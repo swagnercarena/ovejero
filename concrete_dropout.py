@@ -1,7 +1,6 @@
-import keras.backend as K
-from keras import initializers
-from keras.engine import InputSpec
-from keras.layers import Wrapper
+import tensorflow.keras.backend as K
+from tensorflow.keras import initializers
+from tensorflow.keras.layers import Wrapper, InputSpec
 
 import numpy as np
 
