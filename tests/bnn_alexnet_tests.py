@@ -409,11 +409,15 @@ class LensingLossFunctionsTests(unittest.TestCase):
 		
 
 		# Finally, confirm that batching works
-		single_batch = np.concatenate([y_pred4,L_elements,y_pred,L_elements,
+		single_batch1 = np.concatenate([y_pred2,L_elements,y_pred,L_elements,
 			pi_arr],axis=-1)
-		yptf = tf.constant(np.concatenate([single_batch,single_batch],axis=0),
+		single_batch2 = np.concatenate([y_pred3,L_elements,y_pred,L_elements,
+			pi_arr],axis=-1)
+		yptf = tf.constant(np.concatenate([single_batch1,single_batch2],axis=0),
 			dtype=tf.float32)
 		self.assertEqual(yptf.shape,[2,55])
 		diag_loss = loss_class.gm_full_covariance_loss(yttf,yptf).numpy()
 		self.assertEqual(diag_loss.shape,(2,))
 		self.assertEqual(diag_loss[0],diag_loss[1])
+		self.assertAlmostEqual(diag_loss[0],scipy_nll,places=4)
+
