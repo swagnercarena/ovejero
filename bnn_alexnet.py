@@ -169,7 +169,7 @@ class LensingLossFunctions:
 			loss_list.append(self.log_gauss_diag(y_true,
 				tf.matmul(y_pred,flip_mat),std_pred))
 		loss_stack = tf.stack(loss_list,axis=-1)
-		return tf.reduce_min(loss_stack,axis=1)
+		return tf.reduce_min(loss_stack,axis=-1)
 
 	def construct_precision_matrix(self,L_mat_elements):
 		"""
@@ -238,7 +238,7 @@ class LensingLossFunctions:
 
 		Parameters:
 			y_true: The true values of the lensing parameters
-			y_pred: The predicted values of the lensing parameters. This should
+			output: The predicted values of the lensing parameters. This should
 				include self.num_params parameters for the prediction and
 				self.num_params*(self.num_params+1)/2 parameters for the
 				lower triangular log cholesky decomposition
@@ -246,7 +246,7 @@ class LensingLossFunctions:
 		Returns:
 			The loss function (i.e. the tensorflow graph for it).
 		"""
-		# Start by dividing the y_pred into the L_elements and the prediction
+		# Start by dividing the output into the L_elements and the prediction
 		# values.
 		L_elements_len = int(self.num_params*(self.num_params+1)/2)
 		y_pred, L_mat_elements = tf.split(output,
@@ -262,7 +262,80 @@ class LensingLossFunctions:
 			loss_list.append(self.log_gauss_full(y_true,
 				tf.matmul(y_pred,flip_mat),prec_mat,L_diag))
 		loss_stack = tf.stack(loss_list,axis=-1)
-		return tf.reduce_min(loss_stack,axis=1)
+		return tf.reduce_min(loss_stack,axis=-1)
+
+	def log_gauss_gm_full(self,y_true,y_preds,prec_mats,L_diags,pis):
+		"""
+		Returns the negative log likelihood of a GMM with full
+		covariance matrix for each GM. Note this code allows for any number
+		of GMMs.
+
+		Parameters:
+			y_true: The true values of the parameters
+			y_preds: A list of the predicted value of the parameters
+			prec_mats: A list of the precision matrices
+			L_diags: A list of the diagonal (non exponentiated) values of the 
+				log.cholesky decomposition of the precision matrices
+
+		Returns:
+			The TF graph for calculating the nll
+		"""
+		# Stack together the loss to be able to do the logsumexp trick
+		loss_list = []
+		for p_i in range(len(y_preds)):
+			# Since we're multiplying the probabilities, we don't want the
+			# negative here.
+			loss_list.append(-self.log_gauss_full(y_true,y_preds[p_i],
+				prec_mats[p_i],L_diags[p_i])+tf.squeeze(tf.math.log(pis[p_i]),
+				axis=-1))
+
+		# Use tf implementation of logsumexp
+		return -tf.reduce_logsumexp(tf.stack(loss_list,axis=-1),axis=-1)
+
+	def gm_full_covariance_loss(self,y_true,output):
+		"""
+		Loss function assuming a mixture of two (fow now) gaussians each with
+		a full covariance matrix
+
+		Parameters:
+			y_true: The true values of the lensing parameters
+			output: The predicted values of the lensing parameters. This should
+				include 2 gm which consists of self.num_params parameters for the 
+				prediction andself.num_params*(self.num_params+1)/2 parameters 
+				for thelower triangular log cholesky decomposition of each gm.
+				It should also include one final parameter for the ratio between
+				the two gms.
+
+		Returns:
+			The loss function (i.e. the tensorflow graph for it).
+		"""
+		# Start by seperating out the predictions for each gaussian model.
+		L_elements_len = int(self.num_params*(self.num_params+1)/2)
+		y_pred1, L_mat_elements1, y_pred2, L_mat_elements2, pi = tf.split(output,
+			num_or_size_splits = [self.num_params,L_elements_len,self.num_params,
+			L_elements_len,1],axis=-1)
+
+		# Now build the precision matrix for our two models and extract the
+		# diagonal components used for the loss calculation
+		prec_mat1, L_diag1 = self.construct_precision_matrix(L_mat_elements1)
+		prec_mat2, L_diag2 = self.construct_precision_matrix(L_mat_elements2)
+
+		# Add each possible flip to the loss list. We will then take the
+		# minimum.
+		loss_list = []
+		prec_mats = [prec_mat1,prec_mat2]
+		L_diags = [L_diag1,L_diag2]
+		pis = [pi,1-pi]
+		for flip_mat1 in self.flip_mat_list:
+			for flip_mat2 in self.flip_mat_list:
+				# The y_preds depends on the selected flips
+				y_preds = [tf.matmul(y_pred1,flip_mat1),
+					tf.matmul(y_pred2,flip_mat2)]
+				loss_list.append(self.log_gauss_gm_full(y_true,y_preds,
+					prec_mats,L_diags,pis))
+		loss_stack = tf.stack(loss_list,axis=-1)
+		return tf.reduce_min(loss_stack,axis=-1)
+
 
 
 
