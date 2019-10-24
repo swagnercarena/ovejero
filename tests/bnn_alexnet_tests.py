@@ -181,4 +181,110 @@ class LensingLossFunctionsTests(unittest.TestCase):
 		for diag in diag_tf.numpy():
 			self.assertAlmostEqual(np.sum(np.abs(diag-diag_elements)),0)
 
+	def test_log_gauss_full(self):
+		# Will not be used for this test, but must be passed in.
+		flip_pairs = []
+		for num_params in range(1,10):
+			# Pick a random true, pred, and std and make sure it agrees with the
+			# scipy calculation
+			loss_class = bnn_alexnet.LensingLossFunctions(flip_pairs,num_params)
+			y_true = np.random.randn(num_params)
+			y_pred = np.random.randn(num_params)
 
+			l_mat_elements_tf = tf.constant(
+				np.expand_dims(np.random.randn(int(num_params*(num_params+1)/2)),
+					axis=0),dtype=tf.float32)
+			
+			p_mat_tf, L_diag = loss_class.construct_precision_matrix(
+				l_mat_elements_tf)
+
+			p_mat = p_mat_tf.numpy()[0]
+
+			nll_tensor = loss_class.log_gauss_full(tf.constant(np.expand_dims(
+				y_true,axis=0),dtype=float),tf.constant(np.expand_dims(
+				y_pred,axis=0),dtype=float),p_mat_tf,L_diag)
+
+			# Compare to scipy function to be exact. Add 2 pi offset.
+			scipy_nll = (-multivariate_normal.logpdf(y_true,y_pred,np.linalg.inv(
+				p_mat)) - np.log(2 * np.pi) * num_params/2)
+			# The decimal error can be significant due to inverting the precision
+			# matrix
+			self.assertAlmostEqual(np.sum(nll_tensor.numpy()),scipy_nll,places=1)
+
+	def test_full_covariance_loss(self):
+		# Test that the diagonal covariance loss gives the correct values
+		flip_pairs = [[1,2],[3,4],[1,2,3,4]]
+		num_params = 6
+		loss_class = bnn_alexnet.LensingLossFunctions(flip_pairs,num_params)
+
+		# Set up a couple of test function to make sure that the minimum loss
+		# is taken
+		y_true = np.ones((1,num_params))
+		y_pred = np.ones((1,num_params))
+		y_pred1 = np.ones((1,num_params)); y_pred1[:,[1,2]] = -1
+		y_pred2 = np.ones((1,num_params)); y_pred2[:,[3,4]] = -1
+		y_pred3 = np.ones((1,num_params)); y_pred3[:,[1,2,3,4]] = -1
+		y_preds = [y_pred,y_pred1,y_pred2,y_pred3]
+		L_elements_len = int(num_params*(num_params+1)/2)
+		# Have to keep this matrix simple so that we still get a reasonable
+		# answer when we invert it for scipy check
+		L_elements = np.zeros((1,L_elements_len))+1e-2
+
+		# Get out the covariance matrix in numpy
+		l_mat_elements_tf = tf.constant(L_elements,dtype=tf.float32)
+		p_mat_tf, L_diag = loss_class.construct_precision_matrix(
+			l_mat_elements_tf)
+		cov_mat = np.linalg.inv(p_mat_tf.numpy()[0])
+
+		# The correct value of the nll
+		scipy_nll = -multivariate_normal.logpdf(y_true.flatten(),y_pred.flatten(),
+			cov_mat) -np.log(2 * np.pi)*num_params/2
+
+		for yp in y_preds:
+			yptf = tf.constant(np.concatenate([yp,L_elements],axis=-1),
+				dtype=tf.float32)
+			yttf = tf.constant(y_true,dtype=tf.float32)
+			diag_loss = loss_class.full_covariance_loss(yttf,yptf)
+
+			self.assertAlmostEqual(np.sum(diag_loss.numpy()),scipy_nll,places=4)
+
+		# Repeat this excercise, but introducing error in prediction
+		for yp in y_preds:
+			yp[:,0] = 10
+		scipy_nll = -multivariate_normal.logpdf(y_true.flatten(),y_pred.flatten(),
+			cov_mat) -np.log(2 * np.pi)*num_params/2
+
+		for yp in y_preds:
+			yptf = tf.constant(np.concatenate([yp,L_elements],axis=-1),
+				dtype=tf.float32)
+			yttf = tf.constant(y_true,dtype=tf.float32)
+			diag_loss = loss_class.full_covariance_loss(yttf,yptf)
+
+			self.assertAlmostEqual(np.sum(diag_loss.numpy()),scipy_nll,places=4)
+
+
+		# Finally, confirm that when the wrong pair is flipped, it does not
+		# return the same answer.
+		y_pred4 = np.ones((1,num_params)); y_pred4[:,[5,2]] = -1
+		y_pred4[:,0] = 10
+		yptf = tf.constant(np.concatenate([y_pred4,L_elements],axis=-1),
+				dtype=tf.float32)
+		yttf = tf.constant(y_true,dtype=tf.float32)
+		diag_loss = loss_class.full_covariance_loss(yttf,yptf)
+
+		self.assertGreater(np.abs(diag_loss.numpy()-scipy_nll),1)
+		
+		# Make sure it is still consistent with the true nll
+		scipy_nll = -multivariate_normal.logpdf(y_true.flatten(),
+			y_pred4.flatten(),cov_mat) -np.log(2 * np.pi)*num_params/2
+		self.assertAlmostEqual(np.sum(diag_loss.numpy()),scipy_nll,places=2)
+
+		# Finally, confirm that batching works
+		yptf = tf.constant(np.concatenate(
+			[np.concatenate([y_pred,L_elements],axis=-1),
+			np.concatenate([y_pred1,L_elements],axis=-1)],axis=0),
+			dtype=tf.float32)
+		self.assertEqual(yptf.shape,[2,27])
+		diag_loss = loss_class.full_covariance_loss(yttf,yptf).numpy()
+		self.assertEqual(diag_loss.shape,(2,))
+		self.assertEqual(diag_loss[0],diag_loss[1])

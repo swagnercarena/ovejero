@@ -111,7 +111,19 @@ class LensingLossFunctions:
 		# Calculate the split list for lower traingular matrix
 		self.split_list = []
 		for i in range(1,num_params+1):
-		    self.split_list += [i]
+			self.split_list += [i]
+
+		# Now for each flip pair (including no flip) we will add a flip
+		# matrix to our list.
+		self.flip_mat_list = [tf.linalg.diag(tf.constant(np.ones(
+			self.num_params),dtype=tf.float32))]
+		for flip_pair in self.flip_pairs:
+			# Initialize a numpy array since this is the easiest way
+			# to flexibly set the tensor.
+			const_initializer = np.ones(self.num_params)
+			const_initializer[flip_pair] = -1
+			self.flip_mat_list.append(tf.linalg.diag(tf.constant(
+				const_initializer,dtype=tf.float32)))
 
 	def log_gauss_diag(self,y_true,y_pred,std_pred):
 		"""
@@ -132,13 +144,13 @@ class LensingLossFunctions:
 			tf.exp(-std_pred)),axis=-1) + 0.5*tf.reduce_sum(
 			std_pred,axis=-1)
 
-	def diagonal_covariance_loss(self,y_true,y_pred):
+	def diagonal_covariance_loss(self,y_true,output):
 		"""
 		Loss function assuming a diagonal covariance matrix
 
 		Parameters:
 			y_true: The true values of the lensing parameters
-			y_pred: The predicted values of the lensing parameters. This should
+			output: The predicted values of the lensing parameters. This should
 				include 2*self.num_params parameters to account for the
 				diagonal entries of our covariance matrix. Covariance matrix
 				values are assumed to be in log space.
@@ -148,24 +160,14 @@ class LensingLossFunctions:
 		"""
 		# First split the data into predicted parameters and covariance matrix
 		# element
-		param_pred, std_pred = tf.split(y_pred,num_or_size_splits=2,axis=-1)
-		# Now for each flip pair (including no flip) we will add a flip
-		# matrix to our list.
-		flip_mat_list = [tf.linalg.diag(tf.constant(np.ones(self.num_params),
-			dtype=tf.float32))]
-		for flip_pair in self.flip_pairs:
-			# Initialize a numpy array since this is the easiest way
-			# to flexibly set the tensor.
-			const_initializer = np.ones(self.num_params)
-			const_initializer[flip_pair] = -1
-			flip_mat_list.append(tf.linalg.diag(tf.constant(const_initializer,
-				dtype=tf.float32)))
+		y_pred, std_pred = tf.split(output,num_or_size_splits=2,axis=-1)
+
 		# Add each possible flip to the loss list. We will then take the
 		# minimum.
 		loss_list = []
-		for flip_mat in flip_mat_list:
+		for flip_mat in self.flip_mat_list:
 			loss_list.append(self.log_gauss_diag(y_true,
-				tf.matmul(param_pred,flip_mat),std_pred))
+				tf.matmul(y_pred,flip_mat),std_pred))
 		loss_stack = tf.stack(loss_list,axis=-1)
 		return tf.reduce_min(loss_stack,axis=1)
 
@@ -195,9 +197,9 @@ class LensingLossFunctions:
 		pad_offset = 1
 		for cov_element in cov_elements_split:
 			# Use tf pad function since it's likely the fastest option.
-		    pad = tf.constant([[0,0],[0,self.num_params-pad_offset]])
-		    cov_elements_stack.append(tf.pad(cov_element,pad))
-		    pad_offset+=1
+			pad = tf.constant([[0,0],[0,self.num_params-pad_offset]])
+			cov_elements_stack.append(tf.pad(cov_element,pad))
+			pad_offset+=1
 		# Stack the tensors to form our matrix. Use axis=-2 to avoid issues
 		# with batches of matrices being passed in.
 		L_mat = tf.stack(cov_elements_stack,axis=-2)
@@ -210,7 +212,57 @@ class LensingLossFunctions:
 
 		return prec_mat, L_mat_diag
 
-	
+	def log_gauss_full(self,y_true,y_pred,prec_mat,L_diag):
+		"""
+		Returns the negative log likelihood of a Gaussian with full
+		covariance matrix
+
+		Parameters:
+			y_true: The true values of the parameters
+			y_pred: The predicted value of the parameters
+			prec_mat: The precision matrix
+			L_diag: The diagonal (non exponentiated) values of the log
+				cholesky decomposition of the precision matrix
+
+		Returns:
+			The TF graph for calculating the nll
+		"""
+		y_dif = y_true - y_pred
+		return -tf.reduce_sum(L_diag,-1) + 0.5 * tf.reduce_sum(
+			tf.multiply(y_dif,tf.reduce_sum(tf.multiply(tf.expand_dims(
+				y_dif,-1),prec_mat),axis=-2)),-1)
+
+	def full_covariance_loss(self,y_true,output):
+		"""
+		Loss function assuming a full covariance matrix
+
+		Parameters:
+			y_true: The true values of the lensing parameters
+			y_pred: The predicted values of the lensing parameters. This should
+				include self.num_params parameters for the prediction and
+				self.num_params*(self.num_params+1)/2 parameters for the
+				lower triangular log cholesky decomposition
+
+		Returns:
+			The loss function (i.e. the tensorflow graph for it).
+		"""
+		# Start by dividing the y_pred into the L_elements and the prediction
+		# values.
+		L_elements_len = int(self.num_params*(self.num_params+1)/2)
+		y_pred, L_mat_elements = tf.split(output,
+			num_or_size_splits=[self.num_params,L_elements_len],axis=-1)
+
+		# Build the precision matrix and extract the diagonal part
+		prec_mat, L_diag = self.construct_precision_matrix(L_mat_elements)
+
+		# Add each possible flip to the loss list. We will then take the
+		# minimum.
+		loss_list = []
+		for flip_mat in self.flip_mat_list:
+			loss_list.append(self.log_gauss_full(y_true,
+				tf.matmul(y_pred,flip_mat),prec_mat,L_diag))
+		loss_stack = tf.stack(loss_list,axis=-1)
+		return tf.reduce_min(loss_stack,axis=1)
 
 
 
