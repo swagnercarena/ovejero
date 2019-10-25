@@ -6,6 +6,7 @@ sys.path.append("../")
 import data_tools
 import numpy as np
 import pandas as pd
+from matplotlib import pyplot as plt
 
 class TFRecordTests(unittest.TestCase):
 
@@ -91,7 +92,48 @@ class TFRecordTests(unittest.TestCase):
 
 		# Clean up the file now that we're done
 		os.remove(normalized_param_path)	
-		os.remove(normalization_constants_path)		
+		os.remove(normalization_constants_path)	
+
+	def test_write_parameters_in_log_space(self):
+		# Test if putting the lens parameters in log space works correctly.
+		new_lens_params_path = self.root_path + 'metadata_log.csv'
+		data_tools.write_parameters_in_log_space(['lens_mass_theta_E'],
+			self.lens_params_path,new_lens_params_path)
+
+		lens_params_csv = pd.read_csv(new_lens_params_path, index_col=None)
+
+		self.assertTrue('lens_mass_theta_E_log' in lens_params_csv)
+		# Assert that the two parameters agree once we factor for log
+		self.assertAlmostEqual(np.sum(np.abs(
+			lens_params_csv['lens_mass_theta_E_log'] - 
+			np.log(lens_params_csv['lens_mass_theta_E']))),0)
+
+		# Clean up the file now that we're done
+		os.remove(new_lens_params_path)	
+
+	def test_ratang_2_exc(self):
+		# Test if putting the lens parameters in excentricities works correctly.
+		new_lens_params_path = self.root_path + 'metadata_e1e2.csv'
+		data_tools.ratang_2_exc('external_shear_gamma_ext',
+			'external_shear_psi_ext',self.lens_params_path,new_lens_params_path,
+			'external_shear')
+
+		lens_params_csv = pd.read_csv(new_lens_params_path, index_col=None)
+
+		self.assertTrue('external_shear_e1' in lens_params_csv)
+		self.assertTrue('external_shear_e2' in lens_params_csv)
+		# Assert that the two parameters agree once we factor for log
+		rat = lens_params_csv['external_shear_gamma_ext']
+		ang = lens_params_csv['external_shear_psi_ext']
+		e1 = (1.-rat)/(1.+rat)*np.cos(2*ang)
+		e2 = (1.-rat)/(1.+rat)*np.sin(2*ang)
+		self.assertAlmostEqual(np.sum(np.abs(e1 - 
+			lens_params_csv['external_shear_e1'])),0)
+		self.assertAlmostEqual(np.sum(np.abs(e2 - 
+			lens_params_csv['external_shear_e2'])),0)
+
+		# Clean up the file now that we're done
+		os.remove(new_lens_params_path)	
 
 	def test_generate_tf_record(self):
 		# Test that the generate_tf_record code succesfully generates a TFRecord 

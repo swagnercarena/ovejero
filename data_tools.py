@@ -52,6 +52,65 @@ def normalize_lens_parameters(lens_params,lens_params_path,normalized_param_path
 	df_const = pd.DataFrame(data=norm_const_dict)
 	df_const.to_csv(normalization_constants_path,index=False)
 
+def write_parameters_in_log_space(lens_params,lens_params_path,
+	new_lens_params_path):
+	"""
+	Converts lens parameters to log space (important for parameters that cannot 
+	be negative)
+
+	Parameters:
+		lens_params: The parameters that will be convereted to log space
+		lens_params_path:  The path to the csv file containing the lens parameters
+		new_lens_params_path: The path to the csv file where the old parameters
+			and the log parameter will be written. Can be the same as 
+			lens_params_path
+
+	Returns:
+		None. New values of parameters will be written to csv file with the name
+			'lens parameter name'_log
+	"""
+	# Read the lens parameters from the csv file
+	lens_params_csv = pd.read_csv(lens_params_path, index_col=None)
+
+	for lens_param in lens_params:
+		lens_params_csv[lens_param+'_log'] = np.log(lens_params_csv[lens_param])
+
+	# Don't include an index to be consistent with baobab csv files.
+	lens_params_csv.to_csv(new_lens_params_path,index=False)
+
+def ratang_2_exc(lens_param_rat,lens_param_ang,lens_params_path,
+	new_lens_params_path,new_lens_parameter_prefix):
+	"""
+	Converts one lens parameter pair of ratio and angle to excentricities.
+
+	Parameters:
+		lens_param_rat: The ratio parameter name
+		lens_param_ang: The angle parameter name
+		lens_params_path:  The path to the csv file containing the lens parameters
+		new_lens_params_path: The path to the csv file where the old parameters
+			and the new excentricities will be written
+		new_lens_parameter_prefix: The prefix for the new lens parameter name (
+			for example external_shear)
+
+	Returns:
+		None. New values of parameters will be written to csv file with the names
+			'lens new_lens_parameter_prefix name'_e1/e2
+	"""
+	# Read the lens parameters from the csv file
+	lens_params_csv = pd.read_csv(lens_params_path, index_col=None)
+
+	# Calcualte the value of these parameters from their ratio and angle
+	rat = lens_params_csv[lens_param_rat]
+	ang = lens_params_csv[lens_param_ang]
+	e1 = (1.-rat)/(1.+rat)*np.cos(2*ang)
+	e2 = (1.-rat)/(1.+rat)*np.sin(2*ang)
+
+	# Save the values to the new csv (which may also be the old csv)
+	lens_params_csv[new_lens_parameter_prefix+'_e1'] = e1
+	lens_params_csv[new_lens_parameter_prefix+'_e2'] = e2
+	# Don't include an index to be consistent with baobab csv files.
+	lens_params_csv.to_csv(new_lens_params_path,index=False)
+
 def generate_tf_record(root_path,lens_params,lens_params_path,tf_record_path):
 	"""
 	Generates a TFRecord file from a directory of numpy files.
