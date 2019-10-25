@@ -6,6 +6,7 @@ sys.path.append("../")
 import data_tools
 import numpy as np
 import pandas as pd
+from helpers import dataset_comparison
 
 class TFRecordTests(unittest.TestCase):
 
@@ -18,41 +19,6 @@ class TFRecordTests(unittest.TestCase):
 			'lens_mass_gamma','lens_mass_theta_E']
 		self.lens_params_path = self.root_path + 'metadata.csv'
 		self.tf_record_path = self.root_path + 'test_record'
-
-	def dataset_comparison(self,dataset,batch_size,num_npy):
-		# Run the same test as above
-		lens_params_csv = pd.read_csv(self.lens_params_path, index_col=None)
-		index_array = []
-		npy_counts = 0
-		for batch in iter(dataset):
-			# Read the image out
-			height = batch['height'].numpy()[0]
-			width = batch['width'].numpy()[0]
-			batch_images = tf.io.decode_raw(batch['image'],
-				out_type=np.float32).numpy().reshape(batch_size,
-					height,width)
-			npy_indexs = batch['index'].numpy()
-			lens_params_batch = []
-			for lens_param in self.lens_params:
-				lens_params_batch.append(batch[lens_param].numpy())
-			# Load the original image and lens parameters and make sure that they
-			# match
-			for batch_index in range(batch_size):
-				npy_index = npy_indexs[batch_index]
-				index_array.append(npy_index)
-				image = batch_images[batch_index]
-				original_image = np.load(self.root_path+'X_{0:07d}.npy'.format(
-					npy_index+1)).astype(np.float32)
-				self.assertEqual(np.sum(np.abs(image-original_image)),0)
-				lpi = 0
-				for lens_param in self.lens_params:
-					lens_param_value = lens_params_batch[lpi][batch_index]
-					self.assertAlmostEqual(lens_param_value,lens_params_csv[
-						lens_param][npy_index],places=4)
-					lpi += 1
-				npy_counts += 1
-		# Ensure the total number of files is correct
-		self.assertEqual(npy_counts,num_npy)
 
 	def test_normalize_lens_parameters(self):
 		# Test if normalizing the lens parameters works correctly.
@@ -141,7 +107,7 @@ class TFRecordTests(unittest.TestCase):
 
 		# Probe the number of npy files to make sure the total number of files
 		# each epoch matches what is expected
-		num_npy = len(glob.glob(self.root_path+'*.npy'))
+		num_npy = len(glob.glob(self.root_path+'X*.npy'))
 
 		data_tools.generate_tf_record(self.root_path,self.lens_params,
 			self.lens_params_path,self.tf_record_path)
@@ -164,7 +130,7 @@ class TFRecordTests(unittest.TestCase):
 			return tf.io.parse_single_example(example,data_features)
 		batch_size = 10
 		dataset = raw_dataset.map(parse_image).batch(batch_size)
-		self.dataset_comparison(dataset,batch_size,num_npy)
+		dataset_comparison(self,dataset,batch_size,num_npy)
 
 		# Clean up the file now that we're done
 		os.remove(self.tf_record_path)
@@ -172,7 +138,7 @@ class TFRecordTests(unittest.TestCase):
 	def test_build_tf_dataset(self):
 		# Test that build_tf_dataset has the correct batching behaviour and 
 		# returns the same data contained in the npy files and csv.
-		num_npy = len(glob.glob(self.root_path+'*.npy'))
+		num_npy = len(glob.glob(self.root_path+'X*.npy'))
 
 		data_tools.generate_tf_record(self.root_path,self.lens_params,
 			self.lens_params_path,self.tf_record_path)

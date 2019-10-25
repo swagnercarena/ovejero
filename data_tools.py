@@ -126,7 +126,7 @@ def generate_tf_record(root_path,lens_params,lens_params_path,tf_record_path):
 		None
 	"""
 	# Pull the list of numpy filepaths from the directory
-	npy_file_list =  glob.glob(root_path+'*.npy')
+	npy_file_list =  glob.glob(root_path+'X*.npy')
 	# Open label csv
 	lens_params_csv = pd.read_csv(lens_params_path, index_col=None)
 	# Initialize the writer object and write the lens data
@@ -173,7 +173,7 @@ def build_tf_dataset(tf_record_path,lens_params,batch_size,n_epochs):
 			with iterating over the data for repeated epochs.
 
 	Returns:
-		A TFDataset object for us in training
+		A TFDataset object for use in training
 
 	"""
 
