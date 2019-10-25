@@ -6,7 +6,6 @@ sys.path.append("../")
 import data_tools
 import numpy as np
 import pandas as pd
-from matplotlib import pyplot as plt
 
 class TFRecordTests(unittest.TestCase):
 
