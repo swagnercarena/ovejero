@@ -6,8 +6,9 @@ dataset.
 
 # Import some backend stuff
 from tensorflow.keras.callbacks import TensorBoard, ModelCheckpoint
-from keras.optimizers import Adam
+from tensorflow.keras.optimizers import Adam
 import argparse, json, os
+import tensorflow.keras.backend as K
 
 # Import the code to construct the bnn and the data pipeline
 import bnn_alexnet
@@ -104,7 +105,8 @@ def main():
 		'and data/model paths')
 	args = parser.parse_args()
 
-	cfg = json.load(args.config)
+	with open(args.config,'r') as json_f:
+		cfg = json.load(json_f)
 
 	# Extract neccesary parameters from the json config
 	# The batch size used for training
@@ -121,7 +123,7 @@ def main():
 	# The filename of the TFRecord
 	tf_record_path = root_path+cfg['training_params']['tf_record_path']
 	# The final parameters that need to be in tf_record_path
-	final_params = root_path+cfg['training_params']['final_params']
+	final_params = cfg['training_params']['final_params']
 	num_params = len(final_params)
 	# The path to the model weights. If they already exist they will be loaded
 	model_weights = cfg['training_params']['model_weights']
@@ -152,20 +154,22 @@ def main():
 
 	print('Initializing the model')
 
-	model = bnn_alexnet.concrete_alexnet((img_dim, img_dim, 1), num_params,
-		weight_regularizer=wr,dropout_regularizer=dr)
-
+	# Initialize the log function according to bnn_type
 	loss_class = bnn_alexnet.LensingLossFunctions(flip_pairs,num_params)
-
-	# Initialize the log function according to what 
 	if bnn_type == 'diag':
 		loss = loss_class.diagonal_covariance_loss
+		num_outputs = num_params*2
 	elif bnn_type == 'full':
 		loss = loss_class.full_covariance_loss
+		num_outputs = num_params + int(num_params*(num_params+1)/2)
 	elif bnn_type == 'gmm':
 		loss = loss_class.gm_full_covariance_loss
+		num_outputs = 2*(num_params + int(num_params*(num_params+1)/2))+1
 	else:
 		raise RuntimeError('BNN type %s does not exist'%(bnn_type))
+
+	model = bnn_alexnet.concrete_alexnet((img_dim, img_dim, 1), num_outputs,
+		weight_regularizer=wr,dropout_regularizer=dr)
 
 	adam = Adam(lr=learning_rate,amsgrad=False,decay=decay)
 	model.compile(loss=loss, optimizer=adam)
@@ -180,9 +184,17 @@ def main():
 	tensorboard = TensorBoard(log_dir=tensorboard_log_dir,update_freq='batch')
 	modelcheckpoint = ModelCheckpoint(model_weights)
 
+	for layer in model.layers:
+		if 'concrete' in layer.name:
+			print(layer.name,K.sigmoid(layer.weights[0]))
+
 	# TODO add validation data.
 	model.fit_generator(tf_dataset,callbacks=[tensorboard, modelcheckpoint])
 
+	for layer in model.layers:
+		if 'concrete' in layer.name:
+			print(layer.name,K.sigmoid(layer.weights[0]))
 
-
+if __name__ == '__main__':
+    main()
 

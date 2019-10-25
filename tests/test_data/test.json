@@ -1,7 +1,7 @@
 {
     "training_params": {
         "bnn_type": "gmm",
-        "batch_size": 128,
+        "batch_size": 10,
         "n_epochs": 10,
         "learning_rate": 0.0001,
         "decay": 3e-06,

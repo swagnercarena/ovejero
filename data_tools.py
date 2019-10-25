@@ -195,7 +195,7 @@ def build_tf_dataset(tf_record_path,lens_params,batch_size,n_epochs):
 		parsed_dataset = tf.io.parse_single_example(example,data_features)
 		image = tf.io.decode_raw(parsed_dataset['image'],out_type=float)
 		image = tf.reshape(image,(parsed_dataset['height'],
-			parsed_dataset['width']))
+			parsed_dataset['width'],1))
 		lens_param_values = tf.stack([parsed_dataset[lens_param] for lens_param 
 			in lens_params])
 		return image,lens_param_values

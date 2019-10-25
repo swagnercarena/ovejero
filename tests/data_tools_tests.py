@@ -151,7 +151,7 @@ class TFRecordTests(unittest.TestCase):
 		npy_counts = 0
 		for batch in dataset:
 			self.assertListEqual(batch[0].get_shape().as_list(),
-				[batch_size,100,100])
+				[batch_size,100,100,1])
 			self.assertListEqual(batch[1].get_shape().as_list(),
 				[batch_size,8])
 			npy_counts += batch_size
@@ -165,7 +165,7 @@ class TFRecordTests(unittest.TestCase):
 		npy_counts = 0
 		for batch in dataset:
 			self.assertListEqual(batch[0].get_shape().as_list(),
-				[batch_size,100,100])
+				[batch_size,100,100,1])
 			self.assertListEqual(batch[1].get_shape().as_list(),
 				[batch_size,8])
 			npy_counts += batch_size
