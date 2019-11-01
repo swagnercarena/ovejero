@@ -1,4 +1,6 @@
 import unittest, json, glob, os, sys
+# Eliminate TF warning in tests
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 import tensorflow as tf
 sys.path.append("../")
 import model_trainer

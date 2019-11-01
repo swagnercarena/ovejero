@@ -753,9 +753,13 @@ class LensingLossFunctions:
 		"""
 		# Start by seperating out the predictions for each gaussian model.
 		L_elements_len = int(self.num_params*(self.num_params+1)/2)
-		y_pred1, L_mat_elements1, y_pred2, L_mat_elements2, pi = tf.split(output,
-			num_or_size_splits = [self.num_params,L_elements_len,self.num_params,
-			L_elements_len,1],axis=-1)
+		y_pred1, L_mat_elements1, y_pred2, L_mat_elements2, pi_logit = tf.split(
+			output,num_or_size_splits = [self.num_params,L_elements_len,
+			self.num_params,L_elements_len,1],axis=-1)
+
+		# Set the probability between 0 and 1.
+		pi = K.sigmoid(pi_logit)
+
 
 		# Now build the precision matrix for our two models and extract the
 		# diagonal components used for the loss calculation

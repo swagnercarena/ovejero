@@ -433,7 +433,7 @@ class LensingLossFunctionsTests(unittest.TestCase):
 			scipy_nlp = -np.logaddexp(scipy_nlp1,scipy_nlp2)
 			# The decimal error can be significant due to inverting the precision
 			# matrix
-			self.assertAlmostEqual(np.sum(nlp_tensor.numpy()),scipy_nlp,places=3)
+			self.assertAlmostEqual(np.sum(nlp_tensor.numpy()),scipy_nlp,places=2)
 
 	def test_gm_full_covariance_loss(self):
 		# Test that the diagonal covariance loss gives the correct values
@@ -453,8 +453,9 @@ class LensingLossFunctionsTests(unittest.TestCase):
 		# Have to keep this matrix simple so that we still get a reasonable
 		# answer when we invert it for scipy check
 		L_elements = np.zeros((1,L_elements_len))+1e-2
-		pi = 0.45
-		pi_arr = np.array([[pi]])
+		pi_logit = 2
+		pi = np.exp(pi_logit)/(np.exp(pi_logit)+1)
+		pi_arr = np.array([[pi_logit]])
 
 		# Get out the covariance matrix in numpy
 		l_mat_elements_tf = tf.constant(L_elements,dtype=tf.float32)
