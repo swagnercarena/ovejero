@@ -1,3 +1,13 @@
+# -*- coding: utf-8 -*-
+"""
+Build the TensorFlow model and loss functions
+
+This module contains the functions needed to build the BNN model used in ovejero
+as well as the loss functions for the different posteriors.
+
+See the script model_trainer.py for examples of how to use these functions.
+"""
+
 import tensorflow as tf
 import numpy as np
 from tensorflow.keras.models import Model
@@ -9,19 +19,21 @@ from concrete_dropout import ConcreteDropout, SpatialConcreteDropout
 def concrete_alexnet(img_size, num_params, weight_regularizer=1e-6,
 	dropout_regularizer=1e-5):
 	"""
-	Builds the tensorflow graph for the concrete dropout BNN.
+	Build the tensorflow graph for the concrete dropout BNN.
 
-	Parameters:
-		img_size: A tupe with shape (pix,pix,freq) that describes the size of the
-			input images
-		num_params: The number of lensing parameters to predict
-		weight_regularizer: The strength of the l2 norm (associated to the 
-			strength of the prior on the weights)
-		dropout_regularizer: The stronger it is, the more concrete dropout
-			will tend towards larger dropout rates.
+	Parameters
+	----------
+		img_size ((int,int,int)): A tupe with shape (pix,pix,freq) that describes 
+			the size of the input images
+		num_params (int): The number of lensing parameters to predict
+		weight_regularizer (float): The strength of the l2 norm (associated to 
+			the strength of the prior on the weights)
+		dropout_regularizer (float): The stronger it is, the more concrete 
+			dropout will tend towards larger dropout rates.
 
-	Returns:
-		The model (i.e. the tensorflow graph for the model)
+	Returns
+	-------
+		(tf.Tensor): The model (i.e. the tensorflow graph for the model)
 	"""
 
 	# Initialize model
@@ -90,19 +102,17 @@ class LensingLossFunctions:
 	def __init__(self,flip_pairs,num_params):
 		"""
 		Initialize the class with the pairs of parameters that must be flipped.
-			These are parameters like shear and ellipticity that have been
-			defined such that negating both parameters gives the same 
-			physical definition of the system.
+		These are parameters like shear and ellipticity that have been defined 
+		such that negating both parameters gives the same 
+		physical definition of the system.
 
-		Parameters:
-			flip_pairs: A list of pairs of numbers to conduct the flip operation
-				on. If empty no flip pairs will be used. Note if you also want
-				to consider two sets of parameters being flipped at the same 
-				time, that must be added to this list.
-			num_params: The number of parameters to predict.
-
-		Returns:
-			The initialized class.
+		Parameters
+		----------
+			flip_pairs ([[int,int,...],...]): A list of pairs of numbers to 
+				conduct the flip operation on. If empty no flip pairs will be 
+				used. Note if you also want to consider two sets of parameters 
+				being flipped at the same time, that must be added to this list.
+			num_params (int): The number of parameters to predict.
 		"""
 
 		self.flip_pairs = flip_pairs
@@ -127,18 +137,24 @@ class LensingLossFunctions:
 
 	def log_gauss_diag(self,y_true,y_pred,std_pred):
 		"""
-		Returns the negative log likelihood of a Gaussian with diagonal
+		Return the negative log posterior of a Gaussian with diagonal
 		covariance matrix
 
-		Parameters:
-			y_true: The true values of the parameters
-			y_pred: The predicted value of the parameters
-			std_pred: The predicted diagonal entries of the covariance. Note
-				that std_pred is assumed to be the log of the covariance matrix
-				values.
+		Parameters
+		----------
+			y_true (tf.Tensor): The true values of the parameters
+			y_pred (tf.Tensor): The predicted value of the parameters
+			std_pred (tf.Tensor): The predicted diagonal entries of the 
+				covariance. Note that std_pred is assumed to be the log of the 
+				covariance matrix values.
 
-		Returns:
-			The TF graph for calculating the nll
+		Returns
+		-------
+			(tf.Tensor): The TF graph for calculating the nlp
+
+		Notes
+		-----
+			This loss does not include the constant factor of 1/(2*pi)^(d/2).
 		"""
 		return 0.5*tf.reduce_sum(tf.multiply(tf.square(y_pred-y_true),
 			tf.exp(-std_pred)),axis=-1) + 0.5*tf.reduce_sum(
@@ -146,17 +162,19 @@ class LensingLossFunctions:
 
 	def diagonal_covariance_loss(self,y_true,output):
 		"""
-		Loss function assuming a diagonal covariance matrix
+		Return the loss function assuming a diagonal covariance matrix
 
-		Parameters:
-			y_true: The true values of the lensing parameters
-			output: The predicted values of the lensing parameters. This should
-				include 2*self.num_params parameters to account for the
-				diagonal entries of our covariance matrix. Covariance matrix
+		Parameters
+		----------
+			y_true (tf.Tensor): The true values of the lensing parameters
+			output (tf.Tensor): The predicted values of the lensing parameters. 
+				This should include 2*self.num_params parameters to account for 
+				the diagonal entries of our covariance matrix. Covariance matrix
 				values are assumed to be in log space.
 
-		Returns:
-			The loss function (i.e. the tensorflow graph for it).
+		Returns
+		-------
+			(tf.Tensor): The loss function (i.e. the tensorflow graph for it).
 		"""
 		# First split the data into predicted parameters and covariance matrix
 		# element
@@ -174,19 +192,22 @@ class LensingLossFunctions:
 	def construct_precision_matrix(self,L_mat_elements):
 		"""
 		Take the matrix elements for the log cholesky decomposition and
-		convert them to the precision matrix. Will also return the value of
+		convert them to the precision matrix. Also return the value of
 		the diagonal elements before exponentiation, since we get that for 
 		free.
 		
-		Parameters:
-			L_mat_elements: A tensor of length num_params*(num_params+1)/2 that
-				define the lower traingular matrix elements of the log cholesky
-				decomposition
+		Parameters
+		----------
+			L_mat_elements (tf.Tensor): A tensor of length 
+				num_params*(num_params+1)/2 that define the lower traingular 
+				matrix elements of the log cholesky decomposition
 
-		Returns:
-			Both the precision matrix and the diagonal elements (before 
-				exponentiation) of the log cholesky L matrix. Note that
-				this second value is important for the posterior calculation.
+		Returns
+		-------
+			((tf.Tensor,tf.Tensor)): Both the precision matrix and the diagonal 
+				elements (before exponentiation) of the log cholesky L matrix. 
+				Note that this second value is important for the posterior 
+				calculation.
 		"""
 		# First split the tensor into the elements that will populate each row
 		cov_elements_split = tf.split(L_mat_elements,
@@ -214,18 +235,24 @@ class LensingLossFunctions:
 
 	def log_gauss_full(self,y_true,y_pred,prec_mat,L_diag):
 		"""
-		Returns the negative log likelihood of a Gaussian with full
+		Return the negative log posterior of a Gaussian with full
 		covariance matrix
 
-		Parameters:
-			y_true: The true values of the parameters
-			y_pred: The predicted value of the parameters
+		Parameters
+		----------
+			y_true (tf.Tensor): The true values of the parameters
+			y_pred (tf.Tensor): The predicted value of the parameters
 			prec_mat: The precision matrix
-			L_diag: The diagonal (non exponentiated) values of the log
-				cholesky decomposition of the precision matrix
+			L_diag (tf.Tensor): The diagonal (non exponentiated) values of the 
+				log cholesky decomposition of the precision matrix
 
-		Returns:
-			The TF graph for calculating the nll
+		Returns
+		-------
+			(tf.Tensor): The TF graph for calculating the nlp
+
+		Notes
+		-----
+			This loss does not include the constant factor of 1/(2*pi)^(d/2).
 		"""
 		y_dif = y_true - y_pred
 		return -tf.reduce_sum(L_diag,-1) + 0.5 * tf.reduce_sum(
@@ -234,17 +261,19 @@ class LensingLossFunctions:
 
 	def full_covariance_loss(self,y_true,output):
 		"""
-		Loss function assuming a full covariance matrix
+		Return the loss function assuming a full covariance matrix
 
-		Parameters:
-			y_true: The true values of the lensing parameters
-			output: The predicted values of the lensing parameters. This should
-				include self.num_params parameters for the prediction and
-				self.num_params*(self.num_params+1)/2 parameters for the
+		Parameters
+		----------
+			y_true (tf.Tensor): The true values of the lensing parameters
+			output (tf.Tensor): The predicted values of the lensing parameters. 
+				This should include self.num_params parameters for the prediction
+				and self.num_params*(self.num_params+1)/2 parameters for the
 				lower triangular log cholesky decomposition
 
-		Returns:
-			The loss function (i.e. the tensorflow graph for it).
+		Returns
+		-------
+			(tf.Tensor): The loss function (i.e. the tensorflow graph for it).
 		"""
 		# Start by dividing the output into the L_elements and the prediction
 		# values.
@@ -266,19 +295,27 @@ class LensingLossFunctions:
 
 	def log_gauss_gm_full(self,y_true,y_preds,prec_mats,L_diags,pis):
 		"""
-		Returns the negative log likelihood of a GMM with full
+		Return the negative log posterior of a GMM with full
 		covariance matrix for each GM. Note this code allows for any number
 		of GMMs.
 
-		Parameters:
-			y_true: The true values of the parameters
-			y_preds: A list of the predicted value of the parameters
-			prec_mats: A list of the precision matrices
-			L_diags: A list of the diagonal (non exponentiated) values of the 
-				log.cholesky decomposition of the precision matrices
+		Parameters
+		----------
+			y_true (tf.Tensor): The true values of the parameters
+			y_preds ([tf.Tensor,...]): A list of the predicted value of the 
+				parameters
+			prec_mats ([tf.Tensor,...]): A list of the precision matrices
+			L_diags ([tf.Tensor,...]): A list of the diagonal (non exponentiated) 
+				values of the log cholesky decomposition of the precision 
+				matrices
 
-		Returns:
-			The TF graph for calculating the nll
+		Returns
+		-------
+			(tf.Tensor): The TF graph for calculating the nlp
+
+		Notes
+		-----
+			This loss does not include the constant factors of 1/(2*pi)^(d/2).
 		"""
 		# Stack together the loss to be able to do the logsumexp trick
 		loss_list = []
@@ -294,20 +331,23 @@ class LensingLossFunctions:
 
 	def gm_full_covariance_loss(self,y_true,output):
 		"""
-		Loss function assuming a mixture of two (fow now) gaussians each with
+		Return the loss function assuming a mixture of two gaussians each with
 		a full covariance matrix
 
-		Parameters:
-			y_true: The true values of the lensing parameters
-			output: The predicted values of the lensing parameters. This should
-				include 2 gm which consists of self.num_params parameters for the 
-				prediction andself.num_params*(self.num_params+1)/2 parameters 
-				for thelower triangular log cholesky decomposition of each gm.
-				It should also include one final parameter for the ratio between
-				the two gms.
+		Parameters
+		----------
+			y_true (tf.Tensor): The true values of the lensing parameters
+			output (tf.Tensor): The predicted values of the lensing parameters. 
+				This should include 2 gm which consists of self.num_params 
+				parameters for the prediction and 
+				self.num_params*(self.num_params+1)/2 parameters for the 
+				lower triangular log cholesky decomposition of each gm. 
+				It should also include one final parameter for the ratio 
+				between the two gms.
 
-		Returns:
-			The loss function (i.e. the tensorflow graph for it).
+		Returns
+		-------
+			(tf.Tensor): The loss function (i.e. the tensorflow graph for it).
 		"""
 		# Start by seperating out the predictions for each gaussian model.
 		L_elements_len = int(self.num_params*(self.num_params+1)/2)

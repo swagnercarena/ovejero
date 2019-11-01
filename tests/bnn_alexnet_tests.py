@@ -58,13 +58,13 @@ class LensingLossFunctionsTests(unittest.TestCase):
 			y_true = np.random.randn(num_params)
 			y_pred = np.random.randn(num_params)
 			std_pred = np.random.randn(num_params)
-			nll_tensor = loss_class.log_gauss_diag(tf.constant(y_true),
+			nlp_tensor = loss_class.log_gauss_diag(tf.constant(y_true),
 				tf.constant(y_pred),tf.constant(std_pred))
 
 			# Compare to scipy function to be exact. Add 2 pi offset.
-			scipy_nll = -multivariate_normal.logpdf(y_true,y_pred,
+			scipy_nlp = -multivariate_normal.logpdf(y_true,y_pred,
 				np.diag(np.exp(std_pred))) - np.log(2 * np.pi) * num_params/2
-			self.assertAlmostEqual(nll_tensor.numpy(),scipy_nll)
+			self.assertAlmostEqual(nlp_tensor.numpy(),scipy_nlp)
 
 	def test_diagonal_covariance_loss(self):
 		# Test that the diagonal covariance loss gives the correct values
@@ -82,8 +82,8 @@ class LensingLossFunctionsTests(unittest.TestCase):
 		y_preds = [y_pred,y_pred1,y_pred2,y_pred3]
 		std_pred = np.ones((1,num_params))
 
-		# The correct value of the nll
-		scipy_nll = -multivariate_normal.logpdf(y_true.flatten(),y_pred.flatten(),
+		# The correct value of the nlp
+		scipy_nlp = -multivariate_normal.logpdf(y_true.flatten(),y_pred.flatten(),
 			np.diag(np.exp(std_pred.flatten()))) -np.log(2 * np.pi)*num_params/2
 
 		for yp in y_preds:
@@ -92,12 +92,12 @@ class LensingLossFunctionsTests(unittest.TestCase):
 			yttf = tf.constant(y_true,dtype=tf.float32)
 			diag_loss = loss_class.diagonal_covariance_loss(yttf,yptf)
 
-			self.assertAlmostEqual(diag_loss.numpy(),scipy_nll)
+			self.assertAlmostEqual(diag_loss.numpy(),scipy_nlp)
 
 		# Repeat this excercise, but introducing error in prediction
 		for yp in y_preds:
 			yp[:,0] = 10
-		scipy_nll = -multivariate_normal.logpdf(y_true.flatten(),y_pred.flatten(),
+		scipy_nlp = -multivariate_normal.logpdf(y_true.flatten(),y_pred.flatten(),
 			np.diag(np.exp(std_pred.flatten()))) -np.log(2 * np.pi)*num_params/2
 
 		for yp in y_preds:
@@ -106,7 +106,7 @@ class LensingLossFunctionsTests(unittest.TestCase):
 			yttf = tf.constant(y_true,dtype=tf.float32)
 			diag_loss = loss_class.diagonal_covariance_loss(yttf,yptf)
 
-			self.assertAlmostEqual(diag_loss.numpy(),scipy_nll)
+			self.assertAlmostEqual(diag_loss.numpy(),scipy_nlp)
 
 
 		# Confirm that when the wrong pair is flipped, it does not
@@ -118,13 +118,13 @@ class LensingLossFunctionsTests(unittest.TestCase):
 		yttf = tf.constant(y_true,dtype=tf.float32)
 		diag_loss = loss_class.diagonal_covariance_loss(yttf,yptf)
 
-		self.assertGreater(np.abs(diag_loss.numpy()-scipy_nll),1)
+		self.assertGreater(np.abs(diag_loss.numpy()-scipy_nlp),1)
 		
-		# Make sure it is still consistent with the true nll
-		scipy_nll = -multivariate_normal.logpdf(y_true.flatten(),
+		# Make sure it is still consistent with the true nlp
+		scipy_nlp = -multivariate_normal.logpdf(y_true.flatten(),
 			y_pred4.flatten(),
 			np.diag(np.exp(std_pred.flatten()))) -np.log(2 * np.pi)*num_params/2
-		self.assertAlmostEqual(diag_loss.numpy(),scipy_nll)
+		self.assertAlmostEqual(diag_loss.numpy(),scipy_nlp)
 
 		# Finally, confirm that batching works
 		yptf = tf.constant(np.concatenate(
@@ -200,16 +200,16 @@ class LensingLossFunctionsTests(unittest.TestCase):
 
 			p_mat = p_mat_tf.numpy()[0]
 
-			nll_tensor = loss_class.log_gauss_full(tf.constant(np.expand_dims(
+			nlp_tensor = loss_class.log_gauss_full(tf.constant(np.expand_dims(
 				y_true,axis=0),dtype=float),tf.constant(np.expand_dims(
 				y_pred,axis=0),dtype=float),p_mat_tf,L_diag)
 
 			# Compare to scipy function to be exact. Add 2 pi offset.
-			scipy_nll = (-multivariate_normal.logpdf(y_true,y_pred,np.linalg.inv(
+			scipy_nlp = (-multivariate_normal.logpdf(y_true,y_pred,np.linalg.inv(
 				p_mat)) - np.log(2 * np.pi) * num_params/2)
 			# The decimal error can be significant due to inverting the precision
 			# matrix
-			self.assertAlmostEqual(np.sum(nll_tensor.numpy()),scipy_nll,places=1)
+			self.assertAlmostEqual(np.sum(nlp_tensor.numpy()),scipy_nlp,places=1)
 
 	def test_full_covariance_loss(self):
 		# Test that the diagonal covariance loss gives the correct values
@@ -236,8 +236,8 @@ class LensingLossFunctionsTests(unittest.TestCase):
 			l_mat_elements_tf)
 		cov_mat = np.linalg.inv(p_mat_tf.numpy()[0])
 
-		# The correct value of the nll
-		scipy_nll = -multivariate_normal.logpdf(y_true.flatten(),y_pred.flatten(),
+		# The correct value of the nlp
+		scipy_nlp = -multivariate_normal.logpdf(y_true.flatten(),y_pred.flatten(),
 			cov_mat) -np.log(2 * np.pi)*num_params/2
 
 		for yp in y_preds:
@@ -246,12 +246,12 @@ class LensingLossFunctionsTests(unittest.TestCase):
 			yttf = tf.constant(y_true,dtype=tf.float32)
 			diag_loss = loss_class.full_covariance_loss(yttf,yptf)
 
-			self.assertAlmostEqual(np.sum(diag_loss.numpy()),scipy_nll,places=4)
+			self.assertAlmostEqual(np.sum(diag_loss.numpy()),scipy_nlp,places=4)
 
 		# Repeat this excercise, but introducing error in prediction
 		for yp in y_preds:
 			yp[:,0] = 10
-		scipy_nll = -multivariate_normal.logpdf(y_true.flatten(),y_pred.flatten(),
+		scipy_nlp = -multivariate_normal.logpdf(y_true.flatten(),y_pred.flatten(),
 			cov_mat) -np.log(2 * np.pi)*num_params/2
 
 		for yp in y_preds:
@@ -260,7 +260,7 @@ class LensingLossFunctionsTests(unittest.TestCase):
 			yttf = tf.constant(y_true,dtype=tf.float32)
 			diag_loss = loss_class.full_covariance_loss(yttf,yptf)
 
-			self.assertAlmostEqual(np.sum(diag_loss.numpy()),scipy_nll,places=4)
+			self.assertAlmostEqual(np.sum(diag_loss.numpy()),scipy_nlp,places=4)
 
 
 		# Confirm that when the wrong pair is flipped, it does not
@@ -272,12 +272,12 @@ class LensingLossFunctionsTests(unittest.TestCase):
 		yttf = tf.constant(y_true,dtype=tf.float32)
 		diag_loss = loss_class.full_covariance_loss(yttf,yptf)
 
-		self.assertGreater(np.abs(diag_loss.numpy()-scipy_nll),1)
+		self.assertGreater(np.abs(diag_loss.numpy()-scipy_nlp),1)
 		
-		# Make sure it is still consistent with the true nll
-		scipy_nll = -multivariate_normal.logpdf(y_true.flatten(),
+		# Make sure it is still consistent with the true nlp
+		scipy_nlp = -multivariate_normal.logpdf(y_true.flatten(),
 			y_pred4.flatten(),cov_mat) -np.log(2 * np.pi)*num_params/2
-		self.assertAlmostEqual(np.sum(diag_loss.numpy()),scipy_nll,places=2)
+		self.assertAlmostEqual(np.sum(diag_loss.numpy()),scipy_nlp,places=2)
 
 		# Finally, confirm that batching works
 		yptf = tf.constant(np.concatenate(
@@ -320,18 +320,18 @@ class LensingLossFunctionsTests(unittest.TestCase):
 			cov_mat1 = np.linalg.inv(p_mat_tf1.numpy()[0])
 			cov_mat2 = np.linalg.inv(p_mat_tf2.numpy()[0])
 
-			nll_tensor = loss_class.log_gauss_gm_full(yttf,[yp1tf,yp2tf],
+			nlp_tensor = loss_class.log_gauss_gm_full(yttf,[yp1tf,yp2tf],
 				[p_mat_tf1,p_mat_tf2],[L_diag1,L_diag2],[pitf,1-pitf])
 
 			# Compare to scipy function to be exact. Add 2 pi offset.
-			scipy_nll1 = (multivariate_normal.logpdf(y_true,y_pred1,cov_mat1)
+			scipy_nlp1 = (multivariate_normal.logpdf(y_true,y_pred1,cov_mat1)
 				+ np.log(2 * np.pi) * num_params/2 + np.log(pi))
-			scipy_nll2 = (multivariate_normal.logpdf(y_true,y_pred2,cov_mat2)
+			scipy_nlp2 = (multivariate_normal.logpdf(y_true,y_pred2,cov_mat2)
 				+ np.log(2 * np.pi) * num_params/2 + np.log(1-pi))
-			scipy_nll = -np.logaddexp(scipy_nll1,scipy_nll2)
+			scipy_nlp = -np.logaddexp(scipy_nlp1,scipy_nlp2)
 			# The decimal error can be significant due to inverting the precision
 			# matrix
-			self.assertAlmostEqual(np.sum(nll_tensor.numpy()),scipy_nll,places=3)
+			self.assertAlmostEqual(np.sum(nlp_tensor.numpy()),scipy_nlp,places=3)
 
 	def test_gm_full_covariance_loss(self):
 		# Test that the diagonal covariance loss gives the correct values
@@ -360,11 +360,11 @@ class LensingLossFunctionsTests(unittest.TestCase):
 			l_mat_elements_tf)
 		cov_mat = np.linalg.inv(p_mat_tf.numpy()[0])
 
-		scipy_nll1 = (multivariate_normal.logpdf(y_true[0],y_pred[0],cov_mat)
+		scipy_nlp1 = (multivariate_normal.logpdf(y_true[0],y_pred[0],cov_mat)
 			+ np.log(2 * np.pi) * num_params/2 + np.log(pi))
-		scipy_nll2 = (multivariate_normal.logpdf(y_true[0],y_pred[0],cov_mat)
+		scipy_nlp2 = (multivariate_normal.logpdf(y_true[0],y_pred[0],cov_mat)
 			+ np.log(2 * np.pi) * num_params/2 + np.log(1-pi))
-		scipy_nll = -np.logaddexp(scipy_nll1,scipy_nll2)
+		scipy_nlp = -np.logaddexp(scipy_nlp1,scipy_nlp2)
 
 		for yp1 in y_preds:
 			for yp2 in y_preds:
@@ -374,16 +374,16 @@ class LensingLossFunctionsTests(unittest.TestCase):
 				diag_loss = loss_class.gm_full_covariance_loss(yttf,yptf)
 
 				self.assertAlmostEqual(np.sum(diag_loss.numpy()),
-					scipy_nll,places=4)
+					scipy_nlp,places=4)
 
 		# Repeat this excercise, but introducing error in prediction
 		for yp in y_preds:
 			yp[:,0] = 10
-		scipy_nll1 = (multivariate_normal.logpdf(y_true[0],y_pred[0],cov_mat)
+		scipy_nlp1 = (multivariate_normal.logpdf(y_true[0],y_pred[0],cov_mat)
 			+ np.log(2 * np.pi) * num_params/2 + np.log(pi))
-		scipy_nll2 = (multivariate_normal.logpdf(y_true[0],y_pred[0],cov_mat)
+		scipy_nlp2 = (multivariate_normal.logpdf(y_true[0],y_pred[0],cov_mat)
 			+ np.log(2 * np.pi) * num_params/2 + np.log(1-pi))
-		scipy_nll = -np.logaddexp(scipy_nll1,scipy_nll2)
+		scipy_nlp = -np.logaddexp(scipy_nlp1,scipy_nlp2)
 
 		for yp1 in y_preds:
 			for yp2 in y_preds:
@@ -393,7 +393,7 @@ class LensingLossFunctionsTests(unittest.TestCase):
 				diag_loss = loss_class.gm_full_covariance_loss(yttf,yptf)
 
 				self.assertAlmostEqual(np.sum(diag_loss.numpy()),
-					scipy_nll,places=4)
+					scipy_nlp,places=4)
 
 
 		# Confirm that when the wrong pair is flipped, it does not
@@ -405,7 +405,7 @@ class LensingLossFunctionsTests(unittest.TestCase):
 		yttf = tf.constant(y_true,dtype=tf.float32)
 		diag_loss = loss_class.gm_full_covariance_loss(yttf,yptf)
 
-		self.assertGreater(np.abs(diag_loss.numpy()-scipy_nll),0.1)
+		self.assertGreater(np.abs(diag_loss.numpy()-scipy_nlp),0.1)
 		
 
 		# Finally, confirm that batching works
@@ -419,5 +419,5 @@ class LensingLossFunctionsTests(unittest.TestCase):
 		diag_loss = loss_class.gm_full_covariance_loss(yttf,yptf).numpy()
 		self.assertEqual(diag_loss.shape,(2,))
 		self.assertEqual(diag_loss[0],diag_loss[1])
-		self.assertAlmostEqual(diag_loss[0],scipy_nll,places=4)
+		self.assertAlmostEqual(diag_loss[0],scipy_nlp,places=4)
 

@@ -1,3 +1,14 @@
+# -*- coding: utf-8 -*-
+"""
+Manipulate the baobab data and prepare it for the model.
+
+This module contains functions that will normalize and reparametrize the data.
+It also contains the functions neccesary to build a TFDataset that can be used
+for efficient parallelization in training.
+
+See the script model_trainer.py for examples of how to use these functions.
+"""
+
 import numpy as np
 import tensorflow as tf
 import pandas as pd
@@ -9,20 +20,19 @@ def normalize_lens_parameters(lens_params,lens_params_path,normalized_param_path
 	Normalize the lens parameters such that they have mean 0 and standard
 	deviation 1.
 
-	Parameters:
-		lens_params: A list of strings containing the lens params that should
-			be written out as features
-		lens_params_path:  The path to the csv file containing the lens parameters
-		normalized_param_path: The path to the csv file where the normalized
-			parameters will be written
-		normalization_constants_path: The path to the csv file where the
+	Parameters
+	----------
+		lens_params ([str,....]): A list of strings containing the lens params 
+			that should be written out as features
+		lens_params_path (str):  The path to the csv file containing the lens 
+			parameters
+		normalized_param_path (str): The path to the csv file where the 
+			normalized parameters will be written
+		normalization_constants_path (str): The path to the csv file where the
 			mean and std used for normalization will be written / read
-		train_or_test: Whether this is a train time or test time operation.
+		train_or_test (str): Whether this is a train time or test time operation.
 			At test time the normalization values will be read from the
 			normalization constants file instead of written to it.
-
-	Returns:
-		None
 	"""
 	# Read the lens parameters from the csv file
 	lens_params_csv = pd.read_csv(lens_params_path, index_col=None)
@@ -55,19 +65,23 @@ def normalize_lens_parameters(lens_params,lens_params_path,normalized_param_path
 def write_parameters_in_log_space(lens_params,lens_params_path,
 	new_lens_params_path):
 	"""
-	Converts lens parameters to log space (important for parameters that cannot 
+	Convert lens parameters to log space (important for parameters that cannot 
 	be negative)
 
-	Parameters:
-		lens_params: The parameters that will be convereted to log space
-		lens_params_path:  The path to the csv file containing the lens parameters
-		new_lens_params_path: The path to the csv file where the old parameters
-			and the log parameter will be written. Can be the same as 
+	Parameters
+	----------
+		lens_params ([str,...]): The parameters that will be convereted to log 
+			space
+		lens_params_path (str):  The path to the csv file containing the lens 
+			parameters
+		new_lens_params_path (str): The path to the csv file where the old 
+			parameters and the log parameter will be written. Can be the same as 
 			lens_params_path
 
-	Returns:
-		None. New values of parameters will be written to csv file with the name
-			'lens parameter name'_log
+	Notes
+	-----
+		New values of parameters will be written to csv file with the name
+		'lens parameter name'_log
 	"""
 	# Read the lens parameters from the csv file
 	lens_params_csv = pd.read_csv(lens_params_path, index_col=None)
@@ -81,20 +95,23 @@ def write_parameters_in_log_space(lens_params,lens_params_path,
 def ratang_2_exc(lens_param_rat,lens_param_ang,lens_params_path,
 	new_lens_params_path,new_lens_parameter_prefix):
 	"""
-	Converts one lens parameter pair of ratio and angle to excentricities.
+	Convert one lens parameter pair of ratio and angle to excentricities.
 
-	Parameters:
-		lens_param_rat: The ratio parameter name
-		lens_param_ang: The angle parameter name
-		lens_params_path:  The path to the csv file containing the lens parameters
-		new_lens_params_path: The path to the csv file where the old parameters
-			and the new excentricities will be written
-		new_lens_parameter_prefix: The prefix for the new lens parameter name (
-			for example external_shear)
+	Parameters
+	----------
+		lens_param_rat (str): The ratio parameter name
+		lens_param_ang (str): The angle parameter name
+		lens_params_path (str):  The path to the csv file containing the lens 
+			parameters
+		new_lens_params_path (str): The path to the csv file where the old 
+			parameters and the new excentricities will be written
+		new_lens_parameter_prefix (str): The prefix for the new lens parameter 
+			name (for example external_shear)
 
-	Returns:
-		None. New values of parameters will be written to csv file with the names
-			'lens new_lens_parameter_prefix name'_e1/e2
+	Notes
+	-------
+		New values of parameters will be written to csv file with the names
+		'lens new_lens_parameter_prefix name'_e1/e2
 	"""
 	# Read the lens parameters from the csv file
 	lens_params_csv = pd.read_csv(lens_params_path, index_col=None)
@@ -113,17 +130,16 @@ def ratang_2_exc(lens_param_rat,lens_param_ang,lens_params_path,
 
 def generate_tf_record(root_path,lens_params,lens_params_path,tf_record_path):
 	"""
-	Generates a TFRecord file from a directory of numpy files.
+	Generate a TFRecord file from a directory of numpy files.
 
-	Parameters:
-		root_path: The path to the folder containing all of the numpy files
-		lens_params: A list of strings containing the lens params that should
-			be written out as features
-		lens_params_path:  The path to the csv file containing the lens parameters
-		tf_record_path: The path to which the tf_record will be saved
-
-	Returns:
-		None
+	Parameters
+	----------
+		root_path (str): The path to the folder containing all of the numpy files
+		lens_params (str): A list of strings containing the lens params that 
+			should be written out as features
+		lens_params_path (str):  The path to the csv file containing the lens 
+			parameters
+		tf_record_path (str): The path to which the tf_record will be saved
 	"""
 	# Pull the list of numpy filepaths from the directory
 	npy_file_list =  glob.glob(root_path+'X*.npy')
@@ -161,19 +177,21 @@ def generate_tf_record(root_path,lens_params,lens_params_path,tf_record_path):
 
 def build_tf_dataset(tf_record_path,lens_params,batch_size,n_epochs):
 	"""
-	Returns a TFDataset for use in training the model.
+	Return a TFDataset for use in training the model.
 
-	Parameters:
-		tf_record_path: The path to the TFRecord file that will be turned
+	Parameters
+	----------
+		tf_record_path (str): The path to the TFRecord file that will be turned
 			into a TFDataset
-		lens_params: A list of strings containing the lens params that were
-			written out as features
-		batch_size: The batch size that will be used for training
-		n_epochs: The number of training epochs. The dataset object will deal
+		lens_params ([str,...]): A list of strings containing the lens params 
+			that were written out as features
+		batch_size (int): The batch size that will be used for training
+		n_epochs (int): The number of training epochs. The dataset object will deal
 			with iterating over the data for repeated epochs.
 
-	Returns:
-		A TFDataset object for use in training
+	Returns
+	-------
+		(tf.TFDataset): A TFDataset object for use in training
 
 	"""
 
