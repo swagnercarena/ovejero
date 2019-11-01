@@ -1,14 +1,14 @@
 {
     "training_params": {
-        "bnn_type": "gmm",
-        "batch_size": 10,
-        "n_epochs": 10,
+        "bnn_type": "diag",
+        "batch_size": 128,
+        "n_epochs": 30,
         "learning_rate": 0.0001,
         "decay": 3e-06,
         "kernel_regularizer": 1e-05,
         "dropout_regularizer": 1e-06,
-        "root_path": "/Users/sebwagner/Documents/Grad_School/Rotations/Phil/ovejero/tests/test_data/",
-        "tf_record_path": "tf_record_test",
+        "root_path": "/Users/sebwagner/Documents/Grad_School/Rotations/Phil/ovejero/datasets/train/",
+        "tf_record_path": "tf_record_train",
         "final_params": [
             "external_shear_e1",
             "external_shear_e2",
@@ -36,8 +36,8 @@
             ]
         ],
         "img_dim": 128,
-        "model_weights": "/Users/sebwagner/Documents/Grad_School/Rotations/Phil/ovejero/tests/test_data/test_model.h5",
-        "tensorboard_log_dir": "/Users/sebwagner/Documents/Grad_School/Rotations/Phil/ovejero/tests/test_data/test.log",
+        "model_weights": "/Users/sebwagner/Documents/Grad_School/Rotations/Phil/ovejero/models/t1.h5",
+        "tensorboard_log_dir": "/Users/sebwagner/Documents/Grad_School/Rotations/Phil/ovejero/logs/t1.log",
         "random_seed": 1138
     },
     "dataset_params": {

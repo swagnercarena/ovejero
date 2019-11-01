@@ -1,6 +1,8 @@
 # TODO: Change the imports once this is a package!!
 import unittest
-import sys
+import sys, os
+# Eliminate TF warning in tests
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 import numpy as np
 import tensorflow as tf
 sys.path.append("../")
@@ -8,6 +10,106 @@ import bnn_alexnet
 from scipy.stats import multivariate_normal
 
 class BNNTests(unittest.TestCase):
+
+	def __init__(self, *args, **kwargs):
+		super(BNNTests, self).__init__(*args, **kwargs)
+		self.random_seed = 1234
+
+	def test_ConcreteDropout(self):
+		# Test that our implementation of ConcreteDropout works as expected.
+		output_dim = 100
+		activation = 'relu'
+		kernel_regularizer = 1e-6
+		dropout_regularizer = 1e-5
+		init_min = 0.1
+		init_max = 0.1
+		input_shape = (None,200)
+
+		cd_layer = bnn_alexnet.ConcreteDropout(output_dim,activation=activation,
+			kernel_regularizer=kernel_regularizer, 
+			dropout_regularizer=dropout_regularizer, init_min=init_min,
+			init_max=init_max)
+		cd_layer.build(input_shape=input_shape)
+
+		# Check that all of the weights have the right shapes
+		kernel = cd_layer.weights[0]; bias = cd_layer.weights[1]
+		p_logit = cd_layer.weights[2]
+		self.assertListEqual(list(kernel.shape),[200,100])
+		self.assertListEqual(list(bias.shape),[100])
+		self.assertListEqual(list(p_logit.shape),[1])
+
+		# Check that the initializations worked as we wanted them to
+		self.assertEqual(np.sum(bias.numpy()),0)
+		self.assertEqual(p_logit.numpy(),np.log(0.1)-np.log(1-0.1))
+
+		# Check that the losses for the layer is what we would expect for 
+		# concrete dropout.
+		p_logit_reg = cd_layer.losses[0].numpy()
+		kernel_reg = cd_layer.losses[1].numpy()
+		# We know what we set p to
+		p = 0.1
+		p_logit_correct = p * np.log(p) + (1-p)+np.log(1-p)
+		p_logit_correct *= dropout_regularizer * 200
+		self.assertAlmostEqual(p_logit_reg, p_logit_correct)
+		kernel_correct = kernel_regularizer * np.sum(np.square(
+			kernel.numpy())) / (1-p)
+		self.assertAlmostEqual(kernel_reg, kernel_correct)
+
+		# Now check that the call function doesn't return the same value each
+		# time
+		false_input = tf.constant((np.random.rand(1,200)),dtype=tf.float32)
+		output1 = cd_layer(false_input).numpy()
+		output2 = cd_layer(false_input).numpy()
+		self.assertGreater(np.sum(np.abs(output1-output2)),1)
+
+	def test_SpatialConcreteDropout(self):
+		# Test that our implementation of ConcreteDropout works as expected.
+		filters = 64
+		kernel_size = (5,5)
+		activation = 'relu'
+		kernel_regularizer = 1e-6
+		dropout_regularizer = 1e-5
+		init_min = 0.1
+		init_max = 0.1
+		input_shape = (None,20,20,64)
+
+		cd_layer = bnn_alexnet.SpatialConcreteDropout(filters, kernel_size, 
+			activation=activation,
+			kernel_regularizer=kernel_regularizer, 
+			dropout_regularizer=dropout_regularizer, init_min=init_min,
+			init_max=init_max)
+		cd_layer.build(input_shape=input_shape)
+
+		# Check that all of the weights have the right shapes
+		kernel = cd_layer.weights[0]; bias = cd_layer.weights[1]
+		p_logit = cd_layer.weights[2]
+		self.assertListEqual(list(kernel.shape),[5,5,64,64])
+		self.assertListEqual(list(bias.shape),[64])
+		self.assertListEqual(list(p_logit.shape),[1])
+
+		# Check that the initializations worked as we wanted them to
+		self.assertEqual(np.sum(bias.numpy()),0)
+		self.assertEqual(p_logit.numpy(),np.log(0.1)-np.log(1-0.1))
+
+		# Check that the losses for the layer is what we would expect for 
+		# concrete dropout.
+		p_logit_reg = cd_layer.losses[0].numpy()
+		kernel_reg = cd_layer.losses[1].numpy()
+		# We know what we set p to
+		p = 0.1
+		p_logit_correct = p * np.log(p) + (1-p)+np.log(1-p)
+		p_logit_correct *= dropout_regularizer * 64
+		self.assertAlmostEqual(p_logit_reg, p_logit_correct)
+		kernel_correct = kernel_regularizer * np.sum(np.square(
+			kernel.numpy())) / (1-p)
+		self.assertAlmostEqual(kernel_reg, kernel_correct)
+
+		# Now check that the call function doesn't return the same value each
+		# time
+		false_input = tf.constant((np.random.rand(1,20,20,64)),dtype=tf.float32)
+		output1 = cd_layer(false_input).numpy()
+		output2 = cd_layer(false_input).numpy()
+		self.assertGreater(np.sum(np.abs(output1-output2)),1)
 
 	def test_concrete_alexnet(self):
 		# Test that the models initialized agree with what we intended
@@ -20,7 +122,7 @@ class BNNTests(unittest.TestCase):
 		image_size = (100,100,1)
 		num_params = 8
 		model = bnn_alexnet.concrete_alexnet(image_size, num_params, 
-			weight_regularizer=1e-6,dropout_regularizer=1e-5)
+			kernel_regularizer=1e-6,dropout_regularizer=1e-5)
 		input_shapes = [[],(100,100,1),(48,48,64),
 			(24,24,64),(24,24,192),(12,12,192),(12,12,384),(12,12,384),
 			(12,12,256),(6,6,256),(9216,),(4096,),(4096,)]
@@ -37,7 +139,7 @@ class BNNTests(unittest.TestCase):
 			# Check that all the concrete dropout layer except the last have
 			# a ReLU activation function.
 			if 'concrete' in layer.name and l_i < len(model.layers)-1:
-				self.assertEqual(layer.layer.activation,tf.keras.activations.relu)
+				self.assertEqual(layer.activation,tf.keras.activations.relu)
 			l_i += 1
 
 class LensingLossFunctionsTests(unittest.TestCase):

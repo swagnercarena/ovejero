@@ -26,7 +26,7 @@ def dataset_comparison(unittest_class,dataset,batch_size,num_npy):
 			index_array.append(npy_index)
 			image = batch_images[batch_index]
 			original_image = np.load(unittest_class.root_path+
-				'X_{0:07d}.npy'.format(npy_index+1)).astype(np.float32)
+				'X_{0:07d}.npy'.format(npy_index)).astype(np.float32)
 			unittest_class.assertEqual(np.sum(np.abs(image-original_image)),0)
 			lpi = 0
 			for lens_param in unittest_class.lens_params:

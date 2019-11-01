@@ -1,6 +1,8 @@
 # TODO: Change the imports once this is a package!!
 import unittest
 import sys, os, glob
+# Eliminate TF warning in tests
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 import tensorflow as tf
 sys.path.append("../")
 import data_tools
@@ -151,7 +153,7 @@ class TFRecordTests(unittest.TestCase):
 		npy_counts = 0
 		for batch in dataset:
 			self.assertListEqual(batch[0].get_shape().as_list(),
-				[batch_size,100,100,1])
+				[batch_size,128,128,1])
 			self.assertListEqual(batch[1].get_shape().as_list(),
 				[batch_size,8])
 			npy_counts += batch_size
@@ -165,7 +167,7 @@ class TFRecordTests(unittest.TestCase):
 		npy_counts = 0
 		for batch in dataset:
 			self.assertListEqual(batch[0].get_shape().as_list(),
-				[batch_size,100,100,1])
+				[batch_size,128,128,1])
 			self.assertListEqual(batch[1].get_shape().as_list(),
 				[batch_size,8])
 			npy_counts += batch_size

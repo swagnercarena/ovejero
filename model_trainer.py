@@ -5,10 +5,10 @@ dataset.
 """
 
 # Import some backend stuff
+import tensorflow as tf
 from tensorflow.keras.callbacks import TensorBoard, ModelCheckpoint
 from tensorflow.keras.optimizers import Adam
 import argparse, json, os
-import tensorflow.keras.backend as K
 
 # Import the code to construct the bnn and the data pipeline
 import bnn_alexnet
@@ -131,7 +131,7 @@ def main():
 	img_dim = cfg['training_params']['img_dim']
 	# Weight and dropout regularization parameters for the concrete dropout
 	# model.
-	wr = cfg['training_params']['weight_regularizer']
+	kr = cfg['training_params']['kernel_regularizer']
 	dr = cfg['training_params']['dropout_regularizer']
 	# The path for the Tensorboard logs
 	tensorboard_log_dir = cfg['training_params']['tensorboard_log_dir']
@@ -142,6 +142,10 @@ def main():
 	flip_pairs = cfg['training_params']['flip_pairs']
 	# The type of BNN output (either diag, full, or gmm).
 	bnn_type = cfg['training_params']['bnn_type']
+
+	# Finally set the random seed we will use for training
+	random_seed = cfg['training_params']['random_seed']
+	tf.random.set_seed(random_seed)
 
 	if not os.path.exists(tf_record_path):
 		print('Generating new TFRecord at %s'%(tf_record_path))
@@ -169,7 +173,7 @@ def main():
 		raise RuntimeError('BNN type %s does not exist'%(bnn_type))
 
 	model = bnn_alexnet.concrete_alexnet((img_dim, img_dim, 1), num_outputs,
-		weight_regularizer=wr,dropout_regularizer=dr)
+		kernel_regularizer=kr,dropout_regularizer=dr,random_seed=random_seed)
 
 	adam = Adam(lr=learning_rate,amsgrad=False,decay=decay)
 	model.compile(loss=loss, optimizer=adam)
@@ -184,16 +188,8 @@ def main():
 	tensorboard = TensorBoard(log_dir=tensorboard_log_dir,update_freq='batch')
 	modelcheckpoint = ModelCheckpoint(model_weights)
 
-	for layer in model.layers:
-		if 'concrete' in layer.name:
-			print(layer.name,K.sigmoid(layer.weights[0]))
-
 	# TODO add validation data.
 	model.fit_generator(tf_dataset,callbacks=[tensorboard, modelcheckpoint])
-
-	for layer in model.layers:
-		if 'concrete' in layer.name:
-			print(layer.name,K.sigmoid(layer.weights[0]))
 
 if __name__ == '__main__':
     main()

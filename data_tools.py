@@ -148,8 +148,8 @@ def generate_tf_record(root_path,lens_params,lens_params_path,tf_record_path):
 	# Initialize the writer object and write the lens data
 	with tf.io.TFRecordWriter(tf_record_path) as writer:
 		for npy_file in npy_file_list:
-			# Pull the index from the filename (assume things are indexed from 1)
-			index = int(npy_file[-11:-4])-1
+			# Pull the index from the filename
+			index = int(npy_file[-11:-4])
 			image_shape = np.load(npy_file).shape
 			# The image must be converted to a tf string feature
 			image_feature = tf.train.Feature(bytes_list=tf.train.BytesList(

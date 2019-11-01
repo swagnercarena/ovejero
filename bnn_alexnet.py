@@ -10,14 +10,391 @@ See the script model_trainer.py for examples of how to use these functions.
 
 import tensorflow as tf
 import numpy as np
+from tensorflow.keras import initializers, activations
+import tensorflow.keras.backend as K
 from tensorflow.keras.models import Model
-from tensorflow.keras.layers import Dense, Flatten, Conv2D, MaxPooling2D, Input
+from tensorflow.keras.layers import Flatten, Conv2D, MaxPooling2D, Input
+from tensorflow.keras.layers import Layer, InputSpec
 
-# ovejero code uses the concrete_dropout code described in arxiv.1705.07832
-from concrete_dropout import ConcreteDropout, SpatialConcreteDropout
+def cd_regularizer(p, kernel, kernel_regularizer, dropout_regularizer, 
+	input_dim):
+	"""
+	Calculate the regularization term for concrete dropout.
 
-def concrete_alexnet(img_size, num_params, weight_regularizer=1e-6,
-	dropout_regularizer=1e-5):
+	Parameters
+	----------
+		p (tf.Tensor): A 1D Tensor containing the p value for dropout (between 
+			0 and 1).
+		kernel (tf.Tensor): A 2D Tensor defining the weights of the Dense
+			layer
+		kernel_initializer (float): The relative strength of kernel
+			regularization term.
+		dropout_regularizer (float): The relative strength of the dropout
+			regularization term.
+		input_dim (int): The dimension of the input to the layer.
+
+	Returns
+	-------
+		(tf.Tensor): The tensorflow graph to calculate the regularization
+			term.
+
+	Notes
+	-----
+	This is currently not being used because of issues with the Keras
+		framework. Once it updates this will be employed instead of dividing
+		the loss into two parts.
+	"""
+	regularizer = p * K.log(p)
+	regularizer += (1.0 - p) + K.log(1.0 - p)
+	regularizer *= dropout_regularizer * input_dim
+	regularizer += kernel_regularizer * K.sum(K.square(kernel)) / (1.0 - p)
+	return regularizer
+
+class ConcreteDropout(Layer):
+	"""
+	This class defines a concrete dropout layer that is built around a
+	Keras Dense layer. The dropout is parametrized by a weight that is
+	optimized along with the model's weights themselves. Heavy inspiration
+	from code for arxiv.1705.07832.
+	"""
+	def __init__(self, output_dim, activation=None, 
+		kernel_initializer='glorot_uniform', bias_initializer='zeros',
+		kernel_regularizer=1e-6, dropout_regularizer=1e-5, init_min=0.1,
+		init_max=0.1, temp=0.1, random_seed=None, **kwargs):
+		"""
+		Initialize the Concrete dropout Dense layer. This will initialize the 
+		dense layer along with the overhead needed for concrete dropout.
+
+		Parameters
+		----------
+			TODO
+
+		Returns
+		-------
+			(keras.Layer): The initialized ConcreteDropout layer. Must still be
+				built.
+
+		Notes
+		-----
+			Technically the regularization terms must be divided by the number
+				of training examples. This is degenerate with the value of the
+				regularizers, so we do not specify it here.
+		"""
+		# We do this because Keras does this
+		if 'input_shape' not in kwargs and 'input_dim' in kwargs:
+			kwargs['input_shape'] = (kwargs.pop('input_dim'),)
+		# First initialize the properties required by the Dense class
+		super(ConcreteDropout, self).__init__(**kwargs)
+		# Save everything important to self
+		self.output_dim = output_dim
+		self.activation = activations.get(activation)
+		self.kernel_initializer = initializers.get(
+			kernel_initializer)
+		self.bias_initializer = initializers.get(bias_initializer)
+		self.kernel_regularizer = kernel_regularizer
+		self.dropout_regularizer = dropout_regularizer
+		# Convert to logit space (since we want to parameterize our weights
+		# such that any value outputted by the network is valid).
+		self.init_min = np.log(init_min) - np.log(1.0 - init_min)
+		self.init_max = np.log(init_max) - np.log(1.0 - init_max)
+		self.temp = temp
+		self.random_seed = random_seed
+
+	def build(self, input_shape=None):
+		"""
+		Build the weights and operations that the network will use.
+
+		Parameters
+		----------
+			input_shape ((int,...)): The shape of the input to our Dense layer.
+		"""
+		assert len(input_shape) >= 2
+		input_dim = input_shape[-1]
+		
+		self.kernel = self.add_weight(shape=(input_dim, self.output_dim),
+			initializer=self.kernel_initializer, name='kernel')
+		self.bias = self.add_weight(shape=(self.output_dim,),
+			initializer=self.bias_initializer,name='bias')
+		self.p_logit = self.add_weight(name='p_logit',shape=(1,),
+			initializer=initializers.RandomUniform(self.init_min, 
+				self.init_max), trainable=True)
+		# Although we define p in logit space, we then apply the sigmoid 
+		# operation to get the desired value between 0 and 1.
+		self.p = K.sigmoid(self.p_logit[0])
+
+		# Because of issues with Keras, these functions need to be defined
+		# here.
+		def p_logit_regularizer(p_logit):
+			"""
+			Calculate the regularization term for p_logit.
+
+			Parameters
+			----------
+				p_logit (tf.Tensor): A 1D Tensor containing the p_logit value 
+					for dropout.
+
+			Returns
+			-------
+				(tf.Tensor): The tensorflow graph to calculate the 
+					p_logit regularization term.
+			"""
+			# Although we define p in logit space, we then apply the sigmoid 
+			# operation to get the desired value between 0 and 1.
+			p = K.sigmoid(p_logit[0])
+			regularizer = p * K.log(p)
+			regularizer += (1.0 - p) + K.log(1.0 - p)
+			regularizer *= self.dropout_regularizer * input_dim
+			return regularizer
+
+		def kernel_regularizer(kernel):
+			"""
+			Calculate the regularization term for concrete dropout.
+
+			Parameters
+			----------
+				kernel (tf.Tensor): A 2D Tensor containing the kernel for our
+					Dense layer computation.
+
+			Returns
+			-------
+				(tf.Tensor): The tensorflow graph to calculate the 
+					kernel regularization term.
+			"""
+			regularizer = self.kernel_regularizer * K.sum(
+				K.square(kernel)) / (1.0 - self.p)
+			return regularizer
+
+		
+		# This is supposed to change in later versions.
+		self._handle_weight_regularization('p_logit_regularizer',self.p_logit,
+			p_logit_regularizer)
+		self._handle_weight_regularization('kernel_regularizer',self.kernel,
+			kernel_regularizer)
+
+		# Requirement for Keras
+		self.input_spec = InputSpec(min_ndim=2, axes={-1: input_dim})
+		self.built = True
+
+	def call(self, inputs, training=None):
+		"""
+		The function that takes the inputs of the layer and conducts the
+		Dense layer multiplication with concrete dropout.
+
+		Parameters
+		----------
+		inputs (tf.Keras.Layer): The inputs to the Dense layer.
+		training (bool): A required input for call. Setting training to 
+			true or false does nothing because concrete dropout behaves the
+			same way in both cases.
+
+		Returns
+		-------
+		(tf.Keras.Layer): The output of the Dense layer.
+		"""
+		# Small epsilon parameter needed for stable optimization
+		eps = K.cast_to_floatx(K.epsilon())
+
+		# Build the random tensor for dropout from uniform noise. This
+		# formulation allows for a derivative with respect to p.
+		unif_noise = K.random_uniform(shape=K.shape(inputs),
+			seed=self.random_seed)
+		drop_prob = (K.log(self.p+eps) - K.log(1.0-self.p+eps) 
+			+ K.log(unif_noise + eps) - K.log(1.0 - unif_noise + eps))
+		drop_prob = K.sigmoid(drop_prob/self.temp)
+		inputs *= (1.0 - drop_prob)
+		inputs /= (1.0 - self.p) 
+
+		# Now just carry out the basic operations of a Dense layer.
+		output = K.dot(inputs, self.kernel)
+		output = K.bias_add(output, self.bias, data_format='channels_last')
+		if self.activation is not None:
+			output = self.activation(output)
+		return output
+
+
+	def compute_output_shape(self, input_shape):
+		"""
+		Compute the shape of the output given the input. Needed for Keras
+		layer.
+
+		Parameters
+		----------
+		input_shape ((int,...)): The shape of the input to our Dense layer.
+
+		Returns
+		-------
+		((int,...)): The output shape of the layer.
+		"""
+		output_shape = list(input_shape)
+		output_shape[-1] = self.output_dim
+		return tuple(output_shape)
+
+	def get_config(self):
+		"""
+		Return the configuration dictionary required by Keras.
+		"""
+		config = {
+			'output_shape': self.output_shape,
+			'activation': activations.serialize(self.activation),
+			'kernel_initializer': initializers.serialize(
+				self.kernel_initializer),
+			'bias_initializer': initializers.serialize(
+				self.bias_initializer),
+			'kernel_regularizer': self.kernel_regularizer,
+			'dropout_regularizer': self.dropout_regularizer
+		}
+		base_config = super(ConcreteDropout, self).get_config()
+		return dict(list(base_config.items()) + list(config.items()))
+
+class SpatialConcreteDropout(Conv2D):
+	"""
+	This class defines a spatial concrete dropout layer that is built around a
+	Keras Conv2D layer. The dropout is parametrized by a weight that is
+	optimized along with the model's weights themselves. Heavy inspiration
+	from code for arxiv.1705.07832.
+	"""
+	def __init__(self, filters, kernel_size, strides=(1,1), padding='valid',
+		activation=None, kernel_regularizer=1e-6, dropout_regularizer=1e-5, 
+		init_min=0.1, init_max=0.1, temp=0.1, random_seed=None, **kwargs):
+		"""
+		TODO
+		"""
+		super(SpatialConcreteDropout, self).__init__(filters, kernel_size, 
+			strides=strides, padding=padding, activation=activation, **kwargs)
+		# Need to change name to avoid issues with Conv2D
+		self.cd_kernel_regularizer = kernel_regularizer
+		self.dropout_regularizer =dropout_regularizer
+		self.init_min = np.log(init_min) - np.log(1.0 - init_min)
+		self.init_max = np.log(init_max) - np.log(1.0 - init_max)
+		self.temp = temp
+		self.random_seed = random_seed
+
+
+	def build(self, input_shape=None):
+		"""
+		Build the weights and operations that the network will use.
+
+		Parameters
+		----------
+			input_shape ((int,...)): The shape of the input to our Conv2D layer.
+		"""
+		super(SpatialConcreteDropout, self).build(input_shape)
+		input_dim = input_shape[3]
+		
+		# kernel already set by inherited build function.
+		self.p_logit = self.add_weight(name='p_logit',shape=(1,),
+			initializer=initializers.RandomUniform(self.init_min, 
+				self.init_max), trainable=True)
+		# Although we define p in logit space, we then apply the sigmoid 
+		# operation to get the desired value between 0 and 1.
+		self.p = K.sigmoid(self.p_logit[0])
+
+		# Because of issues with Keras, these functions need to be defined
+		# here.
+		def p_logit_regularizer(p_logit):
+			"""
+			Calculate the regularization term for p_logit.
+
+			Parameters
+			----------
+				p_logit (tf.Tensor): A 1D Tensor containing the p_logit value 
+					for dropout.
+
+			Returns
+			-------
+				(tf.Tensor): The tensorflow graph to calculate the 
+					p_logit regularization term.
+			"""
+			# Although we define p in logit space, we then apply the sigmoid 
+			# operation to get the desired value between 0 and 1.
+			p = K.sigmoid(p_logit[0])
+			regularizer = p * K.log(p)
+			regularizer += (1.0 - p) + K.log(1.0 - p)
+			regularizer *= self.dropout_regularizer * input_dim
+			return regularizer
+
+		def kernel_regularizer(kernel):
+			"""
+			Calculate the regularization term for concrete dropout.
+
+			Parameters
+			----------
+				kernel (tf.Tensor): A 2D Tensor containing the kernel for our
+					Dense layer computation.
+
+			Returns
+			-------
+				(tf.Tensor): The tensorflow graph to calculate the 
+					kernel regularization term.
+			"""
+			regularizer = self.cd_kernel_regularizer * K.sum(
+				K.square(kernel)) / (1.0 - self.p)
+			return regularizer
+
+		
+		# This is supposed to change in later versions.
+		self._handle_weight_regularization('p_logit_regularizer',self.p_logit,
+			p_logit_regularizer)
+		self._handle_weight_regularization('kernel_regularizer',self.kernel,
+			kernel_regularizer)
+
+		self.built = True
+
+	def call(self, inputs, training=None):
+		"""
+		The function that takes the inputs of the layer and conducts the
+		Dense layer multiplication with concrete dropout.
+
+		Parameters
+		----------
+		inputs (tf.Keras.Layer): The inputs to the Dense layer.
+		training (bool): A required input for call. Setting training to 
+			true or false does nothing because concrete dropout behaves the
+			same way in both cases.
+
+		Returns
+		-------
+		(tf.Keras.Layer): The output of the Dense layer.
+		"""
+		# Small epsilon parameter needed for stable optimization
+		eps = K.cast_to_floatx(K.epsilon())
+
+		# Build the random tensor for dropout from uniform noise. This
+		# formulation allows for a derivative with respect to p.
+		input_shape = K.shape(inputs)
+		noise_shape = (input_shape[0], 1, 1, input_shape[3])
+		unif_noise = K.random_uniform(shape=noise_shape,
+			seed=self.random_seed)
+		drop_prob = (K.log(self.p+eps) - K.log(1.0-self.p+eps) 
+			+ K.log(unif_noise + eps) - K.log(1.0 - unif_noise + eps))
+		drop_prob = K.sigmoid(drop_prob/self.temp)
+		inputs *= (1.0 - drop_prob)
+		inputs /= (1.0 - self.p) 
+
+		# Now just carry out the basic operations of a Dense layer.
+		return super(SpatialConcreteDropout, self).call(inputs)
+
+
+	def compute_output_shape(self, input_shape):
+		"""
+		Compute the shape of the output given the input. Needed for Keras
+		layer.
+
+		Parameters
+		----------
+		input_shape ((int,...)): The shape of the input to our Dense layer.
+
+		Returns
+		-------
+		((int,...)): The output shape of the layer.
+		"""
+		return super(SpatialConcreteDropout, self).compute_output_shape(
+			input_shape)
+
+
+def concrete_alexnet(img_size, num_params, kernel_regularizer=1e-6,
+	dropout_regularizer=1e-5, init_min=0.1, init_max=0.1,
+	temp=0.1, random_seed=None):
 	"""
 	Build the tensorflow graph for the concrete dropout BNN.
 
@@ -26,10 +403,18 @@ def concrete_alexnet(img_size, num_params, weight_regularizer=1e-6,
 		img_size ((int,int,int)): A tupe with shape (pix,pix,freq) that describes 
 			the size of the input images
 		num_params (int): The number of lensing parameters to predict
-		weight_regularizer (float): The strength of the l2 norm (associated to 
+		kernel_regularizer (float): The strength of the l2 norm (associated to 
 			the strength of the prior on the weights)
 		dropout_regularizer (float): The stronger it is, the more concrete 
 			dropout will tend towards larger dropout rates.
+		init_min (float): The minimum value that the dropout weight p will
+			be initialized to.
+		init_max (float): The maximum value that the dropout weight p will
+			be initialized to.
+		temp (float): The temperature that defines how close the concrete
+			distribution will be to true dropout.
+		random_seed (int): A seed to use in the random function calls. If None 
+			no explicit seed will be used.
 
 	Returns
 	-------
@@ -41,51 +426,68 @@ def concrete_alexnet(img_size, num_params, weight_regularizer=1e-6,
 
 	# Layer 1
 	# model.add(Always_Dropout(dropout_rate))
-	x = SpatialConcreteDropout(Conv2D(filters=64, kernel_size=(5,5), strides=(2,2), 
-		padding='valid', activation='relu', input_shape=img_size),
-		weight_regularizer=weight_regularizer,
-		dropout_regularizer=dropout_regularizer)(inputs)
+	x = SpatialConcreteDropout(filters=64, kernel_size=(5,5), strides=(2,2), 
+		padding='valid', activation='relu', input_shape=img_size,
+		kernel_regularizer = kernel_regularizer,
+		dropout_regularizer= dropout_regularizer,
+		init_min=init_min, init_max=init_max, temp=temp, 
+		random_seed=random_seed)(inputs)
 	x = MaxPooling2D(pool_size=(3,3), strides=(2,2), padding='same')(x)
 
 	# Layer 2
-	x = SpatialConcreteDropout(Conv2D(filters=192, kernel_size=(5,5), strides=(1,1), 
-		padding='same', activation='relu'),weight_regularizer=weight_regularizer,
-		dropout_regularizer=dropout_regularizer)(x)
+	x = SpatialConcreteDropout(filters=192, kernel_size=(5,5), strides=(1,1), 
+		padding='same', activation='relu', 
+		kernel_regularizer = kernel_regularizer,
+		dropout_regularizer= dropout_regularizer,
+		init_min=init_min, init_max=init_max, temp=temp, 
+		random_seed=random_seed)(x)
 	x = MaxPooling2D(pool_size=(3,3), strides=(2,2), padding='same')(x)
 
 	# Layer 3
-	x = SpatialConcreteDropout(Conv2D(filters=384, kernel_size=(3,3), strides=(1,1), 
-		padding='same', activation='relu'),weight_regularizer=weight_regularizer,
-		dropout_regularizer=dropout_regularizer)(x)
+	x = SpatialConcreteDropout(filters=384, kernel_size=(3,3), strides=(1,1), 
+		padding='same', activation='relu',
+		kernel_regularizer = kernel_regularizer,
+		dropout_regularizer= dropout_regularizer,
+		init_min=init_min, init_max=init_max, temp=temp, 
+		random_seed=random_seed)(x)
 
 	# Layer 4
-	x = SpatialConcreteDropout(Conv2D(filters=384, kernel_size=(3,3), strides=(1,1), 
-		padding='same', activation='relu'),weight_regularizer=weight_regularizer,
-		dropout_regularizer=dropout_regularizer)(x)
+	x = SpatialConcreteDropout(filters=384, kernel_size=(3,3), strides=(1,1), 
+		padding='same', activation='relu',
+		kernel_regularizer = kernel_regularizer,
+		dropout_regularizer= dropout_regularizer,
+		init_min=init_min, init_max=init_max, temp=temp, 
+		random_seed=random_seed)(x)
 
 	# Layer 5
-	x = SpatialConcreteDropout(Conv2D(filters=256, kernel_size=(3,3), strides=(1,1), 
-		padding='same', activation='relu'),weight_regularizer=weight_regularizer,
-		dropout_regularizer=dropout_regularizer)(x)
+	x = SpatialConcreteDropout(filters=256, kernel_size=(3,3), strides=(1,1), 
+		padding='same', activation='relu',
+		kernel_regularizer = kernel_regularizer,
+		dropout_regularizer= dropout_regularizer,
+		init_min=init_min, init_max=init_max, temp=temp, 
+		random_seed=random_seed)(x)
 	x = MaxPooling2D(pool_size=(3,3), strides=(2,2), padding='same')(x)
 
 	# Pass to fully connected layers
 	x = Flatten()(x)
 
 	# Layer 6
-	x = ConcreteDropout(Dense(4096, activation='relu'),
-		weight_regularizer=weight_regularizer,
-		dropout_regularizer=dropout_regularizer)(x)
+	x = ConcreteDropout(4096, activation='relu',
+		kernel_regularizer=kernel_regularizer,
+		dropout_regularizer=dropout_regularizer, init_min=init_min,
+		init_max=init_max, temp=temp, random_seed=random_seed)(x)
 
 	# Layer 7
-	x = ConcreteDropout(Dense(4096, activation='relu'),
-		weight_regularizer=weight_regularizer,
-		dropout_regularizer=dropout_regularizer)(x)
+	x = ConcreteDropout(4096, activation='relu',
+		kernel_regularizer=kernel_regularizer,
+		dropout_regularizer=dropout_regularizer, init_min=init_min,
+		init_max=init_max, temp=temp, random_seed=random_seed)(x)
 
 	# Output
-	outputs = ConcreteDropout(Dense(num_params),
-		weight_regularizer=weight_regularizer,
-		dropout_regularizer=dropout_regularizer)(x)
+	outputs = ConcreteDropout(num_params,
+		kernel_regularizer=kernel_regularizer,
+		dropout_regularizer=dropout_regularizer, init_min=init_min,
+		init_max=init_max, temp=temp, random_seed=random_seed)(x)
 
 	# Construct model
 	model = Model(inputs=inputs, outputs=outputs)
