@@ -1,6 +1,11 @@
+# -*- coding: utf-8 -*-
 """
 This script will initialize and train a BNN model on a strong lensing image
 dataset.
+
+Examples
+--------
+python -m model_trainer configs/t1.json
 
 """
 
@@ -18,7 +23,8 @@ def prepare_tf_record(cfg,root_path,tf_record_path,final_params):
 	"""
 	Perpare the tf record using the config file values.
 
-	Parameters:
+	Parameters
+	----------
 		cfg: The dictionary attained from reading the json config
 			file.
 		root_path: The root path that will contain all of the training data
@@ -26,8 +32,6 @@ def prepare_tf_record(cfg,root_path,tf_record_path,final_params):
 		tf_record_path: The path where the TFRecord will be saved.
 		final_params: The parameters we expect to be in the final
 			set of lens parameters.
-	Returns:
-		None. The tf recrod will be generated.
 	"""
 	# Path to csv containing lens parameters.
 	lens_params_path = root_path + cfg['dataset_params']['lens_params_path']

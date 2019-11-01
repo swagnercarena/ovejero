@@ -13,6 +13,7 @@ import numpy as np
 import tensorflow as tf
 import pandas as pd
 import glob
+from tqdm import tqdm
 
 def normalize_lens_parameters(lens_params,lens_params_path,normalized_param_path,
 	normalization_constants_path,train_or_test='train'):
@@ -147,7 +148,7 @@ def generate_tf_record(root_path,lens_params,lens_params_path,tf_record_path):
 	lens_params_csv = pd.read_csv(lens_params_path, index_col=None)
 	# Initialize the writer object and write the lens data
 	with tf.io.TFRecordWriter(tf_record_path) as writer:
-		for npy_file in npy_file_list:
+		for npy_file in tqdm(npy_file_list):
 			# Pull the index from the filename
 			index = int(npy_file[-11:-4])
 			image_shape = np.load(npy_file).shape
