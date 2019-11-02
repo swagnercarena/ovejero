@@ -257,7 +257,8 @@ class LensingLossFunctionsTests(unittest.TestCase):
 			l_mat_elements_tf)
 
 		# Make sure everything matches
-		self.assertAlmostEqual(np.sum(np.abs(p_mat_tf.numpy()-prec_mat)),0)
+		self.assertAlmostEqual(np.sum(np.abs(p_mat_tf.numpy()-prec_mat)),0,
+			places=5)
 		diag_elements = np.array([1,3,6,10])
 		self.assertAlmostEqual(np.sum(np.abs(diag_tf.numpy()-diag_elements)),0)
 
