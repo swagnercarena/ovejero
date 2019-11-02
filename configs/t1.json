@@ -1,28 +1,40 @@
 {
-    "training_params": {
-        "bnn_type": "diag",
-        "batch_size": 128,
-        "random_seed": 1138,
-        "tensorboard_log_dir": "/home/swagnercarena/ovejero/logs/t1.log",
-        "n_epochs": 30,
-        "final_params": [
-            "external_shear_e1",
-            "external_shear_e2",
+    "dataset_params": {
+        "lens_params": [
+            "external_shear_gamma_ext",
+            "external_shear_psi_ext",
             "lens_mass_center_x",
             "lens_mass_center_y",
             "lens_mass_e1",
             "lens_mass_e2",
             "lens_mass_gamma",
-            "lens_mass_theta_E_log"
+            "lens_mass_theta_E"
         ],
-        "model_weights": "/home/swagnercarena/ovejero/models/t1.h5",
-        "root_path": "/home/swagnercarena/ovejero/datasets/train/",
-        "dropout_regularizer": 1e-06,
-        "kernel_regularizer": 1e-05,
-        "img_dim": 128,
-        "learning_rate": 0.0001,
-        "decay": 3e-06,
+        "lens_params_log": [
+            "lens_mass_theta_E"
+        ],
+        "normalization_constants_path": "norms.npy",
+        "ratang": {
+            "ratang_params_ang": [
+                "external_shear_psi_ext"
+            ],
+            "ratang_params_rat": [
+                "external_shear_gamma_ext"
+            ],
+            "ratang_parameter_prefixes": [
+                "external_shear"
+            ]
+        },
+        "new_param_path": "new_metadata.csv",
+        "lens_params_path": "metadata.csv"
+    },
+    "training_params": {
+        "batch_size": 128,
         "tf_record_path": "tf_record_train",
+        "n_epochs": 1,
+        "decay": 3e-06,
+        "tensorboard_log_dir": "/home/swagnercarena/ovejero/logs/t1.log",
+        "root_path": "/home/swagnercarena/ovejero/datasets/train/",
         "flip_pairs": [
             [
                 0,
@@ -38,35 +50,23 @@
                 4,
                 5
             ]
-        ]
-    },
-    "dataset_params": {
-        "normalization_constants_path": "norms.npy",
-        "lens_params_log": [
-            "lens_mass_theta_E"
         ],
-        "ratang": {
-            "ratang_params_ang": [
-                "external_shear_psi_ext"
-            ],
-            "ratang_params_rat": [
-                "external_shear_gamma_ext"
-            ],
-            "ratang_parameter_prefixes": [
-                "external_shear"
-            ]
-        },
-        "lens_params_path": "metadata.csv",
-        "lens_params": [
-            "external_shear_gamma_ext",
-            "external_shear_psi_ext",
+        "bnn_type": "diag",
+        "random_seed": 1138,
+        "dropout_regularizer": 1e-06,
+        "model_weights": "/home/swagnercarena/ovejero/models/t1.h5",
+        "img_dim": 128,
+        "kernel_regularizer": 1e-05,
+        "final_params": [
+            "external_shear_e1",
+            "external_shear_e2",
             "lens_mass_center_x",
             "lens_mass_center_y",
             "lens_mass_e1",
             "lens_mass_e2",
             "lens_mass_gamma",
-            "lens_mass_theta_E"
+            "lens_mass_theta_E_log"
         ],
-        "new_param_path": "new_metadata.csv"
+        "learning_rate": 1e-08
     }
 }
