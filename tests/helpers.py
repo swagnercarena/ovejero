@@ -13,7 +13,7 @@ def dataset_comparison(unittest_class,dataset,batch_size,num_npy):
 		height = batch['height'].numpy()[0]
 		width = batch['width'].numpy()[0]
 		batch_images = tf.io.decode_raw(batch['image'],
-			out_type=np.float32).numpy().reshape(batch_size,
+			out_type=np.float32).numpy().reshape(-1,
 				height,width)
 		npy_indexs = batch['index'].numpy()
 		lens_params_batch = []
