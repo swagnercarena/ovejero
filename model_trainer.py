@@ -157,8 +157,9 @@ def main():
 	else:
 		print('TFRecord found at %s'%(tf_record_path))
 
+	# We let keras deal with epochs instead of the tf dataset object.
 	tf_dataset = data_tools.build_tf_dataset(tf_record_path,final_params,
-		batch_size,n_epochs)
+		batch_size,1)
 
 	print('Initializing the model')
 
@@ -193,7 +194,8 @@ def main():
 	modelcheckpoint = ModelCheckpoint(model_weights)
 
 	# TODO add validation data.
-	model.fit_generator(tf_dataset,callbacks=[tensorboard, modelcheckpoint])
+	model.fit(tf_dataset,callbacks=[tensorboard, modelcheckpoint],
+		epochs = n_epochs)
 
 if __name__ == '__main__':
     main()
