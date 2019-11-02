@@ -67,7 +67,23 @@ class ConcreteDropout(Layer):
 
 		Parameters
 		----------
-			TODO
+			output_dim (int): The number of output parameters
+			activation (str): The type of activation function to be used. Will
+				be passed into tensorflow's activation function library.
+			kernel_initializer (str): The type of initializer to use for the
+				kernel. Will be passed to tensorflow's initializer library
+			bias_initializer (str): The type of initializer to use for the
+				bias. Will be passed to tensorflow's initializer library
+			kernel_regularizer (float): The strength of the concrete dropout
+				regularization term
+			dropout_regularizer (float): The strength of the concrete dropout
+				p regularization term
+			init_min (float): The minimum initial value of the dropout rate
+			init_max (float): The maximum initial value of the dropout rate
+			temp (float): The temperature that defines how close the concrete
+				distribution will be to true dropout.
+			random_seed (int): A seed to use in the random function calls. If 
+				None no explicit seed will be used.
 
 		Returns
 		-------
@@ -79,6 +95,8 @@ class ConcreteDropout(Layer):
 			Technically the regularization terms must be divided by the number
 				of training examples. This is degenerate with the value of the
 				regularizers, so we do not specify it here.
+			The initial dropout rate will be drawn from a uniform distribution
+				with the bounds passed into init.
 		"""
 		# We do this because Keras does this
 		if 'input_shape' not in kwargs and 'input_dim' in kwargs:
@@ -257,7 +275,44 @@ class SpatialConcreteDropout(Conv2D):
 		activation=None, kernel_regularizer=1e-6, dropout_regularizer=1e-5, 
 		init_min=0.1, init_max=0.1, temp=0.1, random_seed=None, **kwargs):
 		"""
-		TODO
+		Initialize the Spatial Concrete dropout Dense layer. This will initialize
+		the Conv2d layer along with the overhead needed for spatial concrete 
+		dropout.
+
+		Parameters
+		----------
+			filters (int): The number of filters to use for the Conv2D layer
+			kernel_size ((int,int)): The dimensions of the kernel for the
+				Conv2D layer
+			strides ((int,int)): The stride to take in each direction for the
+				Conv2D layer.
+			padding (str): What type of padding to use to get the desired
+				output dimensions from the Conv2D layer. Either valid or same
+			activation (str): The type of activation function to be used. Will
+				be passed into tensorflow's activation function library.
+			kernel_regularizer (float): The strength of the concrete dropout
+				regularization term
+			dropout_regularizer (float): The strength of the concrete dropout
+				p regularization term
+			init_min (float): The minimum initial value of the dropout rate
+			init_max (float): The maximum initial value of the dropout rate
+			temp (float): The temperature that defines how close the concrete
+				distribution will be to true dropout.
+			random_seed (int): A seed to use in the random function calls. If 
+				None no explicit seed will be used.
+
+		Returns
+		-------
+			(keras.Layer): The initialized SpatialConcreteDropout layer. Must 
+				still be built.
+
+		Notes
+		-----
+			Technically the regularization terms must be divided by the number
+				of training examples. This is degenerate with the value of the
+				regularizers, so we do not specify it here.
+			The initial dropout rate will be drawn from a uniform distribution
+				with the bounds passed into init.
 		"""
 		super(SpatialConcreteDropout, self).__init__(filters, kernel_size, 
 			strides=strides, padding=padding, activation=activation, **kwargs)
