@@ -9,13 +9,13 @@ To run ovejero, you must first install tensorflow 2.0. This is not part of the p
 
 .. code-block:: bash
 
-	$ pip install tensorflow --user
+	$ pip install tensorflow==2.0.0a0 --user
 
 Otherswise use the command 
 
 .. code-block:: bash
 
-	$ pip install tensorflow-gpu --user
+	$ pip install tensorflow-gpu==2.0.0a0 --user
 
 Then clone the directory and run the setup.py file to complete the installation
 
