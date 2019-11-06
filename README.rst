@@ -1,5 +1,5 @@
 ========================================================
-ovejero - bayesian neural network inference of strong gravitational lenses
+ovejero - Bayesian Neural Network Inference of Strong Gravitational Lenses
 ========================================================
 ''ovejero'' conducts hierarchical inference of strongly-lensed systems with Bayesian neural networks
 
