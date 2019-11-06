@@ -1,9 +1,8 @@
-import unittest, json, glob, os, sys
+import unittest, json, glob, os
 # Eliminate TF warning in tests
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 import tensorflow as tf
-sys.path.append("../")
-import model_trainer
+from ovejero import model_trainer
 from helpers import dataset_comparison
 
 class TFRecordTests(unittest.TestCase):

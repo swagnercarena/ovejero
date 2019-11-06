@@ -1,11 +1,10 @@
 # TODO: Change the imports once this is a package!!
 import unittest
-import sys, os, glob
+import os, glob
 # Eliminate TF warning in tests
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 import tensorflow as tf
-sys.path.append("../")
-import data_tools
+from ovejero import data_tools
 import numpy as np
 import pandas as pd
 from helpers import dataset_comparison

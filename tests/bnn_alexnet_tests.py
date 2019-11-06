@@ -1,12 +1,11 @@
 # TODO: Change the imports once this is a package!!
 import unittest
-import sys, os
+import os
 # Eliminate TF warning in tests
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 import numpy as np
 import tensorflow as tf
-sys.path.append("../")
-import bnn_alexnet
+from ovejero import bnn_alexnet
 from scipy.stats import multivariate_normal
 
 class BNNTests(unittest.TestCase):

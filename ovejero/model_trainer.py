@@ -16,8 +16,7 @@ from tensorflow.keras.optimizers import Adam
 import argparse, json, os
 
 # Import the code to construct the bnn and the data pipeline
-import bnn_alexnet
-import data_tools
+from ovejero import bnn_alexnet, data_tools
 
 def prepare_tf_record(cfg,root_path,tf_record_path,final_params):
 	"""
