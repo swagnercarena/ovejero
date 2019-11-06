@@ -17,7 +17,7 @@ Otherswise use the command
 
 	$ pip install tensorflow-gpu --user
 
-Then clone the directory and run the setup.py file to complete the baobab installation
+Then clone the directory and run the setup.py file to complete the installation
 
 .. code-block:: bash
 
