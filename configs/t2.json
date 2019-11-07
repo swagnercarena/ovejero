@@ -1,7 +1,16 @@
 {
     "training_params": {
+        "bnn_type": "full",
+        "decay": 3e-06,
+        "random_seed": 1138,
+        "batch_size": 128,
+        "img_dim": 128,
+        "tensorboard_log_dir": "/home/swagnercarena/ovejero/logs/t2.log",
+        "kernel_regularizer": 1e-05,
+        "n_epochs": 80,
         "tf_record_path": "tf_record_train",
-        "bnn_type": "diag",
+        "root_path": "/home/swagnercarena/ovejero/datasets/train/",
+        "dropout_regularizer": 1e-06,
         "learning_rate": 1e-05,
         "final_params": [
             "external_shear_e1",
@@ -13,10 +22,6 @@
             "lens_mass_gamma",
             "lens_mass_theta_E_log"
         ],
-        "root_path": "/home/swagnercarena/ovejero/datasets/train/",
-        "batch_size": 128,
-        "dropout_regularizer": 1e-06,
-        "n_epochs": 80,
         "flip_pairs": [
             [
                 0,
@@ -33,30 +38,22 @@
                 5
             ]
         ],
-        "random_seed": 1138,
-        "img_dim": 128,
-        "kernel_regularizer": 1e-05,
-        "tensorboard_log_dir": "/home/swagnercarena/ovejero/logs/t1.log",
-        "model_weights": "/home/swagnercarena/ovejero/models/t1.h5",
-        "decay": 3e-06
+        "model_weights": "/home/swagnercarena/ovejero/models/t2.h5"
     },
     "dataset_params": {
-        "lens_params_log": [
-            "lens_mass_theta_E"
-        ],
-        "lens_params_path": "metadata.csv",
-        "new_param_path": "new_metadata.csv",
         "ratang": {
-            "ratang_params_rat": [
-                "external_shear_gamma_ext"
-            ],
             "ratang_params_ang": [
                 "external_shear_psi_ext"
+            ],
+            "ratang_params_rat": [
+                "external_shear_gamma_ext"
             ],
             "ratang_parameter_prefixes": [
                 "external_shear"
             ]
         },
+        "lens_params_path": "metadata.csv",
+        "new_param_path": "new_metadata.csv",
         "lens_params": [
             "external_shear_gamma_ext",
             "external_shear_psi_ext",
@@ -65,6 +62,9 @@
             "lens_mass_e1",
             "lens_mass_e2",
             "lens_mass_gamma",
+            "lens_mass_theta_E"
+        ],
+        "lens_params_log": [
             "lens_mass_theta_E"
         ],
         "normalization_constants_path": "norms.npy"
