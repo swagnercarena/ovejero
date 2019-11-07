@@ -20,6 +20,8 @@ Otherswise use the command
 Then clone the directory and run the setup.py file to complete the installation
 
 .. code-block:: bash
-
+	
+	$ git clone https://github.com/swagnercarena/ovejero.git
+	$ cd overjero/
 	$ python setup.py install
 
