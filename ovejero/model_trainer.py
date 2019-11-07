@@ -18,6 +18,42 @@ import argparse, json, os
 # Import the code to construct the bnn and the data pipeline
 from ovejero import bnn_alexnet, data_tools
 
+def config_checker(cfg):
+	"""
+	Check that configuration file meets ovejero requirements. Throw an error
+	if configuration file is invalid.
+
+	Parameters
+	----------
+	cfg: The dictionary attained from reading the json config.
+	"""
+
+	def recursive_key_checker(dict_check,dict_ref):
+		"""
+		Check that dictionary has all of the keys in a reference dictionary, and
+		that the same is true for any sub-dictionaries. Raise an error if not
+		identical.
+
+		Parameters
+		----------
+		dict_check (dict): The dictionary to check
+		dict_ref (dict): The reference dictionary
+
+		"""
+		for key in dict_ref:
+			if key not in dict_check:
+				raise RuntimeError('Input config does not contain %s'%(key))
+			if isinstance(dict_ref[key],dict):
+				recursive_key_checker(dict_check[key],dict_ref[key])
+
+	# Load the check json file
+	root_path = os.path.dirname(os.path.abspath(__file__))
+	with open(root_path+'/check.json','r') as json_f:
+		cfg_ref = json.load(json_f)
+
+	recursive_key_checker(cfg,cfg_ref)
+
+
 def prepare_tf_record(cfg,root_path,tf_record_path,final_params):
 	"""
 	Perpare the tf record using the config file values.
@@ -110,6 +146,9 @@ def main():
 
 	with open(args.config,'r') as json_f:
 		cfg = json.load(json_f)
+
+	# Check the config file meets requirements
+	config_checker(cfg)
 
 	# Extract neccesary parameters from the json config
 	# The batch size used for training

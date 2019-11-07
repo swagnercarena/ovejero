@@ -1,0 +1,38 @@
+{
+    "dataset_params": {
+        "lens_params": [
+        ],
+        "lens_params_log": [
+        ],
+        "normalization_constants_path": "",
+        "ratang": {
+            "ratang_params_ang": [
+            ],
+            "ratang_params_rat": [
+            ],
+            "ratang_parameter_prefixes": [
+            ]
+        },
+        "new_param_path": "",
+        "lens_params_path": ""
+    },
+    "training_params": {
+        "batch_size": 0,
+        "tf_record_path": "",
+        "n_epochs": 0,
+        "decay": 0,
+        "tensorboard_log_dir": "",
+        "root_path": "",
+        "flip_pairs": [
+        ],
+        "bnn_type": "",
+        "random_seed": 0,
+        "dropout_regularizer": 0,
+        "model_weights": "",
+        "img_dim": 0,
+        "kernel_regularizer": 0,
+        "final_params": [
+        ],
+        "learning_rate": 0
+    }
+}

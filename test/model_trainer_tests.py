@@ -5,21 +5,47 @@ import tensorflow as tf
 from ovejero import model_trainer
 from helpers import dataset_comparison
 
-class TFRecordTests(unittest.TestCase):
+class DataPrepTests(unittest.TestCase):
 
 	def __init__(self, *args, **kwargs):
-		super(TFRecordTests, self).__init__(*args, **kwargs)
-		self.root_path = 'test_data/'
+		super(DataPrepTests, self).__init__(*args, **kwargs)
+		self.root_path = os.path.dirname(os.path.abspath(__file__))+'test_data/'
 		self.lens_params = ['external_shear_e1','external_shear_e2',
 			'lens_mass_center_x','lens_mass_center_y','lens_mass_e1',
 			'lens_mass_e2','lens_mass_gamma','lens_mass_theta_E_log']
 		self.lens_params_path = self.root_path + 'new_metadata.csv'
 		self.tf_record_path = self.root_path + 'test_record'
 
+	def test_config_checker(self):
+		# Test that the config checker doesn't fail correct configuration files
+		# and does fail configs with missing fields.
+		with open(self.root_path+'test.json','r') as json_f:
+			cfg = json.load(json_f)
+		model_trainer.config_checker(cfg)
+
+		del cfg['training_params']
+		with self.assertRaises(RuntimeError):
+			model_trainer.config_checker(cfg)
+
+		with open(self.root_path+'test.json','r') as json_f:
+			cfg = json.load(json_f)
+		del cfg['training_params']['kernel_regularizer']
+		with self.assertRaises(RuntimeError):
+			model_trainer.config_checker(cfg)
+		self.assertTrue('training_params' in cfg)
+
+		with open(self.root_path+'test.json','r') as json_f:
+			cfg = json.load(json_f)
+		del cfg['dataset_params']['ratang']['ratang_parameter_prefixes']
+		with self.assertRaises(RuntimeError):
+			model_trainer.config_checker(cfg)
+		self.assertTrue('dataset_params' in cfg)
+		self.assertTrue('ratang' in cfg['dataset_params'])
+
 	def test_prepare_tf_record(self):
 		# Test that the prepare_tf_record function works as expected.
 		with open(self.root_path+'test.json','r') as json_f:
-		    cfg = json.load(json_f)
+			cfg = json.load(json_f)
 		model_trainer.prepare_tf_record(cfg,self.root_path,
 			self.tf_record_path,self.lens_params)
 
