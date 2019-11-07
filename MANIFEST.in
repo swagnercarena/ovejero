@@ -1,0 +1,4 @@
+include README.rst
+include test/test_data/*
+include ovejero/check.json
+include configs/*.json
