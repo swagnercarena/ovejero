@@ -3,6 +3,7 @@ import unittest, json, glob, os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 import tensorflow as tf
 import numpy as np
+import pandas as pd
 from ovejero import model_trainer
 from helpers import dataset_comparison
 
@@ -70,6 +71,10 @@ class DataPrepTests(unittest.TestCase):
 		# Test that the prepare_tf_record function works as expected.
 		with open(self.root_path+'test.json','r') as json_f:
 			cfg = json.load(json_f)
+		with self.assertRaises(FileNotFoundError):
+			train_or_test='test'
+			model_trainer.prepare_tf_record(cfg, self.root_path, 
+				self.tf_record_path,self.lens_params,train_or_test)
 		train_or_test='train'
 		model_trainer.prepare_tf_record(cfg, self.root_path, self.tf_record_path,
 			self.lens_params,train_or_test)

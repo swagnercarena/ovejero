@@ -12,7 +12,7 @@ See the script model_trainer.py for examples of how to use these functions.
 import numpy as np
 import tensorflow as tf
 import pandas as pd
-import glob
+import glob, os
 from tqdm import tqdm
 
 def normalize_lens_parameters(lens_params,lens_params_path,normalized_param_path,
@@ -45,6 +45,9 @@ def normalize_lens_parameters(lens_params,lens_params_path,normalized_param_path
 	if train_or_test == 'train':
 		norm_const_dict = {'constant':['means','std']}
 	else:
+		if not os.path.exists(normalization_constants_path):
+			raise FileNotFoundError('%s is not a valid normalization path'%(
+				normalization_constants_path))
 		norm_const_dict = pd.read_csv(normalization_constants_path, 
 			index_col=None)
 
@@ -59,9 +62,10 @@ def normalize_lens_parameters(lens_params,lens_params_path,normalized_param_path
 	df = pd.DataFrame(data=norm_dict)
 	# Don't include an index to be consistent with baobab csv files.
 	df.to_csv(normalized_param_path,index=False)
-	# Repeat the same for the mean and std information
-	df_const = pd.DataFrame(data=norm_const_dict)
-	df_const.to_csv(normalization_constants_path,index=False)
+	if train_or_test == 'train':
+		# Repeat the same for the mean and std information
+		df_const = pd.DataFrame(data=norm_const_dict)
+		df_const.to_csv(normalization_constants_path,index=False)
 
 def write_parameters_in_log_space(lens_params,lens_params_path,
 	new_lens_params_path):
