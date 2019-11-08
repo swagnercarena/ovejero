@@ -2,6 +2,7 @@ import unittest, json, glob, os
 # Eliminate TF warning in tests
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 import tensorflow as tf
+import numpy as np
 from ovejero import model_trainer
 from helpers import dataset_comparison
 
@@ -48,6 +49,23 @@ class DataPrepTests(unittest.TestCase):
 		self.assertTrue('dataset_params' in cfg)
 		self.assertTrue('ratang' in cfg['dataset_params'])
 
+	def test_load_config(self):
+		# Test that load config returns a config file and fails the config check
+		# when it should.
+		cfg = model_trainer.load_config(self.root_path+'test.json')
+
+		del cfg['validation_params']
+		temp_cfg_path = self.root_path + 'temp.json'
+
+		with open(temp_cfg_path,'w') as json_f:
+			json.dump(cfg,json_f,indent=4)
+
+		with self.assertRaises(RuntimeError):
+			model_trainer.load_config(temp_cfg_path)
+
+		os.remove(temp_cfg_path)			
+
+
 	def test_prepare_tf_record(self):
 		# Test that the prepare_tf_record function works as expected.
 		with open(self.root_path+'test.json','r') as json_f:
@@ -82,3 +100,50 @@ class DataPrepTests(unittest.TestCase):
 		os.remove(self.tf_record_path)
 		os.remove(self.root_path+'new_metadata.csv')
 		os.remove(self.root_path+'norms.npy')
+
+	def test_model_loss_builder(self):
+		# Test that the model and loss returned from model_loss_builder
+		# agree with what is expected.
+		cfg = model_trainer.load_config(self.root_path+'test.json')
+		final_params = cfg['training_params']['final_params']
+		num_params = len(final_params)
+
+		model, loss = model_trainer.model_loss_builder(cfg)
+		y_true = np.ones((1,num_params))
+		y_pred = np.ones((1,2*(num_params + 
+			int(num_params*(num_params+1)/2))+1))
+		yptf = tf.constant(y_pred,dtype=tf.float32)
+		yttf = tf.constant(y_true,dtype=tf.float32)
+
+		# Check that the loss function has the right dimensions. More rigerous
+		# tests of the loss function can be found in the test_bnn_alexnet.
+		loss(yttf,yptf)
+		self.assertEqual(len(model.layers),13)
+		self.assertEqual(model.layers[-1].output_shape[-1],y_pred.shape[-1])
+
+		cfg['training_params']['bnn_type'] = 'full'
+		model, loss = model_trainer.model_loss_builder(cfg)
+		y_true = np.ones((1,num_params))
+		y_pred = np.ones((1,num_params + int(num_params*(num_params+1)/2)))
+		yptf = tf.constant(y_pred,dtype=tf.float32)
+		yttf = tf.constant(y_true,dtype=tf.float32)
+
+		# Check that the loss function has the right dimensions. More rigerous
+		# tests of the loss function can be found in the test_bnn_alexnet.
+		loss(yttf,yptf)
+		self.assertEqual(len(model.layers),13)
+		self.assertEqual(model.layers[-1].output_shape[-1],y_pred.shape[-1])	
+		
+		cfg['training_params']['bnn_type'] = 'diag'
+		model, loss = model_trainer.model_loss_builder(cfg)
+		y_true = np.ones((1,num_params))
+		y_pred = np.ones((1,2*num_params))
+		yptf = tf.constant(y_pred,dtype=tf.float32)
+		yttf = tf.constant(y_true,dtype=tf.float32)
+
+		# Check that the loss function has the right dimensions. More rigerous
+		# tests of the loss function can be found in the test_bnn_alexnet.
+		loss(yttf,yptf)
+		self.assertEqual(len(model.layers),13)
+		self.assertEqual(model.layers[-1].output_shape[-1],y_pred.shape[-1])		
+

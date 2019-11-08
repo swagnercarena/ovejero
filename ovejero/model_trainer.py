@@ -36,8 +36,8 @@ def config_checker(cfg):
 
 		Parameters
 		----------
-		dict_check (dict): The dictionary to check
-		dict_ref (dict): The reference dictionary
+			dict_check (dict): The dictionary to check
+			dict_ref (dict): The reference dictionary
 
 		"""
 		for key in dict_ref:
@@ -53,6 +53,29 @@ def config_checker(cfg):
 
 	recursive_key_checker(cfg,cfg_ref)
 
+def load_config(config_path):
+	"""
+	Load a configuration file from the path and check that it meets the 
+	requirements.
+
+	Parameters
+	----------
+		config_path (str): The path to the config file to be loaded 
+
+	Returns
+	-------
+		(dict): A dictionary object with the config file.
+	"""
+	# Load the config
+	with open(config_path,'r') as json_f:
+		cfg = json.load(json_f)
+
+	# Check that it's up to snuff
+	config_checker(cfg)
+
+	# Return it
+	return cfg
+
 
 def prepare_tf_record(cfg,root_path,tf_record_path,final_params):
 	"""
@@ -60,12 +83,12 @@ def prepare_tf_record(cfg,root_path,tf_record_path,final_params):
 
 	Parameters
 	----------
-		cfg: The dictionary attained from reading the json config
+		cfg (dict): The dictionary attained from reading the json config
 			file.
-		root_path: The root path that will contain all of the data
+		root_path (str): The root path that will contain all of the data
 			including the lens parameters, the npy files, and the TFRecord.
-		tf_record_path: The path where the TFRecord will be saved.
-		final_params: The parameters we expect to be in the final
+		tf_record_path (str): The path where the TFRecord will be saved.
+		final_params ([str,...]): The parameters we expect to be in the final
 			set of lens parameters.
 	"""
 	# Path to csv containing lens parameters.
@@ -133,6 +156,83 @@ def prepare_tf_record(cfg,root_path,tf_record_path,final_params):
 	data_tools.generate_tf_record(root_path,lens_params,new_param_path,
 		tf_record_path)
 
+def model_loss_builder(cfg, verbose=False):
+	"""
+	Build a model according to the specifications in configuration dictionary
+	and return both the initialized model and the loss function.
+
+	Parameters
+	----------
+		cfg (dict): The dictionary attained from reading the json config
+			file.
+		verbose (bool): If True, will be verbose as model is built.
+
+	Returns
+	-------
+		(tf.keras.model, function): A bnn model of the type specified in config
+			and a callable function to construct the tesnorflow graph for the 
+			loss. 
+	"""
+	# Load the parameters we need from the config file. Some of these will
+	# be repeats from the main script.
+
+	# The final parameters that need to be in tf_record_path
+	final_params = cfg['training_params']['final_params']
+	num_params = len(final_params)
+	# The learning rate
+	learning_rate = cfg['training_params']['learning_rate']
+	# The decay rate for Adam
+	decay = cfg['training_params']['decay']
+	# Image dimensions
+	img_dim = cfg['training_params']['img_dim']
+	# Weight and dropout regularization parameters for the concrete dropout
+	# model.
+	kr = cfg['training_params']['kernel_regularizer']
+	dr = cfg['training_params']['dropout_regularizer']
+	# If the any of the parameters contain excentricities then the e1/e2
+	# pair should be included in the flip list for the correct loss function
+	# behavior. See the example config files.
+	flip_pairs = cfg['training_params']['flip_pairs']
+	# The type of BNN output (either diag, full, or gmm).
+	bnn_type = cfg['training_params']['bnn_type']
+	# The path to the model weights. If they already exist they will be loaded
+	model_weights = cfg['training_params']['model_weights']
+	# Finally set the random seed we will use for training
+	random_seed = cfg['training_params']['random_seed']
+
+
+	# Initialize the log function according to bnn_type
+	loss_class = bnn_alexnet.LensingLossFunctions(flip_pairs,num_params)
+	if bnn_type == 'diag':
+		loss = loss_class.diagonal_covariance_loss
+		num_outputs = num_params*2
+	elif bnn_type == 'full':
+		loss = loss_class.full_covariance_loss
+		num_outputs = num_params + int(num_params*(num_params+1)/2)
+	elif bnn_type == 'gmm':
+		loss = loss_class.gm_full_covariance_loss
+		num_outputs = 2*(num_params + int(num_params*(num_params+1)/2))+1
+	else:
+		raise RuntimeError('BNN type %s does not exist'%(bnn_type))
+
+	model = bnn_alexnet.concrete_alexnet((img_dim, img_dim, 1), num_outputs,
+		kernel_regularizer=kr,dropout_regularizer=dr,random_seed=random_seed)
+
+	adam = Adam(lr=learning_rate,amsgrad=False,decay=decay)
+	model.compile(loss=loss, optimizer=adam, metrics=[loss])
+	if verbose:
+		print('Is model built: ' + str(model.built))
+
+	try:
+		model.load_weights(model_weights)
+		if verbose:
+			print('Loaded weights %s'%(model_weights))
+	except:
+		if verbose:
+			print('No weights found. Saving new weights to %s'%(model_weights))
+
+	return model, loss
+
 def main():
 	"""
 	Initializes and trains a BNN network. Path to config file are read from 
@@ -144,21 +244,13 @@ def main():
 		'and data/model paths')
 	args = parser.parse_args()
 
-	with open(args.config,'r') as json_f:
-		cfg = json.load(json_f)
-
-	# Check the config file meets requirements
-	config_checker(cfg)
+	cfg = load_config(args.config)
 
 	# Extract neccesary parameters from the json config
 	# The batch size used for training
 	batch_size = cfg['training_params']['batch_size']
 	# The number of epochs of training
 	n_epochs = cfg['training_params']['n_epochs']
-	# The learning rate
-	learning_rate = cfg['training_params']['learning_rate']
-	# The decay rate for Adam
-	decay = cfg['training_params']['decay']
 	# The root path that will contain all of the training data including the lens
 	# parameters, the npy files, and the TFRecord for training.
 	root_path_t = cfg['training_params']['root_path']
@@ -167,27 +259,13 @@ def main():
 	# The filename of the TFRecord for training data
 	tf_record_path_t = root_path_t+cfg['training_params']['tf_record_path']
 	# The same but for validation
-	tf_record_path_v = root_path_t+cfg['validation_params']['tf_record_path']
+	tf_record_path_v = root_path_v+cfg['validation_params']['tf_record_path']
 	# The final parameters that need to be in tf_record_path
 	final_params = cfg['training_params']['final_params']
-	num_params = len(final_params)
 	# The path to the model weights. If they already exist they will be loaded
 	model_weights = cfg['training_params']['model_weights']
-	# Image dimensions
-	img_dim = cfg['training_params']['img_dim']
-	# Weight and dropout regularization parameters for the concrete dropout
-	# model.
-	kr = cfg['training_params']['kernel_regularizer']
-	dr = cfg['training_params']['dropout_regularizer']
 	# The path for the Tensorboard logs
 	tensorboard_log_dir = cfg['training_params']['tensorboard_log_dir']
-
-	# If the any of the parameters contain excentricities then the e1/e2
-	# pair should be included in the flip list for the correct loss function
-	# behavior. See the example config files.
-	flip_pairs = cfg['training_params']['flip_pairs']
-	# The type of BNN output (either diag, full, or gmm).
-	bnn_type = cfg['training_params']['bnn_type']
 
 	# Finally set the random seed we will use for training
 	random_seed = cfg['training_params']['random_seed']
@@ -215,32 +293,7 @@ def main():
 
 	print('Initializing the model')
 
-	# Initialize the log function according to bnn_type
-	loss_class = bnn_alexnet.LensingLossFunctions(flip_pairs,num_params)
-	if bnn_type == 'diag':
-		loss = loss_class.diagonal_covariance_loss
-		num_outputs = num_params*2
-	elif bnn_type == 'full':
-		loss = loss_class.full_covariance_loss
-		num_outputs = num_params + int(num_params*(num_params+1)/2)
-	elif bnn_type == 'gmm':
-		loss = loss_class.gm_full_covariance_loss
-		num_outputs = 2*(num_params + int(num_params*(num_params+1)/2))+1
-	else:
-		raise RuntimeError('BNN type %s does not exist'%(bnn_type))
-
-	model = bnn_alexnet.concrete_alexnet((img_dim, img_dim, 1), num_outputs,
-		kernel_regularizer=kr,dropout_regularizer=dr,random_seed=random_seed)
-
-	adam = Adam(lr=learning_rate,amsgrad=False,decay=decay)
-	model.compile(loss=loss, optimizer=adam, metrics=[loss])
-	print('Is model built: ' + str(model.built))
-
-	try:
-		model.load_weights(model_weights)
-		print('Loaded weights %s'%(model_weights))
-	except:
-		print('No weights found. Saving new weights to %s'%(model_weights))
+	model, loss = model_loss_builder(cfg,verbose=True)
 
 	tensorboard = TensorBoard(log_dir=tensorboard_log_dir,update_freq='batch')
 	modelcheckpoint = ModelCheckpoint(model_weights)
