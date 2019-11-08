@@ -71,6 +71,6 @@
             "lens_mass_gamma",
             "lens_mass_theta_E"
         ],
-        "normalization_constants_path": "norms.npy"
+        "normalization_constants_path": "norms.csv"
     }
 }

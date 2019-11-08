@@ -1,6 +1,6 @@
 {
     "dataset_params": {
-        "normalization_constants_path": "norms.npy",
+        "normalization_constants_path": "norms.csv",
         "lens_params": [
             "external_shear_gamma_ext",
             "external_shear_psi_ext",

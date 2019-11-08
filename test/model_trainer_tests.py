@@ -132,7 +132,7 @@ class DataPrepTests(unittest.TestCase):
 		# Clean up the file now that we're done
 		os.remove(self.tf_record_path)
 		os.remove(self.root_path+'new_metadata.csv')
-		os.remove(self.root_path+'norms.npy')
+		os.remove(self.root_path+'norms.csv')
 
 	def test_model_loss_builder(self):
 		# Test that the model and loss returned from model_loss_builder
