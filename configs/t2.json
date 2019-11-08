@@ -1,17 +1,14 @@
 {
     "training_params": {
         "bnn_type": "full",
-        "decay": 3e-06,
-        "random_seed": 1138,
         "batch_size": 128,
-        "img_dim": 128,
-        "tensorboard_log_dir": "/home/swagnercarena/ovejero/logs/t2.log",
-        "kernel_regularizer": 1e-05,
         "n_epochs": 80,
-        "tf_record_path": "tf_record_train",
-        "root_path": "/home/swagnercarena/ovejero/datasets/train/",
-        "dropout_regularizer": 1e-06,
         "learning_rate": 1e-05,
+        "decay": 3e-06,
+        "kernel_regularizer": 1e-05,
+        "dropout_regularizer": 1e-06,
+        "root_path": "/Users/sebwagner/Documents/Grad_School/Rotations/Phil/ovejero/datasets/train/",
+        "tf_record_path": "tf_record_train",
         "final_params": [
             "external_shear_e1",
             "external_shear_e2",
@@ -38,22 +35,19 @@
                 5
             ]
         ],
-        "model_weights": "/home/swagnercarena/ovejero/models/t2.h5"
+        "img_dim": 128,
+        "model_weights": "/Users/sebwagner/Documents/Grad_School/Rotations/Phil/ovejero/models/t2.h5",
+        "tensorboard_log_dir": "/Users/sebwagner/Documents/Grad_School/Rotations/Phil/ovejero/logs/t2.log",
+        "random_seed": 1138
+    },
+    "validation_params": {
+        "root_path": "/Users/sebwagner/Documents/Grad_School/Rotations/Phil/ovejero/datasets/train/",
+        "tf_record_path": "tf_record_val"
     },
     "dataset_params": {
-        "ratang": {
-            "ratang_params_ang": [
-                "external_shear_psi_ext"
-            ],
-            "ratang_params_rat": [
-                "external_shear_gamma_ext"
-            ],
-            "ratang_parameter_prefixes": [
-                "external_shear"
-            ]
-        },
         "lens_params_path": "metadata.csv",
         "new_param_path": "new_metadata.csv",
+        "normalization_constants_path": "norms.npy",
         "lens_params": [
             "external_shear_gamma_ext",
             "external_shear_psi_ext",
@@ -67,6 +61,16 @@
         "lens_params_log": [
             "lens_mass_theta_E"
         ],
-        "normalization_constants_path": "norms.npy"
+        "ratang": {
+            "ratang_parameter_prefixes": [
+                "external_shear"
+            ],
+            "ratang_params_rat": [
+                "external_shear_gamma_ext"
+            ],
+            "ratang_params_ang": [
+                "external_shear_psi_ext"
+            ]
+        }
     }
 }

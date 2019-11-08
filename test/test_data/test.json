@@ -40,6 +40,10 @@
         "tensorboard_log_dir": "/Users/sebwagner/Documents/Grad_School/Rotations/Phil/ovejero/test/test_data/test.log",
         "random_seed": 1138
     },
+    "validation_params": {
+        "root_path": "/Users/sebwagner/Documents/Grad_School/Rotations/Phil/ovejero/test/test_data/",
+        "tf_record_path": "tf_record_test_val"
+    },
     "dataset_params": {
         "lens_params_path": "metadata.csv",
         "new_param_path": "new_metadata.csv",

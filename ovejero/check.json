@@ -16,6 +16,10 @@
         "new_param_path": "",
         "lens_params_path": ""
     },
+    "validation_params": {
+        "root_path": "",
+        "tf_record_path": ""
+    },
     "training_params": {
         "batch_size": 0,
         "tf_record_path": "",

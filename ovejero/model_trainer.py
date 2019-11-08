@@ -62,7 +62,7 @@ def prepare_tf_record(cfg,root_path,tf_record_path,final_params):
 	----------
 		cfg: The dictionary attained from reading the json config
 			file.
-		root_path: The root path that will contain all of the training data
+		root_path: The root path that will contain all of the data
 			including the lens parameters, the npy files, and the TFRecord.
 		tf_record_path: The path where the TFRecord will be saved.
 		final_params: The parameters we expect to be in the final
@@ -160,10 +160,14 @@ def main():
 	# The decay rate for Adam
 	decay = cfg['training_params']['decay']
 	# The root path that will contain all of the training data including the lens
-	# parameters, the npy files, and the TFRecord.
-	root_path = cfg['training_params']['root_path']
-	# The filename of the TFRecord
-	tf_record_path = root_path+cfg['training_params']['tf_record_path']
+	# parameters, the npy files, and the TFRecord for training.
+	root_path_t = cfg['training_params']['root_path']
+	# The same but for validation
+	root_path_v = cfg['validation_params']['root_path']
+	# The filename of the TFRecord for training data
+	tf_record_path_t = root_path_t+cfg['training_params']['tf_record_path']
+	# The same but for validation
+	tf_record_path_v = root_path_t+cfg['validation_params']['tf_record_path']
 	# The final parameters that need to be in tf_record_path
 	final_params = cfg['training_params']['final_params']
 	num_params = len(final_params)
@@ -189,14 +193,24 @@ def main():
 	random_seed = cfg['training_params']['random_seed']
 	tf.random.set_seed(random_seed)
 
-	if not os.path.exists(tf_record_path):
-		print('Generating new TFRecord at %s'%(tf_record_path))
-		prepare_tf_record(cfg,root_path,tf_record_path,final_params)
+	print('Checking for training data.')
+	if not os.path.exists(tf_record_path_t):
+		print('Generating new TFRecord at %s'%(tf_record_path_t))
+		prepare_tf_record(cfg,root_path_t,tf_record_path_t,final_params)
 	else:
-		print('TFRecord found at %s'%(tf_record_path))
+		print('TFRecord found at %s'%(tf_record_path_t))
+
+	print('Checking for validation data.')
+	if not os.path.exists(tf_record_path_v):
+		print('Generating new TFRecord at %s'%(tf_record_path_v))
+		prepare_tf_record(cfg,root_path_v,tf_record_path_v,final_params)
+	else:
+		print('TFRecord found at %s'%(tf_record_path_v))
 
 	# We let keras deal with epochs instead of the tf dataset object.
-	tf_dataset = data_tools.build_tf_dataset(tf_record_path,final_params,
+	tf_dataset_t = data_tools.build_tf_dataset(tf_record_path_t,final_params,
+		batch_size,1)
+	tf_dataset_v = data_tools.build_tf_dataset(tf_record_path_v,final_params,
 		batch_size,1)
 
 	print('Initializing the model')
@@ -219,7 +233,7 @@ def main():
 		kernel_regularizer=kr,dropout_regularizer=dr,random_seed=random_seed)
 
 	adam = Adam(lr=learning_rate,amsgrad=False,decay=decay)
-	model.compile(loss=loss, optimizer=adam)
+	model.compile(loss=loss, optimizer=adam, metrics=[loss])
 	print('Is model built: ' + str(model.built))
 
 	try:
@@ -232,8 +246,8 @@ def main():
 	modelcheckpoint = ModelCheckpoint(model_weights)
 
 	# TODO add validation data.
-	model.fit(tf_dataset,callbacks=[tensorboard, modelcheckpoint],
-		epochs = n_epochs)
+	model.fit(tf_dataset_t,callbacks=[tensorboard, modelcheckpoint],
+		epochs = n_epochs, validation_data=tf_dataset_v)
 
 if __name__ == '__main__':
     main()

@@ -9,12 +9,12 @@ class DataPrepTests(unittest.TestCase):
 
 	def __init__(self, *args, **kwargs):
 		super(DataPrepTests, self).__init__(*args, **kwargs)
-		self.root_path = os.path.dirname(os.path.abspath(__file__))+'test_data/'
+		self.root_path = os.path.dirname(os.path.abspath(__file__))+'/test_data/'
 		self.lens_params = ['external_shear_e1','external_shear_e2',
 			'lens_mass_center_x','lens_mass_center_y','lens_mass_e1',
 			'lens_mass_e2','lens_mass_gamma','lens_mass_theta_E_log']
 		self.lens_params_path = self.root_path + 'new_metadata.csv'
-		self.tf_record_path = self.root_path + 'test_record'
+		self.tf_record_path = self.root_path + 'tf_record_test'
 
 	def test_config_checker(self):
 		# Test that the config checker doesn't fail correct configuration files
@@ -36,6 +36,12 @@ class DataPrepTests(unittest.TestCase):
 
 		with open(self.root_path+'test.json','r') as json_f:
 			cfg = json.load(json_f)
+		del cfg['validation_params']
+		with self.assertRaises(RuntimeError):
+			model_trainer.config_checker(cfg)
+
+		with open(self.root_path+'test.json','r') as json_f:
+			cfg = json.load(json_f)
 		del cfg['dataset_params']['ratang']['ratang_parameter_prefixes']
 		with self.assertRaises(RuntimeError):
 			model_trainer.config_checker(cfg)
@@ -46,8 +52,8 @@ class DataPrepTests(unittest.TestCase):
 		# Test that the prepare_tf_record function works as expected.
 		with open(self.root_path+'test.json','r') as json_f:
 			cfg = json.load(json_f)
-		model_trainer.prepare_tf_record(cfg,self.root_path,
-			self.tf_record_path,self.lens_params)
+		model_trainer.prepare_tf_record(cfg, self.root_path, self.tf_record_path,
+			self.lens_params)
 
 		# Check the TFRecord and make sure the number of parameters and values
 		# all seems reasonable.

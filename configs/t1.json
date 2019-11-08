@@ -40,6 +40,10 @@
         "model_weights": "/home/swagnercarena/ovejero/models/t1.h5",
         "decay": 3e-06
     },
+    "validation_params": {
+        "root_path": "/Users/sebwagner/Documents/Grad_School/Rotations/Phil/ovejero/datasets/train/",
+        "tf_record_path": "tf_record_val"
+    },
     "dataset_params": {
         "lens_params_log": [
             "lens_mass_theta_E"
