@@ -1,14 +1,44 @@
 {
+    "dataset_params": {
+        "normalization_constants_path": "norms.npy",
+        "lens_params": [
+            "external_shear_gamma_ext",
+            "external_shear_psi_ext",
+            "lens_mass_center_x",
+            "lens_mass_center_y",
+            "lens_mass_e1",
+            "lens_mass_e2",
+            "lens_mass_gamma",
+            "lens_mass_theta_E"
+        ],
+        "new_param_path": "new_metadata.csv",
+        "lens_params_log": [
+            "lens_mass_theta_E"
+        ],
+        "lens_params_path": "metadata.csv",
+        "ratang": {
+            "ratang_parameter_prefixes": [
+                "external_shear"
+            ],
+            "ratang_params_rat": [
+                "external_shear_gamma_ext"
+            ],
+            "ratang_params_ang": [
+                "external_shear_psi_ext"
+            ]
+        }
+    },
     "training_params": {
-        "bnn_type": "full",
-        "batch_size": 128,
-        "n_epochs": 80,
-        "learning_rate": 1e-05,
-        "decay": 3e-06,
-        "kernel_regularizer": 1e-05,
-        "dropout_regularizer": 1e-06,
-        "root_path": "/Users/sebwagner/Documents/Grad_School/Rotations/Phil/ovejero/datasets/train/",
         "tf_record_path": "tf_record_train",
+        "batch_size": 128,
+        "img_dim": 128,
+        "tensorboard_log_dir": "/home/swagnercarena/ovejero/logs/t2.log",
+        "kernel_regularizer": 1e-05,
+        "decay": 3e-06,
+        "n_epochs": 80,
+        "model_weights": "/home/swagnercarena/ovejero/models/t2.h5",
+        "random_seed": 1138,
+        "root_path": "/home/swagnercarena/ovejero/datasets/train/",
         "final_params": [
             "external_shear_e1",
             "external_shear_e2",
@@ -19,6 +49,8 @@
             "lens_mass_gamma",
             "lens_mass_theta_E_log"
         ],
+        "learning_rate": 1e-05,
+        "bnn_type": "full",
         "flip_pairs": [
             [
                 0,
@@ -35,42 +67,10 @@
                 5
             ]
         ],
-        "img_dim": 128,
-        "model_weights": "/Users/sebwagner/Documents/Grad_School/Rotations/Phil/ovejero/models/t2.h5",
-        "tensorboard_log_dir": "/Users/sebwagner/Documents/Grad_School/Rotations/Phil/ovejero/logs/t2.log",
-        "random_seed": 1138
+        "dropout_regularizer": 1e-06
     },
     "validation_params": {
-        "root_path": "/Users/sebwagner/Documents/Grad_School/Rotations/Phil/ovejero/datasets/train/",
-        "tf_record_path": "tf_record_val"
-    },
-    "dataset_params": {
-        "lens_params_path": "metadata.csv",
-        "new_param_path": "new_metadata.csv",
-        "normalization_constants_path": "norms.npy",
-        "lens_params": [
-            "external_shear_gamma_ext",
-            "external_shear_psi_ext",
-            "lens_mass_center_x",
-            "lens_mass_center_y",
-            "lens_mass_e1",
-            "lens_mass_e2",
-            "lens_mass_gamma",
-            "lens_mass_theta_E"
-        ],
-        "lens_params_log": [
-            "lens_mass_theta_E"
-        ],
-        "ratang": {
-            "ratang_parameter_prefixes": [
-                "external_shear"
-            ],
-            "ratang_params_rat": [
-                "external_shear_gamma_ext"
-            ],
-            "ratang_params_ang": [
-                "external_shear_psi_ext"
-            ]
-        }
+        "tf_record_path": "tf_record_val",
+        "root_path": "/home/swagnercarena/ovejero/datasets/train/"
     }
 }
