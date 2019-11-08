@@ -100,8 +100,12 @@ def prepare_tf_record(cfg,root_path,tf_record_path,final_params,train_or_test):
 	# Where to save the lens parameters to after the preprocessing 
 	# transformations
 	new_param_path = root_path + cfg['dataset_params']['new_param_path']
-	# Where to save the normalization constants to
-	normalization_constants_path = root_path + cfg['dataset_params'][
+	# Where to save the normalization constants to. Note that we take the
+	# root path associated with the training_params here, even if validation
+	# params root path was passed in. This is because we always want to use
+	# the training norms!
+	normalization_constants_path = cfg['training_params'][
+		'root_path'] + cfg['dataset_params'][
 		'normalization_constants_path']
 	# Parameters to convert to log space
 	if 'lens_params_log' in cfg['dataset_params']:
