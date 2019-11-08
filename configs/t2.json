@@ -71,6 +71,6 @@
     },
     "validation_params": {
         "tf_record_path": "tf_record_val",
-        "root_path": "/home/swagnercarena/ovejero/datasets/train/"
+        "root_path": "/home/swagnercarena/ovejero/datasets/val/"
     }
 }
