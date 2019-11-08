@@ -70,8 +70,36 @@ class DataPrepTests(unittest.TestCase):
 		# Test that the prepare_tf_record function works as expected.
 		with open(self.root_path+'test.json','r') as json_f:
 			cfg = json.load(json_f)
+		train_or_test='train'
 		model_trainer.prepare_tf_record(cfg, self.root_path, self.tf_record_path,
-			self.lens_params)
+			self.lens_params,train_or_test)
+
+		# Check the TFRecord and make sure the number of parameters and values
+		# all seems reasonable.
+		num_npy = len(glob.glob(self.root_path+'X*.npy'))
+		self.assertTrue(os.path.exists(self.tf_record_path))
+
+		# Open up this TFRecord file and take a look inside
+		raw_dataset = tf.data.TFRecordDataset(self.tf_record_path)
+		# Define a mapping function to parse the image
+		def parse_image(example):
+			data_features = {
+				'image' : tf.io.FixedLenFeature([],tf.string),
+				'height' : tf.io.FixedLenFeature([],tf.int64),
+				'width' : tf.io.FixedLenFeature([],tf.int64),
+				'index' : tf.io.FixedLenFeature([],tf.int64),
+			}
+			for lens_param in self.lens_params:
+					data_features[lens_param] = tf.io.FixedLenFeature(
+						[],tf.float32)
+			return tf.io.parse_single_example(example,data_features)
+		batch_size = 10
+		dataset = raw_dataset.map(parse_image).batch(batch_size)
+		dataset_comparison(self,dataset,batch_size,num_npy)
+
+		train_or_test='test'
+		model_trainer.prepare_tf_record(cfg, self.root_path, self.tf_record_path,
+			self.lens_params,train_or_test)
 
 		# Check the TFRecord and make sure the number of parameters and values
 		# all seems reasonable.

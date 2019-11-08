@@ -31,9 +31,9 @@ def normalize_lens_parameters(lens_params,lens_params_path,normalized_param_path
 			normalized parameters will be written
 		normalization_constants_path (str): The path to the csv file where the
 			mean and std used for normalization will be written / read
-		train_or_test (str): Whether this is a train time or test time operation.
-			At test time the normalization values will be read from the
-			normalization constants file instead of written to it.
+		train_or_test (str): Whether this is a train time or test time 
+			operation. At test time the normalization values will be read from
+			the normalization constants file instead of written to it.
 	"""
 	# Read the lens parameters from the csv file
 	lens_params_csv = pd.read_csv(lens_params_path, index_col=None)

@@ -77,7 +77,7 @@ def load_config(config_path):
 	return cfg
 
 
-def prepare_tf_record(cfg,root_path,tf_record_path,final_params):
+def prepare_tf_record(cfg,root_path,tf_record_path,final_params,train_or_test):
 	"""
 	Perpare the tf record using the config file values.
 
@@ -90,6 +90,8 @@ def prepare_tf_record(cfg,root_path,tf_record_path,final_params):
 		tf_record_path (str): The path where the TFRecord will be saved.
 		final_params ([str,...]): The parameters we expect to be in the final
 			set of lens parameters.
+		train_or_test (string): If test, the normalizations will be
+			saved. If train, the training normalizations will be used.
 	"""
 	# Path to csv containing lens parameters.
 	lens_params_path = root_path + cfg['dataset_params']['lens_params_path']
@@ -143,7 +145,8 @@ def prepare_tf_record(cfg,root_path,tf_record_path,final_params):
 
 	# Now normalize all of the lens parameters
 	data_tools.normalize_lens_parameters(lens_params,lens_params_path,
-		new_param_path,normalization_constants_path,train_or_test='train')
+		new_param_path,normalization_constants_path,
+		train_or_test=train_or_test)
 
 	# Quickly check that all the desired lens_params ended up in the final
 	# csv file.
@@ -274,14 +277,16 @@ def main():
 	print('Checking for training data.')
 	if not os.path.exists(tf_record_path_t):
 		print('Generating new TFRecord at %s'%(tf_record_path_t))
-		prepare_tf_record(cfg,root_path_t,tf_record_path_t,final_params)
+		prepare_tf_record(cfg,root_path_t,tf_record_path_t,final_params,
+			train_or_test='train')
 	else:
 		print('TFRecord found at %s'%(tf_record_path_t))
 
 	print('Checking for validation data.')
 	if not os.path.exists(tf_record_path_v):
 		print('Generating new TFRecord at %s'%(tf_record_path_v))
-		prepare_tf_record(cfg,root_path_v,tf_record_path_v,final_params)
+		prepare_tf_record(cfg,root_path_v,tf_record_path_v,final_params,
+			train_or_test='test')
 	else:
 		print('TFRecord found at %s'%(tf_record_path_v))
 
