@@ -3,8 +3,8 @@ import unittest, json, glob, os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 import tensorflow as tf
 import numpy as np
-import pandas as pd
-from ovejero import model_trainer
+import pandas as pd 
+from ovejero import model_trainer, data_tools
 from helpers import dataset_comparison
 
 class DataPrepTests(unittest.TestCase):
@@ -178,5 +178,43 @@ class DataPrepTests(unittest.TestCase):
 		# tests of the loss function can be found in the test_bnn_alexnet.
 		loss(yttf,yptf)
 		self.assertEqual(len(model.layers),13)
-		self.assertEqual(model.layers[-1].output_shape[-1],y_pred.shape[-1])		
+		self.assertEqual(model.layers[-1].output_shape[-1],y_pred.shape[-1])
+
+	def test_get_normed_pixel_scale(self):
+		# Test if get_normed_pixel scale rescales the pixel_scale as we would
+		# expect.
+		cfg = model_trainer.load_config(self.root_path+'test.json')
+		# The original pixel scale
+		pixel_scale = 0.051
+		# Test if normalizing the lens parameters works correctly.
+		normalized_param_path = self.root_path + 'normed_metadata.csv'
+		normalization_constants_path = self.root_path + 'norms.csv'
+		train_or_test='train'
+		lens_params = ['external_shear_gamma_ext','external_shear_psi_ext',
+			'lens_mass_center_x','lens_mass_center_y',
+			'lens_mass_e1','lens_mass_e2',
+			'lens_mass_gamma','lens_mass_theta_E']
+		lens_params_path = self.root_path + 'metadata.csv'
+		data_tools.normalize_lens_parameters(lens_params,
+			lens_params_path,normalized_param_path,
+			normalization_constants_path,train_or_test=train_or_test)
+
+		# New pixel scale
+		normed_pixel_scale = model_trainer.get_normed_pixel_scale(cfg,
+			pixel_scale)
+
+		lens_params_csv = pd.read_csv(lens_params_path, index_col=None)
+		norm_params_csv = pd.read_csv(normalized_param_path, index_col=None)
+
+		self.assertAlmostEqual(np.std(lens_params_csv['lens_mass_center_x'] / 
+			pixel_scale - norm_params_csv['lens_mass_center_x'] / 
+			normed_pixel_scale['lens_mass_center_x']),0)
+		self.assertAlmostEqual(np.std(lens_params_csv['lens_mass_center_y'] / 
+			pixel_scale - norm_params_csv['lens_mass_center_y'] / 
+			normed_pixel_scale['lens_mass_center_y']),0)
+
+				# Clean up the file now that we're done
+		os.remove(normalized_param_path)	
+		os.remove(normalization_constants_path)	
+
 

@@ -14,6 +14,7 @@ import tensorflow as tf
 from tensorflow.keras.callbacks import TensorBoard, ModelCheckpoint
 from tensorflow.keras.optimizers import Adam
 import argparse, json, os
+import pandas as pd
 
 # Import the code to construct the bnn and the data pipeline
 from ovejero import bnn_alexnet, data_tools
@@ -163,6 +164,37 @@ def prepare_tf_record(cfg,root_path,tf_record_path,final_params,train_or_test):
 	data_tools.generate_tf_record(root_path,lens_params,new_param_path,
 		tf_record_path)
 
+def get_normed_pixel_scale(cfg,pixel_scale):
+	"""
+	Return a dictionary with the pixel scale normalized according to the 
+	normalization of each shift parameter.
+
+	Parameters
+	----------
+		cfg (dict): The dictionary attained from reading the json config file.
+		pixel_scale (float): The pixel scale used for the original images.
+
+	Returns
+	-------
+		(dict): A dictionary of the pixel scales renormalized in the same way as 
+			the shift parameters.
+	"""
+	# Get the parameters we need to read the normalization from
+	shift_params = cfg['training_params']['shift_params']
+	# Adjust the pixel scale by the normalization
+	normalization_constants_path = cfg['training_params']['root_path'] + cfg[
+		'dataset_params']['normalization_constants_path']
+	norm_const_dict = pd.read_csv(normalization_constants_path, index_col=None)
+	# Set the normed pixel scale for each parameter
+	normed_pixel_scale = {}
+	for shift_param in shift_params[0]:
+		normed_pixel_scale[shift_param] = pixel_scale/norm_const_dict[
+			shift_param][1]
+	for shift_param in shift_params[1]:
+		normed_pixel_scale[shift_param] = pixel_scale/norm_const_dict[
+			shift_param][1]
+	return normed_pixel_scale
+
 def model_loss_builder(cfg, verbose=False):
 	"""
 	Build a model according to the specifications in configuration dictionary
@@ -170,8 +202,7 @@ def model_loss_builder(cfg, verbose=False):
 
 	Parameters
 	----------
-		cfg (dict): The dictionary attained from reading the json config
-			file.
+		cfg (dict): The dictionary attained from reading the json config file.
 		verbose (bool): If True, will be verbose as model is built.
 
 	Returns
@@ -274,6 +305,18 @@ def main():
 	# The path for the Tensorboard logs
 	tensorboard_log_dir = cfg['training_params']['tensorboard_log_dir']
 
+	# The parameters govern the augmentation of the data
+	# Whether or not the images should be normalzied to have standard
+	# deviation 1
+	norm_images = cfg['training_params']['norm_images']
+	# The number of pixels to uniformly shift the images by and the
+	# parameters that need to be rescaled to account for this shift
+	shift_pixels = cfg['training_params']['shift_pixels']
+	shift_params = cfg['training_params']['shift_params']
+	# What the pixel_scale of the images is. This will be adjusted for the
+	# normalization.
+	pixel_scale = cfg['training_params']['pixel_scale']
+
 	# Finally set the random seed we will use for training
 	random_seed = cfg['training_params']['random_seed']
 	tf.random.set_seed(random_seed)
@@ -294,11 +337,18 @@ def main():
 	else:
 		print('TFRecord found at %s'%(tf_record_path_v))
 
+	# Get the normalzied pixel scale (will fail if tf_record has not been
+	# correctly created.)
+	normed_pixel_scale = get_normed_pixel_scale(cfg,pixel_scale)
+
 	# We let keras deal with epochs instead of the tf dataset object.
 	tf_dataset_t = data_tools.build_tf_dataset(tf_record_path_t,final_params,
-		batch_size,1)
+		batch_size,1,norm_images=norm_images,shift_pixels=shift_pixels,
+		shift_params=shift_params, normed_pixel_scale=normed_pixel_scale)
+	# Validation dataset will, by default, have no augmentation but will have
+	# the images normalized if requested.
 	tf_dataset_v = data_tools.build_tf_dataset(tf_record_path_v,final_params,
-		batch_size,1)
+		batch_size,1,norm_images=norm_images)
 
 	print('Initializing the model')
 

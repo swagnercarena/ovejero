@@ -180,7 +180,8 @@ def generate_tf_record(root_path,lens_params,lens_params_path,tf_record_path):
 			# Write out the example to the TFRecord file
 			writer.write(example.SerializeToString())
 
-def build_tf_dataset(tf_record_path,lens_params,batch_size,n_epochs):
+def build_tf_dataset(tf_record_path,lens_params,batch_size,n_epochs,
+	norm_images=False,shift_pixels=0,shift_params=None,normed_pixel_scale={}):
 	"""
 	Return a TFDataset for use in training the model.
 
@@ -193,12 +194,26 @@ def build_tf_dataset(tf_record_path,lens_params,batch_size,n_epochs):
 		batch_size (int): The batch size that will be used for training
 		n_epochs (int): The number of training epochs. The dataset object will deal
 			with iterating over the data for repeated epochs.
+		norm_images (bool): If True, images will be normalized to have std 1.
+		shift_pixels (int): If >0, images will be shifted uniformly between 0 
+			and shift_pixels pixels in the x and y direction (the shift in the
+			x and y direction are drawn separately).
+		shift_params (([str,...],[str,...])): A tuple of lists of the 
+			parameters that must be shifted. The first list contains the x 
+			parameters and the second the y. Must be set if shift_pixels is used.
+		normed_pixel_scale (dict): A dict mapping from parameter to the pixel
+			scale (in arcseconds of pixels) for that parameter. Only needs to be 
+			set if shift_pixels is being used. If the data was normalized, the 
+			pixel scale must also be normalized.
 
 	Returns
 	-------
 		(tf.TFDataset): A TFDataset object for use in training
-
 	"""
+
+	# Check that if shifts are used the other required parameters are passed in.
+	if shift_pixels>0 and (shift_params is None or not normed_pixel_scale):
+		raise RuntimeError('Trying to shift images but did not set shift_params.')
 
 	# Read the TFRecord
 	raw_dataset = tf.data.TFRecordDataset(tf_record_path)
@@ -215,10 +230,31 @@ def build_tf_dataset(tf_record_path,lens_params,batch_size,n_epochs):
 				data_features[lens_param] = tf.io.FixedLenFeature(
 					[],tf.float32)
 		parsed_dataset = tf.io.parse_single_example(example,data_features)
-		parsed_dataset = tf.io.parse_single_example(example,data_features)
 		image = tf.io.decode_raw(parsed_dataset['image'],out_type=float)
 		image = tf.reshape(image,(parsed_dataset['height'],
 			parsed_dataset['width'],1))
+		# Shift the images if that's specified
+		if shift_pixels>0:
+			# Get the x and y shift from a categorical distribution centered at 0
+			# and going from -shift_pixels to shift_pixels
+			shifts = tf.squeeze(tf.random.categorical(tf.math.log(
+				[[0.5]*(2*shift_pixels+1)]),2)-shift_pixels,axis=0)
+			# Shift the image accordingly
+			image = tf.roll(image,shifts,axis=[0,1])
+			# Update the x shifts and y shifts
+			for x_param in shift_params[0]:
+				# The shift in the column corresponds to x and increasing column
+				# corresponds to increasing x.
+				parsed_dataset[x_param] += tf.cast(shifts[1],
+					tf.float32)*normed_pixel_scale[x_param]
+			for y_param in shift_params[1]:
+				# The shift in the row corresponds to y and increasing row 
+				# corresponds to increasing y.
+				parsed_dataset[y_param] += tf.cast(shifts[0],
+					tf.float32)*normed_pixel_scale[y_param]
+		# If the images must be normed divide by the std
+		if norm_images:
+			image = image / tf.math.reduce_std(image)
 		lens_param_values = tf.stack([parsed_dataset[lens_param] for lens_param 
 			in lens_params])
 		return image,lens_param_values

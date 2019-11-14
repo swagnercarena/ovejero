@@ -38,7 +38,18 @@
         "kernel_regularizer": 1e-05,
         "tensorboard_log_dir": "/home/swagnercarena/ovejero/logs/t1.log",
         "model_weights": "/home/swagnercarena/ovejero/models/t1.h5",
-        "decay": 3e-06
+        "decay": 3e-06,
+        "norm_images": true,
+        "shift_pixels": 0,
+        "shift_params": [
+            [
+                "lens_mass_center_x"
+            ],
+            [
+                "lens_mass_center_y"
+            ]
+        ],
+        "pixel_scale": 0.051
     },
     "validation_params": {
         "tf_record_path": "tf_record_val",

@@ -38,7 +38,18 @@
         "img_dim": 128,
         "model_weights": "/Users/sebwagner/Documents/Grad_School/Rotations/Phil/ovejero/test/test_data/test_model.h5",
         "tensorboard_log_dir": "/Users/sebwagner/Documents/Grad_School/Rotations/Phil/ovejero/test/test_data/test.log",
-        "random_seed": 1138
+        "random_seed": 1138,
+        "norm_images": true,
+        "shift_pixels": 2,
+        "shift_params": [
+            [
+                "lens_mass_center_x"
+            ],
+            [
+                "lens_mass_center_y"
+            ]
+        ],
+        "pixel_scale": 0.051
     },
     "validation_params": {
         "root_path": "/Users/sebwagner/Documents/Grad_School/Rotations/Phil/ovejero/test/test_data/",
