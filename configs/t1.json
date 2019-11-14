@@ -34,7 +34,7 @@
             ]
         ],
         "random_seed": 1138,
-        "img_dim": 128,
+        "img_dim": 64,
         "kernel_regularizer": 1e-05,
         "tensorboard_log_dir": "/home/swagnercarena/ovejero/logs/t1.log",
         "model_weights": "/home/swagnercarena/ovejero/models/t1.h5",

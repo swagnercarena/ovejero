@@ -35,7 +35,7 @@
                 5
             ]
         ],
-        "img_dim": 128,
+        "img_dim": 64,
         "model_weights": "/Users/sebwagner/Documents/Grad_School/Rotations/Phil/ovejero/models/t3.h5",
         "tensorboard_log_dir": "/Users/sebwagner/Documents/Grad_School/Rotations/Phil/ovejero/logs/t3.log",
         "random_seed": 1138,
