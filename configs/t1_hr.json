@@ -15,7 +15,7 @@
         ],
         "root_path": "/home/swagnercarena/ovejero/datasets/train/",
         "batch_size": 128,
-        "dropout_regularizer": 1e-06,
+        "dropout_regularizer": 1e-03,
         "n_epochs": 80,
         "flip_pairs": [
             [
@@ -35,9 +35,9 @@
         ],
         "random_seed": 1138,
         "img_dim": 64,
-        "kernel_regularizer": 1e-05,
-        "tensorboard_log_dir": "/home/swagnercarena/ovejero/logs/t1_shift.log",
-        "model_weights": "/home/swagnercarena/ovejero/models/t1_shift.h5",
+        "kernel_regularizer": 1e-03,
+        "tensorboard_log_dir": "/home/swagnercarena/ovejero/logs/t1_hr.log",
+        "model_weights": "/home/swagnercarena/ovejero/models/t1_hr.h5",
         "decay": 3e-06,
         "norm_images": true,
         "shift_pixels": 2,
