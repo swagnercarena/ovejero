@@ -252,12 +252,14 @@ def model_loss_builder(cfg, verbose=False):
 		num_outputs = 2*(num_params + int(num_params*(num_params+1)/2))+1
 	else:
 		raise RuntimeError('BNN type %s does not exist'%(bnn_type))
+	# The mse loss doesn't depend on model type.
+	mse_loss = loss_class.mse_loss
 
 	model = bnn_alexnet.concrete_alexnet((img_dim, img_dim, 1), num_outputs,
 		kernel_regularizer=kr,dropout_regularizer=dr,random_seed=random_seed)
 
 	adam = Adam(lr=learning_rate,amsgrad=False,decay=decay)
-	model.compile(loss=loss, optimizer=adam, metrics=[loss])
+	model.compile(loss=loss, optimizer=adam, metrics=[loss,mse_loss])
 	if verbose:
 		print('Is model built: ' + str(model.built))
 

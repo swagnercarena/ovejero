@@ -592,6 +592,32 @@ class LensingLossFunctions:
 			self.flip_mat_list.append(tf.linalg.diag(tf.constant(
 				const_initializer,dtype=tf.float32)))
 
+	def mse_loss(self, y_true, output):
+		"""
+		Returns the MSE loss of the predicted parameters. Will ignore parameters
+		associated with the covariance matrix.
+		Parameters
+		----------
+			y_true (tf.Tensor): The true values of the parameters
+			output (tf.Tensor): The predicted values of the lensing parameters. 
+				This assumes the first num_params are 
+
+		Returns
+		-------
+			(tf.Tensor): The mse loss function.
+
+		Notes
+		-----
+			This function should never be used as a loss function. It is useful
+			as a metric to understand what portion of the reduciton in the loss
+			function can be attributed to improved parameter accuracy. Also
+			note that for the gmm models the output will default to the first
+			Gaussian for this metric.
+		"""
+		y_pred, _ = tf.split(output,num_or_size_splits=(self.num_params,-1),
+			axis=-1)
+		return tf.reduce_mean(tf.square(y_pred-y_true))
+
 	def log_gauss_diag(self,y_true,y_pred,std_pred):
 		"""
 		Return the negative log posterior of a Gaussian with diagonal
