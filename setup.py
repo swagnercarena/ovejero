@@ -13,7 +13,7 @@ readme = open("README.rst").read()
 PACKAGE_PATH = os.path.abspath(os.path.join(__file__, os.pardir))
 
 required_packages = ['numpy>=1.13', 'scipy>=0.14.0', 'configparser',
-	'pandas>=0.24.2']
+	'pandas>=0.24.2','corner>=2.0.1']
 
 setup(
     name='ovejero',
