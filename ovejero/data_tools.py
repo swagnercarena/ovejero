@@ -176,7 +176,8 @@ def generate_tf_record(root_path,lens_params,lens_params_path,tf_record_path):
 					float_list=tf.train.FloatList(
 						value=[lens_params_csv[lens_param][index]]))
 			# Create the tf example object
-			example = tf.train.Example(features=tf.train.Features(feature=feature))
+			example = tf.train.Example(features=tf.train.Features(
+				feature=feature))
 			# Write out the example to the TFRecord file
 			writer.write(example.SerializeToString())
 
