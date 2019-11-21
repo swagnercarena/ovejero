@@ -12,7 +12,7 @@ class DataPrepTests(unittest.TestCase):
 	def __init__(self, *args, **kwargs):
 		super(DataPrepTests, self).__init__(*args, **kwargs)
 		self.root_path = os.path.dirname(os.path.abspath(__file__))+'/test_data/'
-		self.lens_params = ['external_shear_e1','external_shear_e2',
+		self.lens_params = ['external_shear_g1','external_shear_g2',
 			'lens_mass_center_x','lens_mass_center_y','lens_mass_e1',
 			'lens_mass_e2','lens_mass_gamma','lens_mass_theta_E_log']
 		self.lens_params_path = self.root_path + 'new_metadata.csv'
@@ -44,11 +44,11 @@ class DataPrepTests(unittest.TestCase):
 
 		with open(self.root_path+'test.json','r') as json_f:
 			cfg = json.load(json_f)
-		del cfg['dataset_params']['ratang']['ratang_parameter_prefixes']
+		del cfg['dataset_params']['gampsi']['gampsi_parameter_prefixes']
 		with self.assertRaises(RuntimeError):
 			model_trainer.config_checker(cfg)
 		self.assertTrue('dataset_params' in cfg)
-		self.assertTrue('ratang' in cfg['dataset_params'])
+		self.assertTrue('gampsi' in cfg['dataset_params'])
 
 	def test_load_config(self):
 		# Test that load config returns a config file and fails the config check

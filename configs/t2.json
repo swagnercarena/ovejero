@@ -16,14 +16,14 @@
             "lens_mass_theta_E"
         ],
         "lens_params_path": "metadata.csv",
-        "ratang": {
-            "ratang_parameter_prefixes": [
+        "gampsi": {
+            "gampsi_parameter_prefixes": [
                 "external_shear"
             ],
-            "ratang_params_rat": [
+            "gampsi_params_rat": [
                 "external_shear_gamma_ext"
             ],
-            "ratang_params_ang": [
+            "gampsi_params_ang": [
                 "external_shear_psi_ext"
             ]
         }
@@ -40,8 +40,8 @@
         "random_seed": 1138,
         "root_path": "/home/swagnercarena/ovejero/datasets/train/",
         "final_params": [
-            "external_shear_e1",
-            "external_shear_e2",
+            "external_shear_g1",
+            "external_shear_g2",
             "lens_mass_center_x",
             "lens_mass_center_y",
             "lens_mass_e1",

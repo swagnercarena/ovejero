@@ -97,14 +97,14 @@ def write_parameters_in_log_space(lens_params,lens_params_path,
 	# Don't include an index to be consistent with baobab csv files.
 	lens_params_csv.to_csv(new_lens_params_path,index=False)
 
-def ratang_2_exc(lens_param_rat,lens_param_ang,lens_params_path,
+def gampsi_2_g1g2(lens_param_rat,lens_param_ang,lens_params_path,
 	new_lens_params_path,new_lens_parameter_prefix):
 	"""
-	Convert one lens parameter pair of ratio and angle to excentricities.
+	Convert one lens parameter pair of gamma and psi to cartesian coordinates.
 
 	Parameters
 	----------
-		lens_param_rat (str): The ratio parameter name
+		lens_param_rat (str): The gamma parameter name
 		lens_param_ang (str): The angle parameter name
 		lens_params_path (str):  The path to the csv file containing the lens 
 			parameters
@@ -122,14 +122,14 @@ def ratang_2_exc(lens_param_rat,lens_param_ang,lens_params_path,
 	lens_params_csv = pd.read_csv(lens_params_path, index_col=None)
 
 	# Calcualte the value of these parameters from their ratio and angle
-	rat = lens_params_csv[lens_param_rat]
+	gamma = lens_params_csv[lens_param_rat]
 	ang = lens_params_csv[lens_param_ang]
-	e1 = (1.-rat)/(1.+rat)*np.cos(2*ang)
-	e2 = (1.-rat)/(1.+rat)*np.sin(2*ang)
+	g1 = gamma*np.cos(2*ang)
+	g2 = gamma*np.sin(2*ang)
 
 	# Save the values to the new csv (which may also be the old csv)
-	lens_params_csv[new_lens_parameter_prefix+'_e1'] = e1
-	lens_params_csv[new_lens_parameter_prefix+'_e2'] = e2
+	lens_params_csv[new_lens_parameter_prefix+'_g1'] = g1
+	lens_params_csv[new_lens_parameter_prefix+'_g2'] = g2
 	# Don't include an index to be consistent with baobab csv files.
 	lens_params_csv.to_csv(new_lens_params_path,index=False)
 

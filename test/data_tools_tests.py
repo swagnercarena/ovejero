@@ -75,26 +75,26 @@ class TFRecordTests(unittest.TestCase):
 		# Clean up the file now that we're done
 		os.remove(new_lens_params_path)	
 
-	def test_ratang_2_exc(self):
+	def test_gampsi_2_g1g2(self):
 		# Test if putting the lens parameters in excentricities works correctly.
 		new_lens_params_path = self.root_path + 'metadata_e1e2.csv'
-		data_tools.ratang_2_exc('external_shear_gamma_ext',
+		data_tools.gampsi_2_g1g2('external_shear_gamma_ext',
 			'external_shear_psi_ext',self.lens_params_path,new_lens_params_path,
 			'external_shear')
 
 		lens_params_csv = pd.read_csv(new_lens_params_path, index_col=None)
 
-		self.assertTrue('external_shear_e1' in lens_params_csv)
-		self.assertTrue('external_shear_e2' in lens_params_csv)
+		self.assertTrue('external_shear_g1' in lens_params_csv)
+		self.assertTrue('external_shear_g2' in lens_params_csv)
 		# Assert that the two parameters agree once we factor for log
-		rat = lens_params_csv['external_shear_gamma_ext']
+		gamma = lens_params_csv['external_shear_gamma_ext']
 		ang = lens_params_csv['external_shear_psi_ext']
-		e1 = (1.-rat)/(1.+rat)*np.cos(2*ang)
-		e2 = (1.-rat)/(1.+rat)*np.sin(2*ang)
-		self.assertAlmostEqual(np.sum(np.abs(e1 - 
-			lens_params_csv['external_shear_e1'])),0)
-		self.assertAlmostEqual(np.sum(np.abs(e2 - 
-			lens_params_csv['external_shear_e2'])),0)
+		g1 = gamma*np.cos(2*ang)
+		g2 = gamma*np.sin(2*ang)
+		self.assertAlmostEqual(np.sum(np.abs(g1 - 
+			lens_params_csv['external_shear_g1'])),0)
+		self.assertAlmostEqual(np.sum(np.abs(g2 - 
+			lens_params_csv['external_shear_g2'])),0)
 
 		# Clean up the file now that we're done
 		os.remove(new_lens_params_path)	

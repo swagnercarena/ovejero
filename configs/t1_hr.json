@@ -4,8 +4,8 @@
         "bnn_type": "diag",
         "learning_rate": 1e-05,
         "final_params": [
-            "external_shear_e1",
-            "external_shear_e2",
+            "external_shear_g1",
+            "external_shear_g2",
             "lens_mass_center_x",
             "lens_mass_center_y",
             "lens_mass_e1",
@@ -61,14 +61,14 @@
         ],
         "lens_params_path": "metadata.csv",
         "new_param_path": "new_metadata.csv",
-        "ratang": {
-            "ratang_params_rat": [
+        "gampsi": {
+            "gampsi_params_rat": [
                 "external_shear_gamma_ext"
             ],
-            "ratang_params_ang": [
+            "gampsi_params_ang": [
                 "external_shear_psi_ext"
             ],
-            "ratang_parameter_prefixes": [
+            "gampsi_parameter_prefixes": [
                 "external_shear"
             ]
         },

@@ -114,17 +114,17 @@ def prepare_tf_record(cfg,root_path,tf_record_path,final_params,train_or_test):
 	else:
 		lens_params_log = None
 	# Parameters to convert from ratio and ang to excentricities
-	if 'ratang' in cfg['dataset_params']:
-		cfg_ratang = cfg['dataset_params']['ratang']
+	if 'gampsi' in cfg['dataset_params']:
+		cfg_gampsi = cfg['dataset_params']['gampsi']
 		# New prefix for those parameters
-		ratang_parameter_prefixes = cfg_ratang['ratang_parameter_prefixes']
+		gampsi_parameter_prefixes = cfg_gampsi['gampsi_parameter_prefixes']
 		# The parameter names of the ratios
-		ratang_params_rat = cfg_ratang['ratang_params_rat']
+		gampsi_params_rat = cfg_gampsi['gampsi_params_rat']
 		# The parameter names of the angles
-		ratang_params_ang = cfg_ratang['ratang_params_ang']
+		gampsi_params_ang = cfg_gampsi['gampsi_params_ang']
 	else:
-		ratang_parameter_prefixes=None; ratang_params_rat=None;
-		ratang_params_ang=None
+		gampsi_parameter_prefixes=None; gampsi_params_rat=None;
+		gampsi_params_ang=None
 
 	# First write desired parameters in log space.
 	if lens_params_log is not None:
@@ -137,14 +137,14 @@ def prepare_tf_record(cfg,root_path,tf_record_path,final_params,train_or_test):
 		lens_params_path = new_param_path
 
 	# Now convert ratio and angle parameters to excentricities.
-	if ratang_parameter_prefixes is not None:
-		for ratangi in range(len(ratang_parameter_prefixes)):
-			data_tools.ratang_2_exc(ratang_params_rat[ratangi],
-				ratang_params_ang[ratangi],lens_params_path,new_param_path,
-				ratang_parameter_prefixes[ratangi])
+	if gampsi_parameter_prefixes is not None:
+		for gampsii in range(len(gampsi_parameter_prefixes)):
+			data_tools.gampsi_2_g1g2(gampsi_params_rat[gampsii],
+				gampsi_params_ang[gampsii],lens_params_path,new_param_path,
+				gampsi_parameter_prefixes[gampsii])
 			# Update lens_params
-			lens_params.append(ratang_parameter_prefixes[ratangi]+'_e1')
-			lens_params.append(ratang_parameter_prefixes[ratangi]+'_e2')
+			lens_params.append(gampsi_parameter_prefixes[gampsii]+'_g1')
+			lens_params.append(gampsi_parameter_prefixes[gampsii]+'_g2')
 			# Parameters should be read from this path from now on.
 			lens_params_path = new_param_path
 

@@ -5,12 +5,12 @@
         "lens_params_log": [
         ],
         "normalization_constants_path": "",
-        "ratang": {
-            "ratang_params_ang": [
+        "gampsi": {
+            "gampsi_params_ang": [
             ],
-            "ratang_params_rat": [
+            "gampsi_params_rat": [
             ],
-            "ratang_parameter_prefixes": [
+            "gampsi_parameter_prefixes": [
             ]
         },
         "new_param_path": "",
