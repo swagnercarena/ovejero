@@ -266,7 +266,7 @@ class InferenceClass:
 				labels=self.final_params,show_titles=True, 
 				plot_datapoints=False,label_kwargs=dict(fontsize=13),
 				truths=self.y_test[image_index],levels=[0.68,0.95],
-				dpi=1600, color=contour_color)
+				dpi=1600, color=contour_color,fill_contours=True)
 		plt.show()
 
 
