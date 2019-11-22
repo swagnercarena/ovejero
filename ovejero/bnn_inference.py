@@ -158,6 +158,7 @@ class InferenceClass:
 		# This is where we will save the samples for each prediction. We will
 		# use this to numerically extract the covariance.
 		predict_samps = np.zeros((num_samples,self.batch_size,self.num_params))
+		# The alleatoric noise information we want to store depends on the 
 		# Generate our samples
 		for samp in tqdm(range(num_samples)):
 			# How we extract uncertanties will depend on the type of network in
@@ -268,6 +269,8 @@ class InferenceClass:
 				truths=self.y_test[image_index],levels=[0.68,0.95],
 				dpi=1600, color=contour_color,fill_contours=True)
 		plt.show()
+
+
 
 
 

@@ -616,7 +616,12 @@ class LensingLossFunctions:
 		"""
 		y_pred, _ = tf.split(output,num_or_size_splits=(self.num_params,-1),
 			axis=-1)
-		return tf.reduce_mean(tf.square(y_pred-y_true))
+		loss_list = []
+		for flip_mat in self.flip_mat_list:
+			loss_list.append(tf.reduce_mean(tf.square(
+				tf.matmul(y_pred,flip_mat)-y_true),axis=-1))
+		loss_stack = tf.stack(loss_list,axis=-1)
+		return tf.reduce_min(loss_stack,axis=-1)
 
 	def log_gauss_diag(self,y_true,y_pred,std_pred):
 		"""
