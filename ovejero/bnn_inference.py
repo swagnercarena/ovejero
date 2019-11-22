@@ -158,7 +158,11 @@ class InferenceClass:
 		# This is where we will save the samples for each prediction. We will
 		# use this to numerically extract the covariance.
 		predict_samps = np.zeros((num_samples,self.batch_size,self.num_params))
-		# The alleatoric noise information we want to store depends on the 
+		# We also want to store a sampling of the alleatoric noise being
+		# predicted to get a handle on how it compares to the epistemic
+		# uncertainty.
+		all_samp = np.zeros((num_samples,self.batch_size,self.num_params,
+			self.num_params))
 		# Generate our samples
 		for samp in tqdm(range(num_samples)):
 			# How we extract uncertanties will depend on the type of network in
@@ -170,6 +174,7 @@ class InferenceClass:
 					(self.batch_size,self.num_params))
 				predict_samps[samp] += noise*np.exp(output_sample[:,
 					self.num_params:])
+				all_samp[samp] = output_sample[:,self.num_params:]
 			else:
 				raise NotImplementedError('gen_pred_cov does not yet support '+
 					'%s models'%(self.bnn_type))
@@ -178,6 +183,7 @@ class InferenceClass:
 		self.undo_param_norm(predict_samps,self.y_test)
 
 		self.predict_samps = predict_samps
+		self.all_cov = np.mean(all_samp,axis=0)
 		self.y_pred = np.mean(predict_samps,axis=0)
 		self.y_std = np.std(predict_samps,axis=0)
 		self.y_cov = np.zeros((self.batch_size,self.num_params,self.num_params))

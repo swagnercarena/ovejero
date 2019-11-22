@@ -7,7 +7,7 @@
         "decay": 3e-06,
         "kernel_regularizer": 1e-05,
         "dropout_regularizer": 1e-06,
-        "root_path": "/Users/sebwagner/Documents/Grad_School/Rotations/Phil/ovejero/datasets/train/",
+        "root_path": "/home/swagnercarena/ovejero/datasets/train/",
         "tf_record_path": "tf_record_train",
         "final_params": [
             "external_shear_g1",
@@ -36,8 +36,8 @@
             ]
         ],
         "img_dim": 64,
-        "model_weights": "/Users/sebwagner/Documents/Grad_School/Rotations/Phil/ovejero/models/t3.h5",
-        "tensorboard_log_dir": "/Users/sebwagner/Documents/Grad_School/Rotations/Phil/ovejero/logs/t3.log",
+        "model_weights": "/home/swagnercarena/ovejero/models/t3.h5",
+        "tensorboard_log_dir": "/home/swagnercarena/ovejero/logs/t3.log",
         "random_seed": 1138,
         "norm_images": true,
         "shift_pixels": 0,
@@ -52,7 +52,7 @@
         "pixel_scale": 0.051
     },
     "validation_params": {
-        "root_path": "/Users/sebwagner/Documents/Grad_School/Rotations/Phil/ovejero/datasets/val/",
+        "root_path": "/home/swagnercarena/ovejero/datasets/val/",
         "tf_record_path": "tf_record_val"
     },
     "dataset_params": {
