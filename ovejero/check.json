@@ -43,5 +43,9 @@
         "shift_params": [
         ],
         "pixel_scale": 0
+    },
+    "inference_params": {
+        "final_params_print_names": [
+        ]
     }
 }

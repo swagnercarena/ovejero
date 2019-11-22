@@ -106,24 +106,26 @@ class BNNInferenceTest(unittest.TestCase):
 		# defined.
 
 		class ToyModel():
-			def __init__(self,mean,covariance,batch_size):
+			def __init__(self,mean,covariance,batch_size,al_std):
 				# We want to make sure our performance is consistent for a
 				# test
 				np.random.seed(4)
 				self.mean=mean
 				self.covariance = covariance
 				self.batch_size = batch_size
+				self.al_std = al_std
 			def predict(self,image):
 				# We won't actually be using the image. We just want it for
 				# testing.
 				return np.concatenate([np.random.multivariate_normal(self.mean,
-					self.covariance,self.batch_size),np.ones((self.batch_size,
-						len(self.mean)))-1000],axis=-1)
+					self.covariance,self.batch_size),np.zeros((self.batch_size,
+						len(self.mean)))+self.al_std],axis=-1)
 
 		# Start with a simple covariance matrix example.
 		mean = np.ones(self.num_params)*2
 		covariance = np.diag(np.ones(self.num_params))
-		diag_model = ToyModel(mean,covariance,self.batch_size)
+		al_std = -1000
+		diag_model = ToyModel(mean,covariance,self.batch_size,al_std)
 
 		# We don't want any flipping going on
 		self.infer_class.flip_mat_list = [np.diag(np.ones(self.num_params))]
@@ -150,28 +152,40 @@ class BNNInferenceTest(unittest.TestCase):
 			covariance))),0,places=1)
 		self.assertAlmostEqual(np.mean(np.abs(self.infer_class.y_cov-covariance)),
 			0,places=1)
+		self.assertTupleEqual(self.infer_class.al_cov.shape,(self.batch_size,
+			self.num_params,self.num_params))
+		self.assertAlmostEqual(np.mean(np.abs(self.infer_class.al_cov)),0)
 
 		# Repeat this process again with a new covariance matrix and means
 		mean = np.random.rand(self.num_params)
 		covariance = np.random.rand(self.num_params,self.num_params)
+		al_std = 0
 		# Make sure covariance is positive semidefinite
 		covariance = np.dot(covariance,covariance.T)
-		diag_model = ToyModel(mean,covariance,self.batch_size)
+		diag_model = ToyModel(mean,covariance,self.batch_size,al_std)
 		self.infer_class.model = diag_model
 		self.infer_class.gen_samples(10000)
 		self.assertAlmostEqual(np.mean(np.abs(self.infer_class.y_pred-mean)),0,
 			places=1)
+		# Covariance is the sum of two random variables
+		covariance = covariance+np.eye(self.num_params)
 		self.assertAlmostEqual(np.mean(np.abs(self.infer_class.y_std-np.sqrt(
 			np.diag(covariance)))),0,places=1)
 		self.assertAlmostEqual(np.mean(np.abs(self.infer_class.y_cov-covariance)),
 			0,places=1)
+		self.assertTupleEqual(self.infer_class.al_cov.shape,(self.batch_size,
+			self.num_params,self.num_params))
+		self.assertAlmostEqual(np.mean(np.abs(self.infer_class.al_cov-
+			np.eye(self.num_params))),0)
 
 		# Make sure our test probes things well. 
 		wrong_mean = np.random.randn(self.num_params)
 		wrong_covariance = np.random.rand(self.num_params,self.num_params)
+		al_std = -1000
 		# Make sure covariance is positive semidefinite
 		wrong_covariance = np.dot(wrong_covariance,wrong_covariance.T)
-		diag_model = ToyModel(wrong_mean,wrong_covariance,self.batch_size)
+		diag_model = ToyModel(wrong_mean,wrong_covariance,self.batch_size,
+			al_std)
 		self.infer_class.model = diag_model
 		self.infer_class.gen_samples(10000)
 		self.assertGreater(np.mean(np.abs(self.infer_class.y_pred-mean)),0.05)
@@ -179,6 +193,9 @@ class BNNInferenceTest(unittest.TestCase):
 			np.diag(covariance)))),0.05)
 		self.assertGreater(np.mean(np.abs(self.infer_class.y_cov-covariance)),
 			0.05)
+		self.assertTupleEqual(self.infer_class.al_cov.shape,(self.batch_size,
+			self.num_params,self.num_params))
+		self.assertAlmostEqual(np.mean(np.abs(self.infer_class.al_cov)),0)
 
 		# For now inference for more complex model is not implemented. Make
 		# sure an error is raised.

@@ -83,5 +83,17 @@
     "validation_params": {
         "tf_record_path": "tf_record_val",
         "root_path": "/home/swagnercarena/ovejero/datasets/val/"
+    },
+    "inference_params": {
+        "final_params_print_names": [
+            "$\\gamma_1$",
+            "$\\gamma_2$",
+            "$x_\\mathrm{lens}$",
+            "$y_\\mathrm{lens}$",
+            "$e_1$",
+            "$e_2$",
+            "$\\gamma_\\mathrm{lens}$",
+            "$\\log(\\theta_E)$"
+        ]
     }
 }

@@ -7,7 +7,7 @@
         "decay": 3e-06,
         "kernel_regularizer": 1e-05,
         "dropout_regularizer": 1e-06,
-        "root_path": "test_data/",
+        "root_path": "/Users/sebwagner/Documents/Grad_School/Rotations/Phil/ovejero/test/test_data/",
         "tf_record_path": "tf_record_test",
         "final_params": [
             "external_shear_g1",
@@ -36,8 +36,8 @@
             ]
         ],
         "img_dim": 128,
-        "model_weights": "test_data/test_model.h5",
-        "tensorboard_log_dir": "test_data/test.log",
+        "model_weights": "/Users/sebwagner/Documents/Grad_School/Rotations/Phil/ovejero/test/test_data/test_model.h5",
+        "tensorboard_log_dir": "/Users/sebwagner/Documents/Grad_School/Rotations/Phil/ovejero/test/test_data/test.log",
         "random_seed": 1138,
         "norm_images": true,
         "shift_pixels": 2,
@@ -52,7 +52,7 @@
         "pixel_scale": 0.051
     },
     "validation_params": {
-        "root_path": "test_data/",
+        "root_path": "/Users/sebwagner/Documents/Grad_School/Rotations/Phil/ovejero/test/test_data/",
         "tf_record_path": "tf_record_test_val"
     },
     "dataset_params": {
@@ -83,5 +83,17 @@
                 "external_shear_psi_ext"
             ]
         }
+    },
+    "inference_params": {
+        "final_params_print_names": [
+            "$\\gamma_1$",
+            "$\\gamma_2$",
+            "$x_\\mathrm{lens}$",
+            "$y_\\mathrm{lens}$",
+            "$e_1$",
+            "$e_2$",
+            "$\\gamma_\\mathrm{lens}$",
+            "$\\log(\\theta_E)$"
+        ]
     }
 }

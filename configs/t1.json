@@ -83,5 +83,17 @@
             "lens_mass_theta_E"
         ],
         "normalization_constants_path": "norms.csv"
+    },
+    "inference_params": {
+        "final_params_print_names": [
+            "$\\gamma_1$",
+            "$\\gamma_2$",
+            "$x_\\mathrm{lens}$",
+            "$y_\\mathrm{lens}$",
+            "$e_1$",
+            "$e_2$",
+            "$\\gamma_\\mathrm{lens}$",
+            "$\\log(\\theta_E)$"
+        ]
     }
 }
