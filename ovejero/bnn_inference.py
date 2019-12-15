@@ -8,13 +8,15 @@ Examples
 The demo Test_Model_Performance.ipynb gives a number of examples on how to use
 this module.
 """
-from ovejero import model_trainer, data_tools
+from ovejero import model_trainer, data_tools, bnn_alexnet
 import numpy as np
 from tqdm import tqdm
 import pandas as pd
 import matplotlib.pyplot as plt
 import corner
 from scipy.stats import multivariate_normal as mvn
+import tensorflow as tf
+import tensorflow_probability as tfp
 
 class InferenceClass:
 	"""
@@ -63,12 +65,14 @@ class InferenceClass:
 			const_initializer[flip_pair] = -1
 			self.flip_mat_list.append(np.diag(const_initializer))
 
+		self.loss_class = bnn_alexnet.LensingLossFunctions(
+			self.flip_pairs,self.num_params)
+
 		self.y_pred = None
 		self.y_cov = None
 		self.y_std = None
 		self.y_test = None
 		self.predict_samps = None
-
 		self.samples_init = False
 
 	def fix_flip_pairs(self,predict_samps,y_test):
@@ -162,7 +166,7 @@ class InferenceClass:
 		"""
 		# Extract image and output batch from tf dataset
 		for image_batch, yt_batch in self.tf_dataset_v.take(1):
-			self.images = image_batch.numpy()
+			self.images = image_batch
 			self.y_test = yt_batch.numpy()
 
 		# This is where we will save the samples for each prediction. We will
@@ -175,17 +179,88 @@ class InferenceClass:
 			self.num_params))
 		# Generate our samples
 		for samp in tqdm(range(num_samples)):
+			output = self.model.predict(self.images) 
 			# How we extract uncertanties will depend on the type of network in
 			# question.
-			if self.bnn_type=='diag':
-				output_sample = self.model.predict(self.images)
-				predict_samps[samp] = output_sample[:,:self.num_params] 
-				noise = np.random.randn(self.batch_size*self.num_params).reshape(
-					(self.batch_size,self.num_params))
-				predict_samps[samp] += noise*np.exp(output_sample[:,
-					self.num_params:])
-				al_samp[samp] = np.eye(self.num_params)*np.exp(
-					output_sample[:,self.num_params:])[:,np.newaxis]
+			if self.bnn_type == 'diag':
+				# In the diagonal case we only need to add Gaussian random noise
+				# scaled by the variane.
+				y_pred, std_pred = tf.split(output,num_or_size_splits=2,axis=-1)
+				std_pred = tf.exp(std_pred)
+				# Draw a random sample of noise and add that noise to our 
+				# predicted value.
+				noise = tf.random.normal((self.batch_size,
+					self.num_params))*std_pred
+				p_samps_tf = y_pred+noise
+				a_samps_tf = tf.linalg.diag(std_pred)
+
+				# Extract the numpy from the tensorflow
+				predict_samps[samp] = p_samps_tf.numpy()
+				al_samp[samp] = a_samps_tf.numpy()
+
+			elif self.bnn_type == 'full':
+				# In the full covariance case we need to explicitly construcct
+				# our covariance matrix. This mostly follow the code in
+				# bnn_alexnet full_covariance_loss function.
+				# Divide our output into the prediction and the precision matrix
+				# elements.
+				L_elements_len = int(self.num_params*(self.num_params+1)/2)
+				y_pred, L_mat_elements = tf.split(output,
+					num_or_size_splits=[self.num_params,L_elements_len],axis=-1)
+				# Transform our matrix elements into a precision matrix and the
+				# precision matrix into a covariance matrix.
+				prec_mats, _ = self.loss_class.construct_precision_matrix(
+					L_mat_elements)
+				cov_mats = tf.linalg.inv(prec_mats)
+				# Sample noise using our covariance matrices
+				mvn = tfp.distributions.MultivariateNormalFullCovariance(
+					loc=y_pred,covariance_matrix=cov_mats)
+				p_samps_tf = mvn.sample(1)
+
+				# Extract the numpy from the tensorflow
+				predict_samps[samp] = p_samps_tf.numpy()
+				al_samp[samp] = cov_mats.numpy()
+
+			elif self.bnn_type == 'gmm':
+				# In the gmm case, we do the same thing as the bnn case, but
+				# draw which of the two posteriors to draw from.
+				L_elements_len = int(self.num_params*(self.num_params+1)/2)
+				y_pred1, L_mat_elements1, y_pred2, L_mat_elements2, pi_logit = tf.split(
+					output,num_or_size_splits = [self.num_params,L_elements_len,
+					self.num_params,L_elements_len,1],axis=-1)
+
+				# Set the probability between 0 and 1.
+				pi = tf.sigmoid(pi_logit)
+
+				# Now build the precision matrix for our two models and extract the
+				# diagonal components used for the loss calculation
+				prec_mat1, _ = self.loss_class.construct_precision_matrix(
+					L_mat_elements1)
+				# We have to flatten the covariance matrices for the condition
+				# step later on.
+				cov_mats1 = tf.reshape(tf.linalg.inv(prec_mat1),(self.batch_size,
+					-1))
+				prec_mat2, _ = self.loss_class.construct_precision_matrix(
+					L_mat_elements2)
+				cov_mats2 = tf.reshape(tf.linalg.inv(prec_mat2),(self.batch_size,
+					-1))
+
+				# Use random draws from a uniform distribution to select between the
+				# two outputs
+				switch = tf.random.uniform((self.batch_size,1))
+				y_pred = tf.where(switch<pi,y_pred1,y_pred2)
+				cov_mats = tf.reshape(tf.where(switch<pi,cov_mats1,cov_mats2),
+					(self.batch_size,self.num_params,self.num_params))
+
+				# Draw from the alleatoric posterior.
+				mvn = tfp.distributions.MultivariateNormalFullCovariance(
+					loc=y_pred,covariance_matrix=cov_mats)
+				p_samps_tf = mvn.sample(1)
+
+				# Extract the numpy from the tensorflow
+				predict_samps[samp] = p_samps_tf.numpy()
+				al_samp[samp] = cov_mats.numpy()
+
 			else:
 				raise NotImplementedError('gen_pred_cov does not yet support '+
 					'%s models'%(self.bnn_type))
@@ -328,7 +403,7 @@ class InferenceClass:
 		plt.colorbar()
 
 	def plot_calibration(self,n_draws=1000,color_map=["#377eb8", "#4daf4a"],
-		n_perc_points=20):
+		n_perc_points=20,figure=None,legend=None):
 		"""
 		Plot the percentage of draws from the predicted distributions with
 		p(draws) > p(truth) for our different batch examples.
@@ -340,6 +415,14 @@ class InferenceClass:
 			color_map ([str,...]): A list of the colors to use in plotting.
 			n_perc_point (int): The number of percentages to probe in the
 				plotting.
+			figure (matplotlib.pyplot.figure): A figure that was previously
+				returned by plot_calibration to overplot onto.
+			legend ([str,...]): The legend to use for plotting.
+
+		Returns
+		-------
+			(matplotlib.pyplot.figure): The figure object that contains the 
+				plot
 
 		Notes
 		-----
@@ -349,7 +432,7 @@ class InferenceClass:
 		"""
 		if self.samples_init == False:
 			raise RuntimeError('Must generate samples before plotting')
-		# Go through each of our examples and see what percentage of draws have =
+		# Go through each of our examples and see what percentage of draws have
 		# p(draws)>p_true.
 		p_dgt = np.zeros(self.batch_size)
 		for i in range(self.batch_size):
@@ -362,16 +445,22 @@ class InferenceClass:
 		# p(draws)>p(true).
 		percentages = np.linspace(0.0,1.0,n_perc_points)
 		p_images = np.zeros_like(percentages)
-		plt.figure(figsize=(6,6))
+		if figure is None:
+			figure = plt.figure(figsize=(6,6))
+			plt.plot(percentages,percentages,c=color_map[0],ls='--')
 		for pi in range(len(percentages)):
 			percent = percentages[pi]
 			p_images[pi] = np.mean(p_dgt<=percent)
-		plt.plot(percentages,percentages,c=color_map[0],ls='--')
 		plt.plot(percentages,p_images,c=color_map[1])
 		plt.xlabel('Percentage')
 		plt.ylabel('Percent of Images that have x% of draws with p(draws)>p(truth)')
 		plt.title('Calibration of Network Posterior')
-		plt.legend(['Perfect Calibration','Network Calibration'])
+		if legend is None:
+			plt.legend(['Perfect Calibration','Network Calibration'])
+		else:
+			plt.legend(legend)
+
+		return figure
 
 
 

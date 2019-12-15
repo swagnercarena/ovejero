@@ -402,14 +402,14 @@ class SpatialConcreteDropout(Conv2D):
 
 		Parameters
 		----------
-		inputs (tf.Keras.Layer): The inputs to the Dense layer.
-		training (bool): A required input for call. Setting training to 
-			true or false does nothing because concrete dropout behaves the
-			same way in both cases.
+			inputs (tf.Keras.Layer): The inputs to the Dense layer.
+			training (bool): A required input for call. Setting training to 
+				true or false does nothing because concrete dropout behaves the
+				same way in both cases.
 
 		Returns
 		-------
-		(tf.Keras.Layer): The output of the Dense layer.
+			(tf.Keras.Layer): The output of the Dense layer.
 		"""
 		# Small epsilon parameter needed for stable optimization
 		eps = K.cast_to_floatx(K.epsilon())
@@ -437,11 +437,11 @@ class SpatialConcreteDropout(Conv2D):
 
 		Parameters
 		----------
-		input_shape ((int,...)): The shape of the input to our Dense layer.
+			input_shape ((int,...)): The shape of the input to our Dense layer.
 
 		Returns
 		-------
-		((int,...)): The output shape of the layer.
+			((int,...)): The output shape of the layer.
 		"""
 		return super(SpatialConcreteDropout, self).compute_output_shape(
 			input_shape)
@@ -845,7 +845,6 @@ class LensingLossFunctions:
 
 		# Set the probability between 0 and 1.
 		pi = K.sigmoid(pi_logit)
-
 
 		# Now build the precision matrix for our two models and extract the
 		# diagonal components used for the loss calculation
