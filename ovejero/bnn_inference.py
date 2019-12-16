@@ -14,7 +14,6 @@ from tqdm import tqdm
 import pandas as pd
 import matplotlib.pyplot as plt
 import corner
-from scipy.stats import multivariate_normal as mvn
 import tensorflow as tf
 import tensorflow_probability as tfp
 
@@ -402,22 +401,36 @@ class InferenceClass:
 		fig.axes[0].set_yticklabels([0]+self.final_params_print_names)
 		plt.colorbar()
 
-	def plot_calibration(self,n_draws=1000,color_map=["#377eb8", "#4daf4a"],
-		n_perc_points=20,figure=None,legend=None):
+	def calc_p_dlt(self):
+		"""
+		Calculate the percentage of draws from the predicted distribution with
+		||draws||_2 > ||truth||_2 for all of the examples in the batch
+
+		Notes
+		-----
+			p_dlt will be set a property of the class
+		"""
+		self.p_dlt = np.sum(np.square(self.predict_samps-self.y_pred),
+			axis=-1) < np.sum(np.square(self.y_test-self.y_pred),axis=-1)
+		self.p_dlt = np.mean(self.p_dlt,axis=0)
+
+	def plot_calibration(self,color_map=["#377eb8", "#4daf4a"],n_perc_points=20,
+		figure=None,legend=None,show_plot=True):
 		"""
 		Plot the percentage of draws from the predicted distributions with
-		p(draws) > p(truth) for our different batch examples.
+		||draws||_2 > ||truth||_2 for our different batch examples.
 
 		Parameters
 		----------
-			n_draws (int): The number of draws to use in the comparison of
-				p(draws)>p(true) for each image
 			color_map ([str,...]): A list of the colors to use in plotting.
 			n_perc_point (int): The number of percentages to probe in the
 				plotting.
 			figure (matplotlib.pyplot.figure): A figure that was previously
 				returned by plot_calibration to overplot onto.
 			legend ([str,...]): The legend to use for plotting.
+			show_plot (bool): If true, call plt.show() at the end of the
+				function.
+
 
 		Returns
 		-------
@@ -427,19 +440,14 @@ class InferenceClass:
 		Notes
 		-----
 			If the posterior is correctly predicted, it follows that x% of the
-			images should have x% of their draws with p(draws) > p(truth). See
-			the Test_Model_Performance notebook for a discussion of this.
+			images should have x% of their draws with ||draws||_2 > ||truth||_2. 
+			See the Test_Model_Performance notebook for a discussion of this.
 		"""
 		if self.samples_init == False:
 			raise RuntimeError('Must generate samples before plotting')
 		# Go through each of our examples and see what percentage of draws have
-		# p(draws)>p_true.
-		p_dgt = np.zeros(self.batch_size)
-		for i in range(self.batch_size):
-			draws = mvn.rvs(self.y_pred[i],self.y_cov[i],size=n_draws)
-			p_draws = mvn.logpdf(draws,self.y_pred[i],self.y_cov[i])
-			p_true = mvn.logpdf(self.y_test[i],self.y_pred[i],self.y_cov[i])
-			p_dgt[i] = np.mean(p_draws>p_true)
+		# ||draws||_2 < ||truth||_2 (essentially doing integration by radius).
+		self.calc_p_dlt()
 		
 		# Plot what percentage of images have at most x% of draws with 
 		# p(draws)>p(true).
@@ -450,7 +458,7 @@ class InferenceClass:
 			plt.plot(percentages,percentages,c=color_map[0],ls='--')
 		for pi in range(len(percentages)):
 			percent = percentages[pi]
-			p_images[pi] = np.mean(p_dgt<=percent)
+			p_images[pi] = np.mean(self.p_dlt<=percent)
 		plt.plot(percentages,p_images,c=color_map[1])
 		plt.xlabel('Percentage')
 		plt.ylabel('Percent of Images that have x% of draws with p(draws)>p(truth)')
@@ -459,6 +467,8 @@ class InferenceClass:
 			plt.legend(['Perfect Calibration','Network Calibration'])
 		else:
 			plt.legend(legend)
+		if show_plot:
+			plt.show()
 
 		return figure
 

@@ -72,7 +72,7 @@ class BNNInferenceTest(unittest.TestCase):
 
 
 	def test_undo_param_norm(self):
-				# Test if normalizing the lens parameters works correctly.
+		# Test if normalizing the lens parameters works correctly.
 		train_or_test='train'
 		data_tools.normalize_lens_parameters(self.lens_params,
 			self.lens_params_path,self.normalized_param_path,
@@ -459,6 +459,50 @@ class BNNInferenceTest(unittest.TestCase):
 		os.remove(self.normalization_constants_path)
 		os.remove(self.tf_record_path)
 
+	def test_calc_p_dlt(self):
+		# Test that the calc_p_dlt returns the correct percentages for some
+		# toy examples
+
+		# Check a simple case
+		size = int(1e6)
+		self.infer_class.predict_samps = np.random.normal(size=size).reshape(
+			(size//10,10,1))
+		self.infer_class.y_pred = np.mean(self.infer_class.predict_samps,axis=0)
+		self.infer_class.y_test = np.array([1,2,3,4,5,6,7,8,9,10]).reshape((10,1))
+
+		self.infer_class.calc_p_dlt()
+		percentages = [0.682689,0.954499,0.997300,0.999936,0.999999]+[1.0]*5
+		for p_i in range(len(percentages)):
+			self.assertAlmostEqual(percentages[p_i],self.infer_class.p_dlt[p_i],
+				places=2)
+
+		# Shift the mean
+		size = int(1e6)
+		self.infer_class.predict_samps = np.random.normal(loc=2,
+			size=size).reshape((size//10,10,1))
+		self.infer_class.y_pred = np.mean(self.infer_class.predict_samps,axis=0)
+		self.infer_class.y_test = np.array([1,2,3,4,5,6,7,8,9,10]).reshape((10,1))
+		self.infer_class.calc_p_dlt()
+		percentages = [0.682689,0,0.682689,0.954499,0.997300,0.999936]+[1.0]*4
+		for p_i in range(len(percentages)):
+			self.assertAlmostEqual(percentages[p_i],self.infer_class.p_dlt[p_i],
+				places=2)
+
+		# Expand to higher dimensions
+		size = int(1e6)
+		self.infer_class.predict_samps = np.random.normal(loc=0,
+			size=size*2).reshape((size//10,10,2))
+		self.infer_class.predict_samps /= np.sqrt(np.sum(np.square(
+			self.infer_class.predict_samps),axis=-1,keepdims=True))
+		self.infer_class.predict_samps *= np.random.random(size=size).reshape((
+			size//10,10,1))*5
+		self.infer_class.y_pred = np.mean(self.infer_class.predict_samps,axis=0)
+		self.infer_class.y_test = np.array([[1,2,3,4,5,6,7,8,9,10],[0]*10]).T
+		self.infer_class.calc_p_dlt()
+		percentages = [1/5,2/5,3/5,4/5,1,1]+[1.0]*4
+		for p_i in range(len(percentages)):
+			self.assertAlmostEqual(percentages[p_i],self.infer_class.p_dlt[p_i],
+				places=2)
 
 
 
