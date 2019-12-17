@@ -456,10 +456,23 @@ class InferenceClass:
 		if figure is None:
 			figure = plt.figure(figsize=(6,6))
 			plt.plot(percentages,percentages,c=color_map[0],ls='--')
-		for pi in range(len(percentages)):
+
+		# We'll estimate the uncertainty in our plat using a jacknife method.
+		p_images_jn = np.zeros((len(self.p_dlt),n_perc_points))
+		for pi in range(n_perc_points):
 			percent = percentages[pi]
 			p_images[pi] = np.mean(self.p_dlt<=percent)
+			for ji in range(len(self.p_dlt)):
+				samp_p_dlt = np.delete(self.p_dlt,ji)
+				p_images_jn[ji,pi] = np.mean(samp_p_dlt<=percent)
+		# Estimate the standard deviation from the jacknife
+		p_dlt_std = np.sqrt((len(self.p_dlt)-1)*np.mean(np.square(p_images_jn-
+			np.mean(p_images_jn,axis=0))))
 		plt.plot(percentages,p_images,c=color_map[1])
+		# Plot the 1 sigma contours from the jacknife estimate to get an idea of
+		# our sample variance.
+		plt.fill_between(percentages,p_images+p_dlt_std,p_images-p_dlt_std,
+			color=color_map[1],alpha=0.3)
 		plt.xlabel('Percentage')
 		plt.ylabel('Percent of Images that have x% of draws with p(draws)>p(truth)')
 		plt.title('Calibration of Network Posterior')
