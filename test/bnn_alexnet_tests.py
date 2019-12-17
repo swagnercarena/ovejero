@@ -1,6 +1,4 @@
-# TODO: Change the imports once this is a package!!
-import unittest
-import os
+import unittest, os
 # Eliminate TF warning in tests
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 import numpy as np
@@ -148,6 +146,56 @@ class LensingLossFunctionsTests(unittest.TestCase):
 		# Set a seed to make sure that the behaviour of all the test functions
 		# is consistent.
 		np.random.seed(2)
+
+	def test_mse_loss(self):
+		# Test that for a variety of number of parameters and bnn types, the 
+		# algorithm always returns the MSE loss.
+		flip_pairs = []
+		for num_params in range(1,20):
+			# Diagonal covariance
+			loss_class = bnn_alexnet.LensingLossFunctions(flip_pairs,num_params)
+			y_true = np.random.randn(num_params).reshape(1,-1)
+			y_pred = np.random.randn(num_params*2).reshape(1,-1)
+			mse_tensor = loss_class.mse_loss(tf.constant(y_true,dtype=tf.float32),
+				tf.constant(y_pred,dtype=tf.float32))
+			self.assertAlmostEqual(mse_tensor.numpy()[0],np.mean(np.square(
+				y_true-y_pred[:,:num_params])),places=5)
+
+			# Full covariance
+			y_true = np.random.randn(num_params).reshape(1,-1)
+			y_pred = np.random.randn(int(num_params*(num_params+1)/2)).reshape(
+				1,-1)
+			mse_tensor = loss_class.mse_loss(tf.constant(y_true,dtype=tf.float32),
+				tf.constant(y_pred,dtype=tf.float32))
+			self.assertAlmostEqual(mse_tensor.numpy()[0],np.mean(np.square(
+				y_true-y_pred[:,:num_params])),places=5)
+
+			# GMM two matrices full covariance
+			y_true = np.random.randn(num_params).reshape(1,-1)
+			y_pred = np.random.randn(2*(num_params + int(
+				num_params*(num_params+1)/2))+1).reshape(1,-1)
+			mse_tensor = loss_class.mse_loss(tf.constant(y_true,dtype=tf.float32),
+				tf.constant(y_pred,dtype=tf.float32))
+			self.assertAlmostEqual(mse_tensor.numpy()[0],np.mean(np.square(
+				y_true-y_pred[:,:num_params])),places=5)
+
+		# Now an explicit test that flip_pairs is working
+		flip_pairs = [[1,2]]
+		num_params = 5
+		loss_class = bnn_alexnet.LensingLossFunctions(flip_pairs,num_params)
+		y_true = np.ones((4,num_params))
+		y_pred = np.ones((4,num_params))
+		y_pred[:,1:3] *= -1
+		mse_tensor = loss_class.mse_loss(tf.constant(y_true,dtype=tf.float32),
+			tf.constant(y_pred,dtype=tf.float32))
+		self.assertEqual(np.sum(mse_tensor.numpy()),0)
+
+		# Make sure flipping other pairs does not return 0
+		y_pred[:,4] *= -1
+		mse_tensor = loss_class.mse_loss(tf.constant(y_true,dtype=tf.float32),
+			tf.constant(y_pred,dtype=tf.float32))
+		self.assertGreater(np.sum(mse_tensor.numpy()),0.1)
+
 
 	def test_log_gauss_diag(self):
 		# Will not be used for this test, but must be passed in.

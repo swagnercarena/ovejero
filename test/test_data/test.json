@@ -10,8 +10,8 @@
         "root_path": "/Users/sebwagner/Documents/Grad_School/Rotations/Phil/ovejero/test/test_data/",
         "tf_record_path": "tf_record_test",
         "final_params": [
-            "external_shear_e1",
-            "external_shear_e2",
+            "external_shear_g1",
+            "external_shear_g2",
             "lens_mass_center_x",
             "lens_mass_center_y",
             "lens_mass_e1",
@@ -38,7 +38,18 @@
         "img_dim": 128,
         "model_weights": "/Users/sebwagner/Documents/Grad_School/Rotations/Phil/ovejero/test/test_data/test_model.h5",
         "tensorboard_log_dir": "/Users/sebwagner/Documents/Grad_School/Rotations/Phil/ovejero/test/test_data/test.log",
-        "random_seed": 1138
+        "random_seed": 1138,
+        "norm_images": true,
+        "shift_pixels": 2,
+        "shift_params": [
+            [
+                "lens_mass_center_x"
+            ],
+            [
+                "lens_mass_center_y"
+            ]
+        ],
+        "pixel_scale": 0.051
     },
     "validation_params": {
         "root_path": "/Users/sebwagner/Documents/Grad_School/Rotations/Phil/ovejero/test/test_data/",
@@ -61,16 +72,28 @@
         "lens_params_log": [
             "lens_mass_theta_E"
         ],
-        "ratang": {
-            "ratang_parameter_prefixes": [
+        "gampsi": {
+            "gampsi_parameter_prefixes": [
                 "external_shear"
             ],
-            "ratang_params_rat": [
+            "gampsi_params_rat": [
                 "external_shear_gamma_ext"
             ],
-            "ratang_params_ang": [
+            "gampsi_params_ang": [
                 "external_shear_psi_ext"
             ]
         }
+    },
+    "inference_params": {
+        "final_params_print_names": [
+            "$\\gamma_1$",
+            "$\\gamma_2$",
+            "$x_\\mathrm{lens}$",
+            "$y_\\mathrm{lens}$",
+            "$e_1$",
+            "$e_2$",
+            "$\\gamma_\\mathrm{lens}$",
+            "$\\log(\\theta_E)$"
+        ]
     }
 }

@@ -16,14 +16,14 @@
             "lens_mass_theta_E"
         ],
         "lens_params_path": "metadata.csv",
-        "ratang": {
-            "ratang_parameter_prefixes": [
+        "gampsi": {
+            "gampsi_parameter_prefixes": [
                 "external_shear"
             ],
-            "ratang_params_rat": [
+            "gampsi_params_rat": [
                 "external_shear_gamma_ext"
             ],
-            "ratang_params_ang": [
+            "gampsi_params_ang": [
                 "external_shear_psi_ext"
             ]
         }
@@ -31,7 +31,7 @@
     "training_params": {
         "tf_record_path": "tf_record_train",
         "batch_size": 128,
-        "img_dim": 128,
+        "img_dim": 64,
         "tensorboard_log_dir": "/home/swagnercarena/ovejero/logs/t2.log",
         "kernel_regularizer": 1e-05,
         "decay": 3e-06,
@@ -40,8 +40,8 @@
         "random_seed": 1138,
         "root_path": "/home/swagnercarena/ovejero/datasets/train/",
         "final_params": [
-            "external_shear_e1",
-            "external_shear_e2",
+            "external_shear_g1",
+            "external_shear_g2",
             "lens_mass_center_x",
             "lens_mass_center_y",
             "lens_mass_e1",
@@ -67,10 +67,33 @@
                 5
             ]
         ],
-        "dropout_regularizer": 1e-06
+        "dropout_regularizer": 1e-06,
+        "norm_images": true,
+        "shift_pixels": 0,
+        "shift_params": [
+            [
+                "lens_mass_center_x"
+            ],
+            [
+                "lens_mass_center_y"
+            ]
+        ],
+        "pixel_scale": 0.051
     },
     "validation_params": {
         "tf_record_path": "tf_record_val",
         "root_path": "/home/swagnercarena/ovejero/datasets/val/"
+    },
+    "inference_params": {
+        "final_params_print_names": [
+            "$\\gamma_1$",
+            "$\\gamma_2$",
+            "$x_\\mathrm{lens}$",
+            "$y_\\mathrm{lens}$",
+            "$e_1$",
+            "$e_2$",
+            "$\\gamma_\\mathrm{lens}$",
+            "$\\log(\\theta_E)$"
+        ]
     }
 }

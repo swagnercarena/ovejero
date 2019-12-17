@@ -14,6 +14,7 @@ import tensorflow as tf
 from tensorflow.keras.callbacks import TensorBoard, ModelCheckpoint
 from tensorflow.keras.optimizers import Adam
 import argparse, json, os
+import pandas as pd
 
 # Import the code to construct the bnn and the data pipeline
 from ovejero import bnn_alexnet, data_tools
@@ -113,17 +114,17 @@ def prepare_tf_record(cfg,root_path,tf_record_path,final_params,train_or_test):
 	else:
 		lens_params_log = None
 	# Parameters to convert from ratio and ang to excentricities
-	if 'ratang' in cfg['dataset_params']:
-		cfg_ratang = cfg['dataset_params']['ratang']
+	if 'gampsi' in cfg['dataset_params']:
+		cfg_gampsi = cfg['dataset_params']['gampsi']
 		# New prefix for those parameters
-		ratang_parameter_prefixes = cfg_ratang['ratang_parameter_prefixes']
+		gampsi_parameter_prefixes = cfg_gampsi['gampsi_parameter_prefixes']
 		# The parameter names of the ratios
-		ratang_params_rat = cfg_ratang['ratang_params_rat']
+		gampsi_params_rat = cfg_gampsi['gampsi_params_rat']
 		# The parameter names of the angles
-		ratang_params_ang = cfg_ratang['ratang_params_ang']
+		gampsi_params_ang = cfg_gampsi['gampsi_params_ang']
 	else:
-		ratang_parameter_prefixes=None; ratang_params_rat=None;
-		ratang_params_ang=None
+		gampsi_parameter_prefixes=None; gampsi_params_rat=None;
+		gampsi_params_ang=None
 
 	# First write desired parameters in log space.
 	if lens_params_log is not None:
@@ -136,14 +137,14 @@ def prepare_tf_record(cfg,root_path,tf_record_path,final_params,train_or_test):
 		lens_params_path = new_param_path
 
 	# Now convert ratio and angle parameters to excentricities.
-	if ratang_parameter_prefixes is not None:
-		for ratangi in range(len(ratang_parameter_prefixes)):
-			data_tools.ratang_2_exc(ratang_params_rat[ratangi],
-				ratang_params_ang[ratangi],lens_params_path,new_param_path,
-				ratang_parameter_prefixes[ratangi])
+	if gampsi_parameter_prefixes is not None:
+		for gampsii in range(len(gampsi_parameter_prefixes)):
+			data_tools.gampsi_2_g1g2(gampsi_params_rat[gampsii],
+				gampsi_params_ang[gampsii],lens_params_path,new_param_path,
+				gampsi_parameter_prefixes[gampsii])
 			# Update lens_params
-			lens_params.append(ratang_parameter_prefixes[ratangi]+'_e1')
-			lens_params.append(ratang_parameter_prefixes[ratangi]+'_e2')
+			lens_params.append(gampsi_parameter_prefixes[gampsii]+'_g1')
+			lens_params.append(gampsi_parameter_prefixes[gampsii]+'_g2')
 			# Parameters should be read from this path from now on.
 			lens_params_path = new_param_path
 
@@ -163,6 +164,37 @@ def prepare_tf_record(cfg,root_path,tf_record_path,final_params,train_or_test):
 	data_tools.generate_tf_record(root_path,lens_params,new_param_path,
 		tf_record_path)
 
+def get_normed_pixel_scale(cfg,pixel_scale):
+	"""
+	Return a dictionary with the pixel scale normalized according to the 
+	normalization of each shift parameter.
+
+	Parameters
+	----------
+		cfg (dict): The dictionary attained from reading the json config file.
+		pixel_scale (float): The pixel scale used for the original images.
+
+	Returns
+	-------
+		(dict): A dictionary of the pixel scales renormalized in the same way as 
+			the shift parameters.
+	"""
+	# Get the parameters we need to read the normalization from
+	shift_params = cfg['training_params']['shift_params']
+	# Adjust the pixel scale by the normalization
+	normalization_constants_path = cfg['training_params']['root_path'] + cfg[
+		'dataset_params']['normalization_constants_path']
+	norm_const_dict = pd.read_csv(normalization_constants_path, index_col=None)
+	# Set the normed pixel scale for each parameter
+	normed_pixel_scale = {}
+	for shift_param in shift_params[0]:
+		normed_pixel_scale[shift_param] = pixel_scale/norm_const_dict[
+			shift_param][1]
+	for shift_param in shift_params[1]:
+		normed_pixel_scale[shift_param] = pixel_scale/norm_const_dict[
+			shift_param][1]
+	return normed_pixel_scale
+
 def model_loss_builder(cfg, verbose=False):
 	"""
 	Build a model according to the specifications in configuration dictionary
@@ -170,8 +202,7 @@ def model_loss_builder(cfg, verbose=False):
 
 	Parameters
 	----------
-		cfg (dict): The dictionary attained from reading the json config
-			file.
+		cfg (dict): The dictionary attained from reading the json config file.
 		verbose (bool): If True, will be verbose as model is built.
 
 	Returns
@@ -221,12 +252,14 @@ def model_loss_builder(cfg, verbose=False):
 		num_outputs = 2*(num_params + int(num_params*(num_params+1)/2))+1
 	else:
 		raise RuntimeError('BNN type %s does not exist'%(bnn_type))
+	# The mse loss doesn't depend on model type.
+	mse_loss = loss_class.mse_loss
 
 	model = bnn_alexnet.concrete_alexnet((img_dim, img_dim, 1), num_outputs,
 		kernel_regularizer=kr,dropout_regularizer=dr,random_seed=random_seed)
 
 	adam = Adam(lr=learning_rate,amsgrad=False,decay=decay)
-	model.compile(loss=loss, optimizer=adam, metrics=[loss])
+	model.compile(loss=loss, optimizer=adam, metrics=[loss,mse_loss])
 	if verbose:
 		print('Is model built: ' + str(model.built))
 
@@ -274,6 +307,18 @@ def main():
 	# The path for the Tensorboard logs
 	tensorboard_log_dir = cfg['training_params']['tensorboard_log_dir']
 
+	# The parameters govern the augmentation of the data
+	# Whether or not the images should be normalzied to have standard
+	# deviation 1
+	norm_images = cfg['training_params']['norm_images']
+	# The number of pixels to uniformly shift the images by and the
+	# parameters that need to be rescaled to account for this shift
+	shift_pixels = cfg['training_params']['shift_pixels']
+	shift_params = cfg['training_params']['shift_params']
+	# What the pixel_scale of the images is. This will be adjusted for the
+	# normalization.
+	pixel_scale = cfg['training_params']['pixel_scale']
+
 	# Finally set the random seed we will use for training
 	random_seed = cfg['training_params']['random_seed']
 	tf.random.set_seed(random_seed)
@@ -294,11 +339,18 @@ def main():
 	else:
 		print('TFRecord found at %s'%(tf_record_path_v))
 
+	# Get the normalzied pixel scale (will fail if tf_record has not been
+	# correctly created.)
+	normed_pixel_scale = get_normed_pixel_scale(cfg,pixel_scale)
+
 	# We let keras deal with epochs instead of the tf dataset object.
 	tf_dataset_t = data_tools.build_tf_dataset(tf_record_path_t,final_params,
-		batch_size,1)
+		batch_size,1,norm_images=norm_images,shift_pixels=shift_pixels,
+		shift_params=shift_params, normed_pixel_scale=normed_pixel_scale)
+	# Validation dataset will, by default, have no augmentation but will have
+	# the images normalized if requested.
 	tf_dataset_v = data_tools.build_tf_dataset(tf_record_path_v,final_params,
-		batch_size,1)
+		batch_size,1,norm_images=norm_images)
 
 	print('Initializing the model')
 

@@ -402,14 +402,14 @@ class SpatialConcreteDropout(Conv2D):
 
 		Parameters
 		----------
-		inputs (tf.Keras.Layer): The inputs to the Dense layer.
-		training (bool): A required input for call. Setting training to 
-			true or false does nothing because concrete dropout behaves the
-			same way in both cases.
+			inputs (tf.Keras.Layer): The inputs to the Dense layer.
+			training (bool): A required input for call. Setting training to 
+				true or false does nothing because concrete dropout behaves the
+				same way in both cases.
 
 		Returns
 		-------
-		(tf.Keras.Layer): The output of the Dense layer.
+			(tf.Keras.Layer): The output of the Dense layer.
 		"""
 		# Small epsilon parameter needed for stable optimization
 		eps = K.cast_to_floatx(K.epsilon())
@@ -437,11 +437,11 @@ class SpatialConcreteDropout(Conv2D):
 
 		Parameters
 		----------
-		input_shape ((int,...)): The shape of the input to our Dense layer.
+			input_shape ((int,...)): The shape of the input to our Dense layer.
 
 		Returns
 		-------
-		((int,...)): The output shape of the layer.
+			((int,...)): The output shape of the layer.
 		"""
 		return super(SpatialConcreteDropout, self).compute_output_shape(
 			input_shape)
@@ -591,6 +591,37 @@ class LensingLossFunctions:
 			const_initializer[flip_pair] = -1
 			self.flip_mat_list.append(tf.linalg.diag(tf.constant(
 				const_initializer,dtype=tf.float32)))
+
+	def mse_loss(self, y_true, output):
+		"""
+		Returns the MSE loss of the predicted parameters. Will ignore parameters
+		associated with the covariance matrix.
+		Parameters
+		----------
+			y_true (tf.Tensor): The true values of the parameters
+			output (tf.Tensor): The predicted values of the lensing parameters. 
+				This assumes the first num_params are 
+
+		Returns
+		-------
+			(tf.Tensor): The mse loss function.
+
+		Notes
+		-----
+			This function should never be used as a loss function. It is useful
+			as a metric to understand what portion of the reduciton in the loss
+			function can be attributed to improved parameter accuracy. Also
+			note that for the gmm models the output will default to the first
+			Gaussian for this metric.
+		"""
+		y_pred, _ = tf.split(output,num_or_size_splits=(self.num_params,-1),
+			axis=-1)
+		loss_list = []
+		for flip_mat in self.flip_mat_list:
+			loss_list.append(tf.reduce_mean(tf.square(
+				tf.matmul(y_pred,flip_mat)-y_true),axis=-1))
+		loss_stack = tf.stack(loss_list,axis=-1)
+		return tf.reduce_min(loss_stack,axis=-1)
 
 	def log_gauss_diag(self,y_true,y_pred,std_pred):
 		"""
@@ -814,7 +845,6 @@ class LensingLossFunctions:
 
 		# Set the probability between 0 and 1.
 		pi = K.sigmoid(pi_logit)
-
 
 		# Now build the precision matrix for our two models and extract the
 		# diagonal components used for the loss calculation

@@ -13,7 +13,7 @@ readme = open("README.rst").read()
 PACKAGE_PATH = os.path.abspath(os.path.join(__file__, os.pardir))
 
 required_packages = ['numpy>=1.13', 'scipy>=0.14.0', 'configparser',
-	'pandas>=0.24.2']
+	'pandas>=0.24.2','corner>=2.0.1','tensorflow-probability>=0.8.0']
 
 setup(
     name='ovejero',
@@ -23,7 +23,6 @@ setup(
     author='Sebastian Wagner-Carena',
     author_email='sebaswagner@outlook.com',
     url='https://github.com/swagnercarena/ovejero',
-    download_url='https://github.com/sibirrer/lenstronomy/archive/1.0.1.tar.gz',
     packages=find_packages(PACKAGE_PATH),
     package_dir={'ovejero': 'ovejero'},
     include_package_data=True,
