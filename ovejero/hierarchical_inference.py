@@ -272,6 +272,7 @@ class HierarchicalClass:
 		
 		# We iterate through each lens parameter and carry out the evaluation
 
+		# TODO: Make this faster. .1 seconds is a bit slow.
 		logpdf = np.zeros((samples.shape[0],samples.shape[1]))
 
 		for li in range(len(self.lens_params)):
@@ -360,6 +361,14 @@ class HierarchicalClass:
 			self.lens_samps[:,:,angi] = np.arctan2(
 				self.predict_samps[:,:,pg2i],
 				self.predict_samps[:,:,pg1i])/2
+
+		# TODO: We need a much better way to deal with this! But for now
+		# we're just going to force it.
+		hard_fix_params = ['lens_mass_e1','lens_mass_e2']
+		for lens_param in hard_fix_params:
+			fixi = self.lens_params.index(lens_param)
+			self.lens_samps[self.lens_samps[:,:,fixi]<-0.55,fixi] = -0.55+1e-5
+			self.lens_samps[self.lens_samps[:,:,fixi]>0.55,fixi] = 0.55-1e-5
 
 		self.pt_omegai = self.log_p_theta_omega(self.lens_samps,
 			self.target_eval_dict['hyps'], self.target_eval_dict)
