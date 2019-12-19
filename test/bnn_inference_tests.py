@@ -15,8 +15,6 @@ class BNNInferenceTest(unittest.TestCase):
 		self.root_path = os.path.dirname(os.path.abspath(__file__))+'/test_data/'
 		with open(self.root_path+'test.json','r') as json_f:
 			self.cfg = json.load(json_f)
-		self.final_params = self.cfg['training_params']['final_params']
-		self.num_params = len(self.final_params)
 		self.batch_size = self.cfg['training_params']['batch_size']
 		self.normalized_param_path = self.root_path + 'normed_metadata.csv'
 		self.normalization_constants_path = self.root_path + 'norm.csv'
@@ -25,6 +23,7 @@ class BNNInferenceTest(unittest.TestCase):
 			'lens_mass_center_x','lens_mass_center_y',
 			'lens_mass_e1','lens_mass_e2',
 			'lens_mass_gamma','lens_mass_theta_E']
+		self.num_params = len(self.lens_params)
 		self.cfg['dataset_params']['normalization_constants_path'] = 'norm.csv'
 		self.cfg['training_params']['final_params'] = self.lens_params
 		self.cfg['training_params']['bnn_type'] = 'diag'
@@ -90,9 +89,12 @@ class BNNInferenceTest(unittest.TestCase):
 		lens_params_numpy = np.array(lens_params_numpy).T
 		norms_params_numpy = np.array(norms_params_numpy).T
 		predict_samps = np.tile(norms_params_numpy,(3,1,1))
+		# TODO: write a good test for al_samps!
+		al_samps = np.ones((3,3,self.num_params,self.num_params))
 
 		# Try to denormalize everything
-		self.infer_class.undo_param_norm(predict_samps,norms_params_numpy)
+		self.infer_class.undo_param_norm(predict_samps,norms_params_numpy,
+			al_samps)
 
 		self.assertAlmostEqual(np.mean(np.abs(norms_params_numpy-
 			lens_params_numpy)),0)
@@ -451,7 +453,7 @@ class BNNInferenceTest(unittest.TestCase):
 		self.assertAlmostEqual(np.mean(np.abs(self.infer_class.y_pred-4)),
 			0,places=1)
 		self.assertAlmostEqual(np.mean(np.abs(self.infer_class.y_std-np.sqrt(5))),
-			0,places=1)
+			0,places=0)
 		self.assertTupleEqual(self.infer_class.al_cov.shape,(self.batch_size,
 			self.num_params,self.num_params))
 

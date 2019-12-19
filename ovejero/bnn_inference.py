@@ -1,5 +1,7 @@
 # -*- coding: utf-8 -*-
 """
+Given a trained model, use the model to infer the posteriors of new lenses.
+
 This module contains the functions neccesary for conducting inference using a
 trained bnn.
 

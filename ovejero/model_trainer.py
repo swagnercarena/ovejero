@@ -15,6 +15,7 @@ from tensorflow.keras.callbacks import TensorBoard, ModelCheckpoint
 from tensorflow.keras.optimizers import Adam
 import argparse, json, os
 import pandas as pd
+import copy
 
 # Import the code to construct the bnn and the data pipeline
 from ovejero import bnn_alexnet, data_tools
@@ -96,8 +97,9 @@ def prepare_tf_record(cfg,root_path,tf_record_path,final_params,train_or_test):
 	"""
 	# Path to csv containing lens parameters.
 	lens_params_path = root_path + cfg['dataset_params']['lens_params_path']
-	# The list of lens parameters that should be trained on
-	lens_params = cfg['dataset_params']['lens_params']
+	# The list of lens parameters that should be trained on. We will
+	# append to this, so we want to make a copy.
+	lens_params = copy.copy(cfg['dataset_params']['lens_params'])
 	# Where to save the lens parameters to after the preprocessing 
 	# transformations
 	new_param_path = root_path + cfg['dataset_params']['new_param_path']
