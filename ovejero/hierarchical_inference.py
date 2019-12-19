@@ -403,7 +403,7 @@ class HierarchicalClass:
 		like_ratio = special.logsumexp(pt_omega-self.pt_omegai,axis=0)
 		like_ratio[np.isnan(like_ratio)] = -np.inf
 
-		return lprior + like_ratio
+		return lprior + np.sum(like_ratio)
 
 
 
