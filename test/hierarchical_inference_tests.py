@@ -1,7 +1,7 @@
 import unittest, os, json
 # import tensorflow as tf
 from ovejero import hierarchical_inference, model_trainer
-from baobab.configs import BaobabConfig
+from baobab import configs
 import numpy as np
 from scipy import stats
 import tensorflow as tf
@@ -98,8 +98,9 @@ class HierarchicalnferenceTest(unittest.TestCase):
 		# Check that the eval dictionary is built correctly for an example with
 		# and without priors.
 		root_path = os.path.dirname(os.path.abspath(__file__))+'/test_data/'
-		cfg = BaobabConfig.from_file(root_path + 'test_baobab_cfg.py')
-		cfg_pr = BaobabConfig.from_file(root_path + 'test_baobab_cfg_prior.py')
+		cfg = configs.BaobabConfig.from_file(root_path + 'test_baobab_cfg.py')
+		cfg_pr = configs.BaobabConfig.from_file(root_path + 
+			'test_baobab_cfg_prior.py')
 		lens_params = ['external_shear_gamma_ext','external_shear_psi_ext',
 			'lens_mass_center_x','lens_mass_center_y',
 			'lens_mass_e1','lens_mass_e2',

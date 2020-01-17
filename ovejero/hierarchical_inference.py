@@ -15,7 +15,8 @@ use this module.
 
 import numpy as np
 from scipy import stats, special
-from baobab.configs import BaobabConfig
+from baobab import configs
+from baobab import distributions
 from ovejero import bnn_inference
 
 def eval_log_norm_log_pdf(samples,hyp):
@@ -112,8 +113,8 @@ def build_evaluation_dictionary(baobab_cfg,lens_params,extract_hyperpriors=False
 
 	Notes
 	-----
-		This will not be automatically forward compatible with new
-		distributions in baobab. Only uniform hyperpriors are supported for now.
+		This will be automatically forward compatible with new distributions in 
+		baobab. Only uniform hyperpriors are supported for now.
 	"""
 
 	# Initialize eval_dict with empty lists for hyperparameters and hyperpriors.
@@ -229,9 +230,9 @@ class HierarchicalClass:
 		self.lens_params_log = cfg['dataset_params']['lens_params_log']
 		self.gampsi = cfg['dataset_params']['gampsi']
 		self.final_params = cfg['training_params']['final_params']
-		self.interim_baobab_omega = BaobabConfig.from_file(
+		self.interim_baobab_omega = configs.BaobabConfig.from_file(
 			interim_baobab_omega_path)
-		self.target_baobab_omega = BaobabConfig.from_file(
+		self.target_baobab_omega = configs.BaobabConfig.from_file(
 			target_baobab_omega_path)
 		self.num_params = len(self.lens_params)
 		# Build the evaluation dictionaries from the 
