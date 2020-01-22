@@ -48,9 +48,11 @@ class InferenceClass:
 		self.num_params = len(self.final_params)
 		self.batch_size = cfg['training_params']['batch_size']
 		self.norm_images = cfg['training_params']['norm_images']
+		self.baobab_config_path = cfg['training_params']['baobab_config_path']
 
 		self.tf_dataset_v = data_tools.build_tf_dataset(self.tf_record_path_v,
-			self.final_params,self.batch_size,1,norm_images=self.norm_images)
+			self.final_params,self.batch_size,1,self.baobab_config_path,
+			norm_images=self.norm_images)
 
 		self.output_shape = self.model.output_shape[1]
 		self.bnn_type = cfg['training_params']['bnn_type']

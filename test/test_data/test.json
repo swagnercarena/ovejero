@@ -49,7 +49,8 @@
                 "lens_mass_center_y"
             ]
         ],
-        "pixel_scale": 0.051
+        "pixel_scale": 0.051,
+        "baobab_config_path": "/Users/sebwagner/Documents/Grad_School/Rotations/Phil/ovejero/test/test_data/test_baobab_cfg.py"
     },
     "validation_params": {
         "root_path": "/Users/sebwagner/Documents/Grad_School/Rotations/Phil/ovejero/test/test_data/",

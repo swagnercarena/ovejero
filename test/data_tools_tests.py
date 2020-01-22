@@ -6,6 +6,7 @@ from ovejero import data_tools
 import numpy as np
 import pandas as pd
 from helpers import dataset_comparison
+from matplotlib import pyplot as plt
 
 class TFRecordTests(unittest.TestCase):
 
@@ -18,6 +19,7 @@ class TFRecordTests(unittest.TestCase):
 			'lens_mass_gamma','lens_mass_theta_E']
 		self.lens_params_path = self.root_path + 'metadata.csv'
 		self.tf_record_path = self.root_path + 'test_record'
+		self.baobab_config_path = self.root_path + 'test_baobab_cfg.py'
 
 	def test_normalize_lens_parameters(self):
 		# Test if normalizing the lens parameters works correctly.
@@ -147,7 +149,8 @@ class TFRecordTests(unittest.TestCase):
 		n_epochs = 1
 		norm_images = False
 		dataset = data_tools.build_tf_dataset(self.tf_record_path,
-			self.lens_params,batch_size,n_epochs,norm_images=norm_images)
+			self.lens_params,batch_size,n_epochs,self.baobab_config_path,
+			norm_images=norm_images)
 		npy_counts = 0
 		for batch in dataset:
 			self.assertListEqual(batch[0].get_shape().as_list(),
@@ -161,7 +164,8 @@ class TFRecordTests(unittest.TestCase):
 		batch_size = 5
 		n_epochs = 2
 		dataset = data_tools.build_tf_dataset(self.tf_record_path,
-			self.lens_params,batch_size,n_epochs,norm_images=norm_images)
+			self.lens_params,batch_size,n_epochs,self.baobab_config_path,
+			norm_images=norm_images)
 		npy_counts = 0
 		for batch in dataset:
 			self.assertListEqual(batch[0].get_shape().as_list(),
@@ -176,7 +180,8 @@ class TFRecordTests(unittest.TestCase):
 		n_epochs = 2
 		norm_images=True
 		dataset = data_tools.build_tf_dataset(self.tf_record_path,
-			self.lens_params,batch_size,n_epochs,norm_images=norm_images)
+			self.lens_params,batch_size,n_epochs,self.baobab_config_path,
+			norm_images=norm_images)
 		npy_counts = 0
 		for batch in dataset:
 			self.assertListEqual(batch[0].get_shape().as_list(),
@@ -192,16 +197,17 @@ class TFRecordTests(unittest.TestCase):
 		shift_pixels = 2
 		with self.assertRaises(RuntimeError):
 			dataset_shifted = data_tools.build_tf_dataset(self.tf_record_path,
-				self.lens_params,batch_size,n_epochs,norm_images=norm_images,
-				shift_pixels=shift_pixels)
+				self.lens_params,batch_size,n_epochs,self.baobab_config_path,
+				norm_images=norm_images,shift_pixels=shift_pixels)
 
 		# Try raising a different shift error
 		shift_pixels = 2
 		shift_params = (['lens_mass_center_x'],['lens_mass_center_y'])
 		with self.assertRaises(RuntimeError):
 			dataset_shifted = data_tools.build_tf_dataset(self.tf_record_path,
-				self.lens_params,batch_size,n_epochs,norm_images=norm_images,
-				shift_pixels=shift_pixels,shift_params=shift_params)
+				self.lens_params,batch_size,n_epochs,self.baobab_config_path,
+				norm_images=norm_images,shift_pixels=shift_pixels,
+				shift_params=shift_params)
 
 		# Try doing the shifting right
 		batch_size = 20
@@ -213,12 +219,13 @@ class TFRecordTests(unittest.TestCase):
 		shift_params = (['lens_mass_center_x'],['lens_mass_center_y'])
 		tf.random.set_seed(20)
 		dataset_shifted = data_tools.build_tf_dataset(self.tf_record_path,
-				self.lens_params,batch_size,n_epochs,norm_images=norm_images,
-				shift_pixels=shift_pixels, shift_params=shift_params,
-				normed_pixel_scale=normed_pixel_scale)
+				self.lens_params,batch_size,n_epochs,self.baobab_config_path,
+				norm_images=norm_images, shift_pixels=shift_pixels, 
+				shift_params=shift_params, normed_pixel_scale=normed_pixel_scale)
 		tf.random.set_seed(20)
 		dataset = data_tools.build_tf_dataset(self.tf_record_path,
-				self.lens_params,batch_size,n_epochs,norm_images=norm_images)
+				self.lens_params,batch_size,n_epochs,self.baobab_config_path,
+				norm_images=norm_images)
 		npy_counts = 0
 		for batch in dataset:
 			for batch_shifted in dataset_shifted:
@@ -264,3 +271,17 @@ class TFRecordTests(unittest.TestCase):
 						places=2)
 			npy_counts += batch_size
 		self.assertEqual(npy_counts,num_npy*n_epochs)
+
+		# Finally, just check that the noise statistics follow what we've
+		# specified in the baobab configuration file.
+		dataset = data_tools.build_tf_dataset(self.tf_record_path,
+				self.lens_params,batch_size,n_epochs,self.baobab_config_path,
+				norm_images=False)
+		for batch in dataset:
+			for image_i in range(len(batch[0].numpy())):
+				image = batch[0].numpy()[image_i]
+				self.assertGreater(np.std(image[:2,:,0]),5e-3)
+				self.assertGreater(np.std(image[-2:,:,0]),5e-3)
+				self.assertGreater(np.std(image[:,:2,0]),5e-3)
+				self.assertGreater(np.std(image[:,-2:,0]),5e-3)
+

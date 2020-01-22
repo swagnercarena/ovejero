@@ -42,7 +42,8 @@
         "shift_pixels": 0,
         "shift_params": [
         ],
-        "pixel_scale": 0
+        "pixel_scale": 0,
+        "baobab_config_path": ""
     },
     "inference_params": {
         "final_params_print_names": [

@@ -308,6 +308,8 @@ def main():
 	model_weights = cfg['training_params']['model_weights']
 	# The path for the Tensorboard logs
 	tensorboard_log_dir = cfg['training_params']['tensorboard_log_dir']
+	# The path to the baobab config file that will be used to add noise
+	baobab_config_path = cfg['training_params']['baobab_config_path']
 
 	# The parameters govern the augmentation of the data
 	# Whether or not the images should be normalzied to have standard
@@ -347,12 +349,13 @@ def main():
 
 	# We let keras deal with epochs instead of the tf dataset object.
 	tf_dataset_t = data_tools.build_tf_dataset(tf_record_path_t,final_params,
-		batch_size,1,norm_images=norm_images,shift_pixels=shift_pixels,
-		shift_params=shift_params, normed_pixel_scale=normed_pixel_scale)
+		batch_size,1,baobab_config_path,norm_images=norm_images,
+		shift_pixels=shift_pixels,shift_params=shift_params, 
+		normed_pixel_scale=normed_pixel_scale)
 	# Validation dataset will, by default, have no augmentation but will have
 	# the images normalized if requested.
 	tf_dataset_v = data_tools.build_tf_dataset(tf_record_path_v,final_params,
-		batch_size,1,norm_images=norm_images)
+		batch_size,1,baobab_config_path,norm_images=norm_images)
 
 	print('Initializing the model')
 

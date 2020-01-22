@@ -49,7 +49,8 @@
                 "lens_mass_center_y"
             ]
         ],
-        "pixel_scale": 0.051
+        "pixel_scale": 0.051,
+        "baobab_config_path": "/home/swagnercarena/ovejero/configs/train_diagonal.py"
     },
     "validation_params": {
         "tf_record_path": "tf_record_val",

@@ -14,6 +14,8 @@ import tensorflow as tf
 import pandas as pd
 import glob, os
 from tqdm import tqdm
+from baobab import configs
+from baobab.data_augmentation import noise_tf 
 
 def normalize_lens_parameters(lens_params,lens_params_path,normalized_param_path,
 	normalization_constants_path,train_or_test='train'):
@@ -181,8 +183,32 @@ def generate_tf_record(root_path,lens_params,lens_params_path,tf_record_path):
 			# Write out the example to the TFRecord file
 			writer.write(example.SerializeToString())
 
+# TODO - This function really belongs in baobab. Talk to Ji Won about moving it 
+# there.
+def get_noise_kwargs(baobab_cfg):
+	"""
+	Return the noise kwargs defined in the babobab config
+
+	Parameters
+	----------
+		baobab_cfg (BaobabConfig): A BaobabConfig object containing the desired
+			noise parameters.
+
+	Returns
+	-------
+		(dict): A dict containing the noise kwargs to be passed to the noise
+			model.
+	"""
+	# Go through the baobab config and pull out the noise kwargs one by one.
+	noise_kwargs = {}
+	noise_kwargs.update(baobab_cfg.instrument)
+	noise_kwargs.update(baobab_cfg.bandpass)
+	noise_kwargs.update(baobab_cfg.observation)
+	return noise_kwargs
+
 def build_tf_dataset(tf_record_path,lens_params,batch_size,n_epochs,
-	norm_images=False,shift_pixels=0,shift_params=None,normed_pixel_scale={}):
+	baobab_config_path,norm_images=False,shift_pixels=0,shift_params=None,
+	normed_pixel_scale={}):
 	"""
 	Return a TFDataset for use in training the model.
 
@@ -193,8 +219,10 @@ def build_tf_dataset(tf_record_path,lens_params,batch_size,n_epochs,
 		lens_params ([str,...]): A list of strings containing the lens params 
 			that were written out as features
 		batch_size (int): The batch size that will be used for training
-		n_epochs (int): The number of training epochs. The dataset object will deal
-			with iterating over the data for repeated epochs.
+		n_epochs (int): The number of training epochs. The dataset object will 
+			deal with iterating over the data for repeated epochs.
+		baobab_config_path: The string specifying the path to the baobab config 
+			for the training set. 
 		norm_images (bool): If True, images will be normalized to have std 1.
 		shift_pixels (int): If >0, images will be shifted uniformly between 0 
 			and shift_pixels pixels in the x and y direction (the shift in the
@@ -219,6 +247,11 @@ def build_tf_dataset(tf_record_path,lens_params,batch_size,n_epochs,
 	# Read the TFRecord
 	raw_dataset = tf.data.TFRecordDataset(tf_record_path)
 
+	# Load a noise model from baobab.
+	baobab_cfg = configs.BaobabConfig.from_file(baobab_config_path)
+	noise_kwargs = get_noise_kwargs(baobab_cfg)
+	noise_function = noise_tf.NoiseModelTF(**noise_kwargs)
+
 	# Create the feature decoder that will be used
 	def parse_image_features(example):
 		data_features = {
@@ -234,6 +267,8 @@ def build_tf_dataset(tf_record_path,lens_params,batch_size,n_epochs,
 		image = tf.io.decode_raw(parsed_dataset['image'],out_type=float)
 		image = tf.reshape(image,(parsed_dataset['height'],
 			parsed_dataset['width'],1))
+		# Add the noise using the baobab noise function (which is a tf graph)
+		image = noise_function.add_noise(image)
 		# Shift the images if that's specified
 		if shift_pixels>0:
 			# Get the x and y shift from a categorical distribution centered at 0
