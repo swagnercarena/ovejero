@@ -183,29 +183,6 @@ def generate_tf_record(root_path,lens_params,lens_params_path,tf_record_path):
 			# Write out the example to the TFRecord file
 			writer.write(example.SerializeToString())
 
-# TODO - This function really belongs in baobab. Talk to Ji Won about moving it 
-# there.
-def get_noise_kwargs(baobab_cfg):
-	"""
-	Return the noise kwargs defined in the babobab config
-
-	Parameters
-	----------
-		baobab_cfg (BaobabConfig): A BaobabConfig object containing the desired
-			noise parameters.
-
-	Returns
-	-------
-		(dict): A dict containing the noise kwargs to be passed to the noise
-			model.
-	"""
-	# Go through the baobab config and pull out the noise kwargs one by one.
-	noise_kwargs = {}
-	noise_kwargs.update(baobab_cfg.instrument)
-	noise_kwargs.update(baobab_cfg.bandpass)
-	noise_kwargs.update(baobab_cfg.observation)
-	return noise_kwargs
-
 def build_tf_dataset(tf_record_path,lens_params,batch_size,n_epochs,
 	baobab_config_path,norm_images=False,shift_pixels=0,shift_params=None,
 	normed_pixel_scale={}):
@@ -247,9 +224,9 @@ def build_tf_dataset(tf_record_path,lens_params,batch_size,n_epochs,
 	# Read the TFRecord
 	raw_dataset = tf.data.TFRecordDataset(tf_record_path)
 
-	# Load a noise model from baobab.
+	# Load a noise model from baobab using the baobab config file.
 	baobab_cfg = configs.BaobabConfig.from_file(baobab_config_path)
-	noise_kwargs = get_noise_kwargs(baobab_cfg)
+	noise_kwargs = baobab_cfg.get_noise_kwargs()
 	noise_function = noise_tf.NoiseModelTF(**noise_kwargs)
 
 	# Create the feature decoder that will be used

@@ -339,9 +339,6 @@ class HierarchicalClassTest(unittest.TestCase):
 		for pi in range(self.num_params):
 			self.assertGreater(np.sum(self.hclass.lens_samps[:,:,pi]),0)
 
-		print(self.lens_params)
-		print(self.final_params)
-
 		# Check that the parameters that got changed did so in the right way.
 		# First check theta_e
 		self.assertAlmostEqual(np.max(np.abs(self.hclass.predict_samps[:,:,-1]-
