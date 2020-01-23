@@ -18,6 +18,7 @@ from scipy import stats, special
 from baobab import configs
 from baobab import distributions
 from ovejero import bnn_inference
+from inspect import signature
 
 def eval_log_norm_log_pdf(samples,hyp):
 	"""
@@ -132,70 +133,33 @@ def build_evaluation_dictionary(baobab_cfg,lens_params,extract_hyperpriors=False
 		dist = baobab_cfg.bnn_omega['_'.join(lens_split[:2])][
 			'_'.join(lens_split[2:])]
 
-		# We are going to read through the config file here and build a mapping
-		# between an array of hyperparameter values that our mcmc will return
-		# and the pdf on the data. To do this we will have to read through the
-		# distribution for each parameter and build a function we can evaluate 
-		# to get the pdf. We will also store the values for the distribution
-		# parameters in the config file, since these will be important to know
-		# for the interim prior. Finally, we also need to know the hyperpriors
-		# we're imposing on the distribution parameters in Omega. We will extract
-		# this if extract_hyperpriors is set to true. 
-		if dist['dist'] == 'normal':
-			# Normal has two hyperparameters
-			eval_dict[lens_param]['hyp_ind'] = np.arange(eval_dict['hyp_len'],
-				eval_dict['hyp_len']+2)
-			eval_dict['hyp_len'] += 2
-			# Add the value of the parameters in the config file
-			eval_dict['hyps'].extend([dist['mu'],dist['sigma']])
-			eval_dict['hyp_names'].extend([lens_param+':mu',lens_param+':sigma'])
-			if extract_hyperpriors:
-				hypp = dist['hyper_prior']
-				eval_dict['hyp_prior'].extend([hypp['mu'],hypp['sigma']])
-			# For a normal distribution we want the sigma parameter to be 
-			# calculated in log space, and we need to check if it is normal
-			# or log normal.
-			if dist['log'] == True:
-				eval_dict[lens_param]['eval_fn'] = eval_log_norm_log_pdf
+		# Get the function in question from lenstronomy.
+		eval_fn = getattr(distributions,'eval_{}_logpdf'.format(dist['dist']))
+		eval_sig = signature(eval_fn)
+
+		# Hyperparameters is number of parameters-1 because the first parameter
+		# is where to evaluate.
+		n_hyps = len(eval_sig.parameters)-1
+
+		# Add the value of the hyperparameters in the config file. Again skip
+		# the first one.
+		for hyperparam_name in list(eval_sig.parameters.keys())[1:]:
+			# Sometimes hyperparameters are not specified
+			if dist[hyperparam_name] == {}:
+				n_hyps -= 1
 			else:
-				eval_dict[lens_param]['eval_fn'] = eval_norm_log_pdf
-			# 
+				eval_dict['hyps'].extend([dist[hyperparam_name]])
+				eval_dict['hyp_names'].extend([lens_param+':'+hyperparam_name])
+				if extract_hyperpriors:
+					hypp = dist['hyper_prior']
+					eval_dict['hyp_prior'].extend([hypp[hyperparam_name]])
 
-		elif dist['dist'] == 'beta':
-			# Beta has four parameters - a, b, lower, and upper
-			eval_dict[lens_param]['hyp_ind'] = np.arange(eval_dict['hyp_len'],
-				eval_dict['hyp_len']+4)
-			eval_dict['hyp_len'] += 4
-			# Add the value of the parameters in the config file
-			eval_dict['hyps'].extend([dist['a'],dist['b'],dist['lower'],
-				dist['upper']])
-			eval_dict['hyp_names'].extend([lens_param+':a',lens_param+':b',
-				lens_param+':lower',lens_param+':upper'])
-			if extract_hyperpriors:
-				hypp = dist['hyper_prior']
-				eval_dict['hyp_prior'].extend([hypp['a'],hypp['b'],hypp['lower'],
-					hypp['upper']])
-			eval_dict[lens_param]['eval_fn'] = eval_beta_log_pdf
+		eval_dict[lens_param]['hyp_ind'] = np.arange(eval_dict['hyp_len'],
+			eval_dict['hyp_len']+n_hyps)
+		eval_dict['hyp_len'] += n_hyps
 
-		elif dist['dist'] == 'generalized_normal':
-			# A generalized normal distribution has five parameters - mu, alpha,
-			# p, lower, and upper.
-			eval_dict[lens_param]['hyp_ind'] = np.arange(eval_dict['hyp_len'],
-				eval_dict['hyp_len']+5)
-			eval_dict['hyp_len'] += 5
-			# Add the value of the parameters in the config file
-			eval_dict['hyps'].extend([dist['mu'],dist['alpha'],dist['p'],
-				dist['lower'],dist['upper']])
-			eval_dict['hyp_names'].extend([lens_param+':mu',lens_param+':alpha',
-				lens_param+':p',lens_param+':lower',lens_param+':upper'])
-			if extract_hyperpriors:
-				hypp = dist['hyper_prior']
-				eval_dict['hyp_prior'].extend([hypp['mu'],hypp['alpha'],hypp['p'],
-					hypp['lower'],hypp['upper']])
-			eval_dict[lens_param]['eval_fn'] = eval_gen_norm_log_pdf
-
-		else:
-			raise RuntimeError('Distribution %s is not an option'%(dist['dist']))
+		# Finally, actually include the evaluation function.
+		eval_dict[lens_param]['eval_fn'] = eval_fn
 
 	# Transform list of initial values into np array
 	eval_dict['hyps'] = np.array(eval_dict['hyps'])
@@ -279,7 +243,7 @@ class HierarchicalClass:
 		for li in range(len(self.lens_params)):
 			lens_param = self.lens_params[li]
 			logpdf += eval_dict[lens_param]['eval_fn'](samples[:,:,li],
-				hyp[eval_dict[lens_param]['hyp_ind']])
+				*hyp[eval_dict[lens_param]['hyp_ind']])
 
 		return logpdf
 

@@ -2,6 +2,7 @@ import unittest, os, json
 # import tensorflow as tf
 from ovejero import hierarchical_inference, model_trainer
 from baobab import configs
+from baobab import distributions
 import numpy as np
 from scipy import stats
 import tensorflow as tf
@@ -13,86 +14,6 @@ class HierarchicalnferenceTest(unittest.TestCase):
 		super(HierarchicalnferenceTest, self).__init__(*args, **kwargs)
 		# Open up the config file.
 		np.random.seed(2)
-
-	def test_eval_norm_pdf(self):
-		# Test that the norm pdf gives what you expect
-		n_test = 10
-		mu = np.random.randn(n_test)
-		sigma = np.random.rand(n_test)
-		n_points = 1000
-		samples = np.random.rand(n_points)
-
-		for i in range(n_test):
-			pdf = hierarchical_inference.eval_norm_log_pdf(samples,[mu[i],
-				sigma[i]])
-			scipy_p = stats.norm.logpdf(samples,loc=mu[i],scale=sigma[i])
-			self.assertAlmostEqual(np.max(np.abs(pdf-scipy_p)),0)
-
-	def test_eval_log_norm_pdf(self):
-		# Test that the norm pdf gives what you expect
-		n_test = 10
-		mu = np.random.randn(n_test)
-		sigma = np.random.rand(n_test)
-		n_points = 1000
-		samples = np.random.rand(n_points)
-
-		for i in range(n_test):
-			pdf = hierarchical_inference.eval_log_norm_log_pdf(samples,[mu[i],
-				sigma[i]])
-			scipy_p = stats.lognorm.logpdf(samples,scale=np.exp(mu[i]),s=sigma[i])
-			self.assertAlmostEqual(np.max(np.abs(pdf-scipy_p)),0)
-
-	def test_eval_beta_log_pdf(self):
-		# Test that the norm pdf gives what you expect
-		n_test = 10
-		a = np.random.rand(n_test)
-		b = np.random.rand(n_test)
-		lower = np.random.rand(n_test)-1
-		upper = np.random.rand(n_test)+1
-		n_points = 1000
-		samples = np.random.rand(n_points)
-
-		for i in range(n_test):
-			pdf = hierarchical_inference.eval_beta_log_pdf(samples,[a[i],b[i],
-				lower[i],upper[i]])
-			scipy_p = stats.beta.logpdf(samples,a=a[i],b=b[i],loc=lower[i],
-				scale=upper[i]-lower[i])
-			self.assertAlmostEqual(np.max(np.abs(pdf-scipy_p)),0)
-
-		samples = np.random.rand(n_points) - 5
-		self.assertTrue(np.all(hierarchical_inference.eval_beta_log_pdf(samples,
-			[a[0],b[0],lower[0],upper[0]])==-np.inf))
-
-		samples = np.random.rand(n_points) + 5
-		self.assertTrue(np.all(hierarchical_inference.eval_beta_log_pdf(samples,
-			[a[0],b[0],lower[0],upper[0]])==-np.inf))
-
-	def test_eval_gen_norm_log_pdf(self):
-		# Test that the norm pdf gives what you expect
-		n_test = 10
-		mu = np.random.rand(n_test)-0.5
-		alpha = np.random.rand(n_test)
-		p = np.ones((n_test))*10
-		lower = np.random.rand(n_test)-2
-		upper = np.random.rand(n_test)+1
-		n_points = 1000
-		samples = np.random.rand(n_points)
-
-		for i in range(n_test):
-			pdf = hierarchical_inference.eval_gen_norm_log_pdf(samples,[mu[i],
-				alpha[i],p[i],lower[i],upper[i]])
-			dist = stats.gennorm(beta=p[i],loc=mu[i],scale=alpha[i])
-			scipy_p = dist.logpdf(samples) / (dist.cdf(upper[i]) - dist.cdf(
-				lower[i]))
-			self.assertAlmostEqual(np.max(np.abs(pdf-scipy_p)),0)
-
-		samples = np.random.rand(n_points)+5
-		self.assertTrue(np.all(hierarchical_inference.eval_gen_norm_log_pdf(
-			samples,[mu[i],alpha[i],p[i],lower[i],upper[i]])==-np.inf))
-
-		samples = np.random.rand(n_points)-5
-		self.assertTrue(np.all(hierarchical_inference.eval_gen_norm_log_pdf(
-			samples,[mu[i],alpha[i],p[i],lower[i],upper[i]])==-np.inf))
 
 	def test_build_evaluation_dictionary(self):
 		# Check that the eval dictionary is built correctly for an example with
@@ -137,15 +58,15 @@ class HierarchicalnferenceTest(unittest.TestCase):
 				list(range(total,total+n_p)))
 			if n_p == 2:
 				self.assertTrue((eval_dict[lens_param]['eval_fn'] is 
-					hierarchical_inference.eval_norm_log_pdf) or (
+					distributions.eval_normal_logpdf) or (
 					eval_dict[lens_param]['eval_fn'] is 
-					hierarchical_inference.eval_log_norm_log_pdf))
+					distributions.eval_lognormal_logpdf))
 			if n_p == 4:
 				self.assertTrue(eval_dict[lens_param]['eval_fn'] is 
-					hierarchical_inference.eval_beta_log_pdf)
+					distributions.eval_beta_logpdf)
 			if n_p == 5:
 				self.assertTrue(eval_dict[lens_param]['eval_fn'] is 
-					hierarchical_inference.eval_gen_norm_log_pdf)
+					distributions.eval_generalized_normal_logpdf)
 			total += n_p
 
 		# Now we test the case with priors.
@@ -170,19 +91,19 @@ class HierarchicalnferenceTest(unittest.TestCase):
 		for li in range(len(lens_params)):
 			lens_param = lens_params[li]
 			n_p = n_lens_param_p_params[li]
-			self.assertListEqual(list(eval_dict_prior[lens_param]['hyp_ind']),
+			self.assertListEqual(list(eval_dict[lens_param]['hyp_ind']),
 				list(range(total,total+n_p)))
 			if n_p == 2:
-				self.assertTrue((eval_dict_prior[lens_param]['eval_fn'] is 
-					hierarchical_inference.eval_norm_log_pdf) or (
-					eval_dict_prior[lens_param]['eval_fn'] is 
-					hierarchical_inference.eval_log_norm_log_pdf))
+				self.assertTrue((eval_dict[lens_param]['eval_fn'] is 
+					distributions.eval_normal_logpdf) or (
+					eval_dict[lens_param]['eval_fn'] is 
+					distributions.eval_lognormal_logpdf))
 			if n_p == 4:
-				self.assertTrue(eval_dict_prior[lens_param]['eval_fn'] is 
-					hierarchical_inference.eval_beta_log_pdf)
+				self.assertTrue(eval_dict[lens_param]['eval_fn'] is 
+					distributions.eval_beta_logpdf)
 			if n_p == 5:
-				self.assertTrue(eval_dict_prior[lens_param]['eval_fn'] is 
-					hierarchical_inference.eval_gen_norm_log_pdf)
+				self.assertTrue(eval_dict[lens_param]['eval_fn'] is 
+					distributions.eval_generalized_normal_logpdf)
 			total += n_p
 
 		self.assertListEqual(list(eval_dict_prior['hyp_prior'][0]),[-np.inf,0.0,
@@ -251,7 +172,7 @@ class HierarchicalClassTest(unittest.TestCase):
 				s=hyp[1])
 
 			dist = stats.gennorm(beta=hyp[4],loc=hyp[2],scale=hyp[3])
-			scipy_pdf += dist.logpdf(samples[:,:,1])/(dist.cdf(hyp[6]) - 
+			scipy_pdf += dist.logpdf(samples[:,:,1])-np.log(dist.cdf(hyp[6]) - 
 				dist.cdf(hyp[5]))
 
 			scipy_pdf += stats.norm.logpdf(samples[:,:,2],loc=hyp[7],
