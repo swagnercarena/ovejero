@@ -17,10 +17,9 @@ import numpy as np
 from scipy import special
 from baobab import configs
 from baobab import distributions
-from ovejero import bnn_inference
+from ovejero import bnn_inference, data_tools, model_trainer
 from inspect import signature
-from tqdm import tqdm
-import emcee, pickle, os
+import emcee, os, glob
 
 def build_evaluation_dictionary(baobab_cfg,lens_params,
 	extract_hyperpriors=False):
@@ -102,20 +101,26 @@ class HierarchicalClass:
 	A class that contains all of the functions needed to conduct a hierarchical
 	calculation of the lens parameter distributions.
 	"""
-	def __init__(self,cfg,interim_baobab_omega_path,target_baobab_omega_path):
+	def __init__(self,cfg,interim_baobab_omega_path,target_baobab_omega_path,
+		test_dataset_path,test_dataset_rf_record_path):
 		"""
 		Initialize the HierarchicalClass instance using the parameters of the
 		configuration file.
 
 		Parameters
 		----------
-			cfg (dict): The dictionary attained from reading the json config file.
-			interim_baobab_omega_path (str): The string specifying the path to the
-				baobab config for the interim omega. 
+			cfg (dict): The dictionary attained from reading the json config 
+				file.
+			interim_baobab_omega_path (str): The string specifying the path to 
+				the baobab config for the interim omega. 
 			target_baobab_omega_path (str): The string specifying the path to the 
 				baobab config for the target omega. The exact value of the
 				distribution parameters in omega will be used as
 				intitialization points for the mc chains.
+			test_dataset_path (str): The path to the dataset on which
+				hiearchical inference will be conducted
+			test_dataset_rf_record_path (str): The path where the TFRecord will 
+				be saved. If it already exists it will be loaded.
 		"""
 		self.cfg = cfg
 		# Pull the needed param information from the config file.
@@ -128,6 +133,8 @@ class HierarchicalClass:
 		self.target_baobab_omega = configs.BaobabConfig.from_file(
 			target_baobab_omega_path)
 		self.num_params = len(self.lens_params)
+		self.norm_images = cfg['training_params']['norm_images']
+		n_npy_files =  len(glob.glob(test_dataset_path+'X*.npy'))
 		# Build the evaluation dictionaries from the 
 		self.interim_eval_dict = build_evaluation_dictionary(
 			self.interim_baobab_omega, self.lens_params, 
@@ -137,6 +144,21 @@ class HierarchicalClass:
 			extract_hyperpriors=True)
 		# Make our inference class we'll use to generate samples.
 		self.infer_class = bnn_inference.InferenceClass(self.cfg)
+
+		# The inference class will load the validation set from the config
+		# file. We do not want this. Therefore we must reset it here.
+		if not os.path.exists(test_dataset_rf_record_path):
+			print('Generating new TFRecord at %s'%(test_dataset_rf_record_path))
+			model_trainer.prepare_tf_record(cfg,test_dataset_path,
+				test_dataset_rf_record_path,self.final_params,
+				train_or_test='test')
+		else:
+			print('TFRecord found at %s'%(test_dataset_rf_record_path))
+		self.tf_dataset = data_tools.build_tf_dataset(
+			test_dataset_rf_record_path,self.final_params,n_npy_files,1,
+			target_baobab_omega_path,norm_images=self.norm_images)
+		self.infer_class.tf_dataset_v = self.tf_dataset
+
 		self.samples_init = False
 		# The probability of the data given the interim prior. Will be
 		# generated along with the samples.

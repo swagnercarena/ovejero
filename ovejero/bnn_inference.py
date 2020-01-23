@@ -36,7 +36,8 @@ class InferenceClass:
 		"""
 
 		self.cfg = cfg
-		self.model, self.loss = model_trainer.model_loss_builder(cfg)
+		self.model, self.loss = model_trainer.model_loss_builder(cfg,
+			verbose=True)
 
 		# Load the validation set we're going to use.
 		self.tf_record_path_v = (cfg['validation_params']['root_path']+
