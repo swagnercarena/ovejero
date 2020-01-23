@@ -285,3 +285,17 @@ class TFRecordTests(unittest.TestCase):
 				self.assertGreater(np.std(image[:,:2,0]),5e-3)
 				self.assertGreater(np.std(image[:,-2:,0]),5e-3)
 
+		# Check that multiple calls to the same dataset returns different data
+		sums = []
+		dataset = data_tools.build_tf_dataset(self.tf_record_path,
+				self.lens_params,batch_size,2,self.baobab_config_path,
+				norm_images=False)
+		for batch in dataset:
+			sum_cur = 0
+			for image_i in range(len(batch[0].numpy())):
+				image = batch[0].numpy()[image_i]
+				sum_cur += np.sum(np.abs(image))
+			sums.append(sum_cur)
+		self.assertNotEqual(sums[0],sums[1])
+
+

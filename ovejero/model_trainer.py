@@ -15,7 +15,7 @@ from tensorflow.keras.callbacks import TensorBoard, ModelCheckpoint
 from tensorflow.keras.optimizers import Adam
 import argparse, json, os
 import pandas as pd
-import copy
+import copy, glob
 
 # Import the code to construct the bnn and the data pipeline
 from ovejero import bnn_alexnet, data_tools
@@ -327,6 +327,10 @@ def main():
 	random_seed = cfg['training_params']['random_seed']
 	tf.random.set_seed(random_seed)
 
+	# Number of steps per epoch is number of examples over the batch size
+	npy_file_list =  glob.glob(root_path_t+'X*.npy')
+	steps_per_epoch = len(npy_file_list)//batch_size
+
 	print('Checking for training data.')
 	if not os.path.exists(tf_record_path_t):
 		print('Generating new TFRecord at %s'%(tf_record_path_t))
@@ -349,7 +353,7 @@ def main():
 
 	# We let keras deal with epochs instead of the tf dataset object.
 	tf_dataset_t = data_tools.build_tf_dataset(tf_record_path_t,final_params,
-		batch_size,1,baobab_config_path,norm_images=norm_images,
+		batch_size,n_epochs,baobab_config_path,norm_images=norm_images,
 		shift_pixels=shift_pixels,shift_params=shift_params, 
 		normed_pixel_scale=normed_pixel_scale)
 	# Validation dataset will, by default, have no augmentation but will have
@@ -366,7 +370,8 @@ def main():
 
 	# TODO add validation data.
 	model.fit(tf_dataset_t,callbacks=[tensorboard, modelcheckpoint],
-		epochs = n_epochs, validation_data=tf_dataset_v)
+		epochs=n_epochs, steps_per_epoch = steps_per_epoch, 
+		validation_data=tf_dataset_v)
 
 if __name__ == '__main__':
     main()
