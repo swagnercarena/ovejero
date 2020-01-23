@@ -14,87 +14,16 @@ use this module.
 """
 
 import numpy as np
-from scipy import stats, special
+from scipy import special
 from baobab import configs
 from baobab import distributions
 from ovejero import bnn_inference
 from inspect import signature
+from tqdm import tqdm
+import emcee, pickle, os
 
-def eval_log_norm_log_pdf(samples,hyp):
-	"""
-	Evaluate the log normal log pdf with the hyperparameters provided.
-
-	Parameters
-	----------
-		samples (np.array): A numpy array with dimensions (n_samps,batch_size)
-		hyperparameters (np.array): A numpy array containing the mean and 
-			sigma
-
-	Returns
-	-------
-		np.array: The pdf at each point.
-	"""
-	mu = np.exp(hyp[0])
-	sigma = hyp[1]
-	dist = stats.lognorm(scale=mu,s=sigma)
-	return dist.logpdf(samples)
-
-def eval_norm_log_pdf(samples,hyp):
-	"""
-	Evaluate the normal log pdf with the hyperparameters provided.
-
-	Parameters
-	----------
-		samples (np.array): A numpy array with dimensions (n_samps,batch_size)
-		hyp (np.array): A numpy array containing the mean and sigma
-
-	Returns
-	-------
-		np.array: The log pdf at each point.
-	"""
-	mu,sigma = hyp
-	dist = stats.norm(loc=mu,scale=sigma)
-	return dist.logpdf(samples)
-
-def eval_beta_log_pdf(samples,hyp):
-	"""
-	Evaluate the beta log pdf with the hyperparameters provided.
-
-	Parameters
-	----------
-		samples (np.array): A numpy array with dimensions (n_samps,batch_size)
-		hyp (np.array): A numpy array containing [a,b,lower,upper].
-
-	Returns
-	-------
-		np.array: The log pdf at each point.
-	"""
-	a,b,lower,upper = hyp
-	dist = stats.beta(a=a, b=b, loc=lower,scale=upper-lower)
-	return dist.logpdf(samples)
-
-def eval_gen_norm_log_pdf(samples,hyp):
-	"""
-	Evaluate the generalized normal pdf with the hyperparameters provided.
-
-	Parameters
-	----------
-		samples (np.array): A numpy array with dimensions (n_samps,batch_size)
-		hyp (np.array): A numpy array containing [mu,alpha,p,lower,upper].
-
-	Returns
-	-------
-		np.array: The pdf at each point.
-	"""
-	mu, alpha, p, lower, upper = hyp
-	dist = stats.gennorm(beta=p, loc=mu, scale=alpha)
-	logpdf = dist.logpdf(samples)
-	logpdf /= dist.cdf(upper) - dist.cdf(lower)
-	logpdf[samples<lower] = -np.inf; logpdf[samples>upper] = -np.inf
-	return logpdf
-
-
-def build_evaluation_dictionary(baobab_cfg,lens_params,extract_hyperpriors=False):
+def build_evaluation_dictionary(baobab_cfg,lens_params,
+	extract_hyperpriors=False):
 	"""
 	Map between the baobab config and a dictionary that contains the 
 	evaluation function and hyperparameter indices for each parameters.
@@ -212,6 +141,8 @@ class HierarchicalClass:
 		# The probability of the data given the interim prior. Will be
 		# generated along with the samples.
 		self.pt_omegai = None
+		# Track if the sampler has been initialzied yet.
+		self.sampler_init = False
 
 	def log_p_theta_omega(self, samples, hyp, eval_dict):
 		"""
@@ -369,6 +300,49 @@ class HierarchicalClass:
 		like_ratio[np.isnan(like_ratio)] = -np.inf
 
 		return lprior + np.sum(like_ratio)
+
+	def initialize_sampler(self,n_walkers,save_path):
+		"""
+		Initialize the sampler to be used by run_samples.
+
+		
+		Parameters
+		----------
+			n_walkers (int): The number of walkers used by the sampler.
+				Must be at least twice the number of hyperparameters.
+			save_path (str): A pickle path specifying where to save the 
+				sampler chains. If a sampler chain is already present in the
+				path it will be loaded.
+		"""
+		nwalkers = 50
+		ndim = self.target_eval_dict['hyp_len']
+		if os.path.isfile(save_path):
+			self.cur_state = None
+		else:
+			self.cur_state = (np.random.rand(nwalkers, ndim)*0.1 + 
+				self.target_eval_dict['hyps'])
+
+		backend = emcee.backends.HDFBackend(save_path)
+
+		self.sampler = emcee.EnsembleSampler(nwalkers, ndim, 
+			self.log_post_omega, backend=backend)
+
+		self.sampler_init = True
+
+	def run_samples(self,n_samps,save_path):
+		"""
+		Run an emcee sampler to get a posterior on the hyperparameters.
+
+		Parameters
+		----------
+			n_samps (int): The number of samples to take
+		"""
+		if self.samples_init == False:
+			raise RuntimeError('Must generate samples before inference')
+		if self.sampler_init == False:
+			raise RuntimeError('Must initialize sampler before running sampler')
+
+		self.sampler.run_mcmc(self.cur_state,n_samps)
 
 
 

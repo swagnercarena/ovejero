@@ -285,5 +285,13 @@ class HierarchicalClassTest(unittest.TestCase):
 		# TODO: Make this test
 		return
 
+	def test_initialize_sampler(self):
+		# TODO: Make this test
+		return
+
+	def test_run_samples(self):
+		# TODO: Make this test
+		return
+
 
 
