@@ -19,7 +19,8 @@ from baobab import configs
 from baobab import distributions
 from ovejero import bnn_inference, data_tools, model_trainer
 from inspect import signature
-import emcee, os, glob
+import emcee, os, glob, corner
+import matplotlib.pyplot as plt
 
 def build_evaluation_dictionary(baobab_cfg,lens_params,
 	extract_hyperpriors=False):
@@ -62,7 +63,8 @@ def build_evaluation_dictionary(baobab_cfg,lens_params,
 			'_'.join(lens_split[2:])]
 
 		# Get the function in question from lenstronomy.
-		eval_fn = getattr(distributions,'eval_{}_logpdf'.format(dist['dist']))
+		eval_fn = getattr(distributions,'eval_{}_logpdf_approx'.format(
+			dist['dist']))
 		eval_sig = signature(eval_fn)
 
 		# Hyperparameters is number of parameters-1 because the first parameter
@@ -102,7 +104,7 @@ class HierarchicalClass:
 	calculation of the lens parameter distributions.
 	"""
 	def __init__(self,cfg,interim_baobab_omega_path,target_baobab_omega_path,
-		test_dataset_path,test_dataset_rf_record_path):
+		test_dataset_path,test_dataset_tf_record_path):
 		"""
 		Initialize the HierarchicalClass instance using the parameters of the
 		configuration file.
@@ -119,7 +121,7 @@ class HierarchicalClass:
 				intitialization points for the mc chains.
 			test_dataset_path (str): The path to the dataset on which
 				hiearchical inference will be conducted
-			test_dataset_rf_record_path (str): The path where the TFRecord will 
+			test_dataset_tf_record_path (str): The path where the TFRecord will 
 				be saved. If it already exists it will be loaded.
 		"""
 		self.cfg = cfg
@@ -135,6 +137,7 @@ class HierarchicalClass:
 		self.num_params = len(self.lens_params)
 		self.norm_images = cfg['training_params']['norm_images']
 		n_npy_files =  len(glob.glob(test_dataset_path+'X*.npy'))
+		self.cfg['training_params']['batch_size'] = n_npy_files
 		# Build the evaluation dictionaries from the 
 		self.interim_eval_dict = build_evaluation_dictionary(
 			self.interim_baobab_omega, self.lens_params, 
@@ -147,15 +150,15 @@ class HierarchicalClass:
 
 		# The inference class will load the validation set from the config
 		# file. We do not want this. Therefore we must reset it here.
-		if not os.path.exists(test_dataset_rf_record_path):
-			print('Generating new TFRecord at %s'%(test_dataset_rf_record_path))
+		if not os.path.exists(test_dataset_tf_record_path):
+			print('Generating new TFRecord at %s'%(test_dataset_tf_record_path))
 			model_trainer.prepare_tf_record(cfg,test_dataset_path,
-				test_dataset_rf_record_path,self.final_params,
+				test_dataset_tf_record_path,self.final_params,
 				train_or_test='test')
 		else:
-			print('TFRecord found at %s'%(test_dataset_rf_record_path))
+			print('TFRecord found at %s'%(test_dataset_tf_record_path))
 		self.tf_dataset = data_tools.build_tf_dataset(
-			test_dataset_rf_record_path,self.final_params,n_npy_files,1,
+			test_dataset_tf_record_path,self.final_params,n_npy_files,1,
 			target_baobab_omega_path,norm_images=self.norm_images)
 		self.infer_class.tf_dataset_v = self.tf_dataset
 
@@ -197,6 +200,7 @@ class HierarchicalClass:
 			lens_param = self.lens_params[li]
 			logpdf += eval_dict[lens_param]['eval_fn'](samples[:,:,li],
 				*hyp[eval_dict[lens_param]['hyp_ind']])
+		logpdf[np.isnan(logpdf)] = -np.inf
 
 		return logpdf
 
@@ -289,7 +293,7 @@ class HierarchicalClass:
 			self.lens_samps[self.lens_samps[:,:,fixi]>0.55,fixi] = 0.55-1e-5
 
 		self.pt_omegai = self.log_p_theta_omega(self.lens_samps,
-			self.target_eval_dict['hyps'], self.target_eval_dict)
+			self.interim_eval_dict['hyps'], self.interim_eval_dict)
 
 		self.samples_init = True
 
@@ -323,7 +327,7 @@ class HierarchicalClass:
 
 		return lprior + np.sum(like_ratio)
 
-	def initialize_sampler(self,n_walkers,save_path):
+	def initialize_sampler(self,n_walkers,save_path,pool):
 		"""
 		Initialize the sampler to be used by run_samples.
 
@@ -335,23 +339,36 @@ class HierarchicalClass:
 			save_path (str): A pickle path specifying where to save the 
 				sampler chains. If a sampler chain is already present in the
 				path it will be loaded.
+			pool (Pool): A multiprocessing pool to be used for multithreading.
 		"""
 		nwalkers = 50
 		ndim = self.target_eval_dict['hyp_len']
 		if os.path.isfile(save_path):
+			print('Loaded chains found at %s'%(save_path))
 			self.cur_state = None
 		else:
-			self.cur_state = (np.random.rand(nwalkers, ndim)*0.1 + 
+			print('No chains found at %s'%(save_path))
+			self.cur_state = (np.random.randn(nwalkers, ndim)*0.05 + 
 				self.target_eval_dict['hyps'])
+			# Inflate lower and upper bounds since this can otherwise
+			# cause none of the initial samples to be non -np.inf.
+			for hpi in range(len(self.target_eval_dict['hyp_names'])):
+				name = self.target_eval_dict['hyp_names'][hpi]
+				if 'lower' in name:
+					self.cur_state[:,hpi] -= 0.2
+				if 'upper' in name:
+					self.cur_state[:,hpi] += 0.2
 
-		backend = emcee.backends.HDFBackend(save_path)
+
+		# Initialize backend hdf5 file that will store samples as we go
+		self.backend = emcee.backends.HDFBackend(save_path)
 
 		self.sampler = emcee.EnsembleSampler(nwalkers, ndim, 
-			self.log_post_omega, backend=backend)
+			self.log_post_omega, backend=self.backend)
 
 		self.sampler_init = True
 
-	def run_samples(self,n_samps,save_path):
+	def run_samples(self,n_samps):
 		"""
 		Run an emcee sampler to get a posterior on the hyperparameters.
 
@@ -364,8 +381,128 @@ class HierarchicalClass:
 		if self.sampler_init == False:
 			raise RuntimeError('Must initialize sampler before running sampler')
 
-		self.sampler.run_mcmc(self.cur_state,n_samps)
+		self.sampler.run_mcmc(self.cur_state,n_samps,progress='notebook')
 
+		self.cur_state = None
+
+
+	def plot_chains(self,burnin=None,hyperparam_plot_names=None):
+		"""
+		Plot the chains resulting from the emcee to figure out what
+		the correct burnin is.
+
+		Parameters
+		----------
+			burnin (int): How many of the initial samples to drop as burnin
+			hyperparam_plot_names ([str,...]): A list containing the names
+				of the hyperparameters to be used during plotting
+		"""
+		if hyperparam_plot_names is None:
+			hyperparam_plot_names = self.target_eval_dict['hyp_names']
+
+		# Extract and plot the chains
+		chains = self.sampler.chain
+		if burnin is not None:
+			chains = chains[:,burnin:]
+		ci = 0
+		for chain in chains.T:
+			plt.plot(chain,'.')
+			plt.title(hyperparam_plot_names[ci])
+			plt.ylabel(hyperparam_plot_names[ci])
+			plt.xlabel('sample')
+			plt.axhline(self.target_eval_dict['hyps'][ci],c='k')
+			plt.show()
+			ci += 1
+
+	def plot_corner(self,burnin,hyperparam_plot_names=None):
+		"""
+		Plot the corner plot of chains resulting from the emcee
+
+		Parameters
+		----------
+			burnin (int): How many of the initial samples to drop as burnin
+			hyperparam_plot_names ([str,...]): A list containing the names
+				of the hyperparameters to be used during plotting
+		"""
+		if hyperparam_plot_names is None:
+			hyperparam_plot_names = self.target_eval_dict['hyp_names']
+
+		# Get the chains from the samples
+		chains = self.sampler.chain[:,burnin:].reshape(-1,
+			len(hyperparam_plot_names))
+
+		# Iterate through groups of hyperparameters and make the plots
+		for lens_param in self.lens_params:
+			hyp_ind = self.target_eval_dict[lens_param]['hyp_ind']
+			hyp_s = np.min(hyp_ind)
+			hyp_e = np.max(hyp_ind)+1
+			corner.corner(chains[:,hyp_s:hyp_e],
+				labels=hyperparam_plot_names[hyp_s:hyp_e],
+				bins=20,show_titles=True, plot_datapoints=False,
+				label_kwargs=dict(fontsize=10),
+				truths=self.target_eval_dict['hyps'][hyp_s:hyp_e],
+				levels=[0.68,0.95],color='#FFAA00',fill_contours=True)
+			plt.show()
+
+	def plot_distributions(self,burnin,hyperparam_plot_names=None):
+		"""
+		Plot the 
+
+		Parameters
+		----------
+			burnin (int): How many of the initial samples to drop as burnin
+			hyperparam_plot_names ([str,...]): A list containing the names
+				of the hyperparameters to be used during plotting
+		"""
+				# TODO: Make this faster. .1 seconds is a bit slow.
+		if hyperparam_plot_names is None:
+			hyperparam_plot_names = self.target_eval_dict['hyp_names']
+		chains = self.sampler.chain[:,burnin:].reshape(-1,
+			len(hyperparam_plot_names))
+
+		for li in range(len(self.lens_params)):
+			# Grab the lens parameters, the samples, and indices of the
+			# hyperparameters
+			lens_param = self.lens_params[li]
+			samples = self.lens_samps[:,:,li].flatten()
+			hyp_ind = self.target_eval_dict[lens_param]['hyp_ind']
+			hyp_s = np.min(hyp_ind)
+			hyp_e = np.max(hyp_ind)+1
+
+			# Select the range of parameter values to evaluate the pdf at
+			eval_pdf_at = np.linspace(np.min(samples)-0.1,np.max(samples)+0.1,
+				1000)
+
+			# Plot the samples for the parameter
+			plt.hist(samples,bins=100,density=True,align='mid',
+				label='BNN samples',color='#a1dab4')
+
+			# Sample 100 chains and plot them
+			n_chains_plot = 50
+			for chain in chains[np.random.randint(len(chains),size=n_chains_plot)]:
+				chain_eval = np.exp(self.target_eval_dict[lens_param]['eval_fn'](
+				eval_pdf_at,*chain[hyp_s:hyp_e]))
+				plt.plot(eval_pdf_at,chain_eval,color="#41b6c4", lw=2, 
+					alpha=5/n_chains_plot)
+
+			# Plot the true distribution these parameters were being drawn
+			# from.
+			truth_eval = np.exp(self.target_eval_dict[lens_param]['eval_fn'](
+				eval_pdf_at,*self.target_eval_dict['hyps'][hyp_s:hyp_e]))
+			plt.plot(eval_pdf_at,truth_eval,color="#2c7fb8", lw=2.5, 
+				label='True Distribution')
+
+			# Plot the interim distribution these parameters were being drawn
+			# from.
+			truth_eval = np.exp(self.interim_eval_dict[lens_param]['eval_fn'](
+				eval_pdf_at,*self.interim_eval_dict['hyps'][hyp_s:hyp_e]))
+			plt.plot(eval_pdf_at,truth_eval,color="#253494", lw=2.5, 
+				label='Interim Distribution')
+
+			plt.legend()
+			plt.xlabel(lens_param)
+			plt.legend()
+			plt.show()
 
 
 

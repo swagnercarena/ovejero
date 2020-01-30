@@ -58,15 +58,15 @@ class HierarchicalnferenceTest(unittest.TestCase):
 				list(range(total,total+n_p)))
 			if n_p == 2:
 				self.assertTrue((eval_dict[lens_param]['eval_fn'] is 
-					distributions.eval_normal_logpdf) or (
+					distributions.eval_normal_logpdf_approx) or (
 					eval_dict[lens_param]['eval_fn'] is 
-					distributions.eval_lognormal_logpdf))
+					distributions.eval_lognormal_logpdf_approx))
 			if n_p == 4:
 				self.assertTrue(eval_dict[lens_param]['eval_fn'] is 
-					distributions.eval_beta_logpdf)
+					distributions.eval_beta_logpdf_approx)
 			if n_p == 5:
 				self.assertTrue(eval_dict[lens_param]['eval_fn'] is 
-					distributions.eval_generalized_normal_logpdf)
+					distributions.eval_generalized_normal_logpdf_approx)
 			total += n_p
 
 		# Now we test the case with priors.
@@ -95,15 +95,15 @@ class HierarchicalnferenceTest(unittest.TestCase):
 				list(range(total,total+n_p)))
 			if n_p == 2:
 				self.assertTrue((eval_dict[lens_param]['eval_fn'] is 
-					distributions.eval_normal_logpdf) or (
+					distributions.eval_normal_logpdf_approx) or (
 					eval_dict[lens_param]['eval_fn'] is 
-					distributions.eval_lognormal_logpdf))
+					distributions.eval_lognormal_logpdf_approx))
 			if n_p == 4:
 				self.assertTrue(eval_dict[lens_param]['eval_fn'] is 
-					distributions.eval_beta_logpdf)
+					distributions.eval_beta_logpdf_approx)
 			if n_p == 5:
 				self.assertTrue(eval_dict[lens_param]['eval_fn'] is 
-					distributions.eval_generalized_normal_logpdf)
+					distributions.eval_generalized_normal_logpdf_approx)
 			total += n_p
 
 		self.assertListEqual(list(eval_dict_prior['hyp_prior'][0]),[-np.inf,0.0,
@@ -124,7 +124,7 @@ class HierarchicalClassTest(unittest.TestCase):
 		self.target_baobab_omega_path = self.root_path+'test_baobab_cfg_prior.py'
 		self.lens_params = self.cfg['dataset_params']['lens_params']
 		self.num_params = len(self.lens_params)
-		self.batch_size = self.cfg['training_params']['batch_size']
+		self.batch_size = 20
 
 		self.normalized_param_path = self.root_path + 'new_metadata.csv'
 		self.normalization_constants_path = self.root_path + 'norm.csv'
@@ -134,8 +134,16 @@ class HierarchicalClassTest(unittest.TestCase):
 		self.tf_record_path = self.root_path+self.cfg['validation_params'][
 			'tf_record_path']
 
+		# We'll have to make the tf record and clean it up at the end
+		model_trainer.prepare_tf_record(self.cfg,self.root_path,
+				self.tf_record_path,self.final_params,
+				train_or_test='train')
+
 		self.hclass = hierarchical_inference.HierarchicalClass(self.cfg,
-			self.interim_baobab_omega_path,self.target_baobab_omega_path)
+			self.interim_baobab_omega_path,self.target_baobab_omega_path,
+			self.root_path,self.tf_record_path)
+
+		os.remove(self.tf_record_path)
 
 	def test_log_p_omega(self):
 		# Test that log_p_omega gives the expected behavior on the boundaries
