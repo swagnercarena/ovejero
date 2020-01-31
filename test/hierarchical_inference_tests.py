@@ -4,7 +4,7 @@ from ovejero import hierarchical_inference, model_trainer
 from baobab import configs
 from baobab import distributions
 import numpy as np
-from scipy import stats
+from scipy import stats, special
 import tensorflow as tf
 import pandas as pd
 
@@ -290,16 +290,125 @@ class HierarchicalClassTest(unittest.TestCase):
 		os.remove(self.tf_record_path)
 
 	def test_log_post_omega(self):
-		# TODO: Make this test
-		return
+		# Test that the log_p_theta_omega function returns the correct value 
+		# for some sample data points.
+		hyp = np.array([-2.73,1.05,0.0,0.5*np.pi,10.0,-0.5*np.pi,0.5*np.pi,0.0,
+			0.102,0.0,0.102,4.0,4.0,-0.55,0.55,4.0,4.0,-0.55,0.55,0.7,0.1,0.0,
+			0.1])
+		samples = np.ones((2,2,8))*0.3
+
+
+		def hand_calc_log_pdf(samples,hyp):
+			# Add each one of the probabilities
+			scipy_pdf = stats.lognorm.logpdf(samples[:,:,0],scale=np.exp(hyp[0]),
+				s=hyp[1])
+
+			dist = stats.gennorm(beta=hyp[4],loc=hyp[2],scale=hyp[3])
+			scipy_pdf += dist.logpdf(samples[:,:,1])-np.log(dist.cdf(hyp[6]) - 
+				dist.cdf(hyp[5]))
+
+			scipy_pdf += stats.norm.logpdf(samples[:,:,2],loc=hyp[7],
+				scale=hyp[8])
+			scipy_pdf += stats.norm.logpdf(samples[:,:,3],loc=hyp[9],
+				scale=hyp[10])
+
+			scipy_pdf += stats.beta.logpdf(samples[:,:,4],a=hyp[11],b=hyp[12],
+				loc=hyp[13],scale=hyp[14]-hyp[13])
+			scipy_pdf += stats.beta.logpdf(samples[:,:,5],a=hyp[15],b=hyp[16],
+				loc=hyp[17],scale=hyp[18]-hyp[17])
+
+			scipy_pdf += stats.lognorm.logpdf(samples[:,:,6],scale=np.exp(
+				hyp[19]),s=hyp[20])
+			scipy_pdf += stats.lognorm.logpdf(samples[:,:,7],scale=np.exp(
+				hyp[21]),s=hyp[22])
+
+			return scipy_pdf
+
+		# Initialize the fake sampling in our hclass
+		self.hclass.lens_samps=samples
+		self.hclass.samples_init=True
+		self.hclass.pt_omegai = self.hclass.log_p_theta_omega(
+			self.hclass.lens_samps,
+			self.hclass.interim_eval_dict['hyps'], self.hclass.interim_eval_dict)
+
+		places = 7
+		post_hand = np.sum(special.logsumexp(hand_calc_log_pdf(samples,hyp)-
+			self.hclass.pt_omegai,axis=0))
+		self.assertAlmostEqual(self.hclass.log_post_omega(hyp),post_hand,
+			places=places)
+
+		samples = np.random.uniform(size=(2,2,8))*0.3
+		self.hclass.lens_samps=samples
+		self.hclass.pt_omegai = self.hclass.log_p_theta_omega(
+			self.hclass.lens_samps,
+			self.hclass.interim_eval_dict['hyps'], self.hclass.interim_eval_dict)
+		post_hand = np.sum(special.logsumexp(hand_calc_log_pdf(samples,hyp)-
+			self.hclass.pt_omegai,axis=0))
+		self.assertAlmostEqual(self.hclass.log_post_omega(hyp),post_hand,
+			places=places)
+
+		hyp = np.array([-1.02,1.5,0.1,0.49*np.pi,10.0,-np.pi,np.pi,0.1,
+			0.1,0.1,0.1,3.0,3.0,-0.75,0.75,3.0,3.0,-0.75,0.75,0.6,0.11,0.01,
+			0.2])
+		post_hand = np.sum(special.logsumexp(hand_calc_log_pdf(samples,hyp)-
+			self.hclass.pt_omegai,axis=0))
+		self.assertAlmostEqual(self.hclass.log_post_omega(hyp),post_hand,
+			places=places)
+
+		self.hclass.samples_init=False
 
 	def test_initialize_sampler(self):
-		# TODO: Make this test
-		return
+		# Test that the walker initialization is correct.
+		test_chains_path = self.root_path + 'test_chains.h5'
+		n_walkers = 60
 
-	def test_run_samples(self):
-		# TODO: Make this test
-		return
+		# Make some fake samples.
+		samples = np.ones((2,2,8))*0.3
+		self.hclass.lens_samps=samples
+		self.hclass.samples_init=True
+		self.hclass.pt_omegai = self.hclass.log_p_theta_omega(
+			self.hclass.lens_samps,
+			self.hclass.interim_eval_dict['hyps'], self.hclass.interim_eval_dict)
+		
+		self.hclass.initialize_sampler(n_walkers,test_chains_path)
+
+		self.assertTrue(os.path.isfile(test_chains_path))
+		self.assertTrue(self.hclass.cur_state is not None)
+		self.assertEqual(len(self.hclass.cur_state),n_walkers)
+
+
+		# Check that no walker was initialized to a point with
+		# -np.inf
+		for walker in self.hclass.cur_state:
+			self.assertFalse(self.hclass.log_post_omega(walker)==-np.inf)
+
+		os.remove(test_chains_path)
+
+	def test_run_sampler(self):
+		# Here, we're mostly just testing things don't crash since the
+		# work is being done by emcee.
+		test_chains_path = self.root_path + 'test_chains.h5'
+		n_walkers = 60
+		n_samps = 10
+
+		# Make some fake samples.
+		samples = np.ones((2,2,8))*0.3
+		self.hclass.lens_samps=samples
+		self.hclass.samples_init=True
+		self.hclass.pt_omegai = self.hclass.log_p_theta_omega(
+			self.hclass.lens_samps,
+			self.hclass.interim_eval_dict['hyps'], self.hclass.interim_eval_dict)
+		
+		self.hclass.initialize_sampler(n_walkers,test_chains_path)
+		self.hclass.run_sampler(n_samps)
+
+		chains = self.hclass.sampler.get_chain()
+		self.assertEqual(chains.shape[0],n_samps)
+		self.assertEqual(chains.shape[1],n_walkers)
+
+		self.assertGreater(np.max(np.abs(chains[:,-1]-chains[:,-2])),0)
+
+		os.remove(test_chains_path)
 
 
 

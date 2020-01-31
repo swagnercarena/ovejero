@@ -314,6 +314,8 @@ class HierarchicalClass:
 		-----
 			Constant factors with respect to omega are ignored.
 		"""
+		if self.samples_init == False:
+			raise RuntimeError('Must generate samples before fitting')
 		# Add the prior on omega
 		lprior = self.log_p_omega(hyp)
 
@@ -321,13 +323,15 @@ class HierarchicalClass:
 		pt_omega = self.log_p_theta_omega(self.lens_samps, hyp, 
 			self.target_eval_dict)
 		# We've already calculated the value of pt_omegai when we generated
-		# the samples. Now we just need to sum them correctly.
+		# the samples. Now we just need to sum them correctly. Note that the
+		# first axis in samples has dimension number of samples, so that is
+		# what we want to log sum exp over.
 		like_ratio = special.logsumexp(pt_omega-self.pt_omegai,axis=0)
 		like_ratio[np.isnan(like_ratio)] = -np.inf
 
 		return lprior + np.sum(like_ratio)
 
-	def initialize_sampler(self,n_walkers,save_path,pool):
+	def initialize_sampler(self,n_walkers,save_path):
 		"""
 		Initialize the sampler to be used by run_samples.
 
@@ -339,16 +343,15 @@ class HierarchicalClass:
 			save_path (str): A pickle path specifying where to save the 
 				sampler chains. If a sampler chain is already present in the
 				path it will be loaded.
-			pool (Pool): A multiprocessing pool to be used for multithreading.
 		"""
-		nwalkers = 50
+		self.n_walkers = n_walkers
 		ndim = self.target_eval_dict['hyp_len']
 		if os.path.isfile(save_path):
 			print('Loaded chains found at %s'%(save_path))
 			self.cur_state = None
 		else:
 			print('No chains found at %s'%(save_path))
-			self.cur_state = (np.random.randn(nwalkers, ndim)*0.05 + 
+			self.cur_state = (np.random.randn(n_walkers, ndim)*0.05 + 
 				self.target_eval_dict['hyps'])
 			# Inflate lower and upper bounds since this can otherwise
 			# cause none of the initial samples to be non -np.inf.
@@ -358,17 +361,31 @@ class HierarchicalClass:
 					self.cur_state[:,hpi] -= 0.2
 				if 'upper' in name:
 					self.cur_state[:,hpi] += 0.2
-
+			# Ensure that no walkers start at a point with log probability
+			# - np.inf
+			all_finite = False
+			while all_finite==False:
+				all_finite = True
+				f_counter = 0.0
+				for w_i in range(n_walkers):
+					if self.log_post_omega(self.cur_state[w_i]) == -np.inf:
+						all_finite = False
+						f_counter +=1
+						self.cur_state[w_i] = self.cur_state[np.random.randint(
+							n_walkers)]
+				if f_counter > n_walkers*0.5:
+					raise RuntimeError('Too few (%d) of the initial'%(
+						f_counter/n_walkers)+'walkers have finite probability!')
 
 		# Initialize backend hdf5 file that will store samples as we go
 		self.backend = emcee.backends.HDFBackend(save_path)
 
-		self.sampler = emcee.EnsembleSampler(nwalkers, ndim, 
+		self.sampler = emcee.EnsembleSampler(n_walkers, ndim, 
 			self.log_post_omega, backend=self.backend)
 
 		self.sampler_init = True
 
-	def run_samples(self,n_samps):
+	def run_sampler(self,n_samps):
 		"""
 		Run an emcee sampler to get a posterior on the hyperparameters.
 
@@ -401,12 +418,12 @@ class HierarchicalClass:
 			hyperparam_plot_names = self.target_eval_dict['hyp_names']
 
 		# Extract and plot the chains
-		chains = self.sampler.chain
+		chains = self.sampler.get_chain()
 		if burnin is not None:
-			chains = chains[:,burnin:]
+			chains = chains[burnin:]
 		ci = 0
 		for chain in chains.T:
-			plt.plot(chain,'.')
+			plt.plot(chain.T,'.')
 			plt.title(hyperparam_plot_names[ci])
 			plt.ylabel(hyperparam_plot_names[ci])
 			plt.xlabel('sample')
@@ -428,7 +445,7 @@ class HierarchicalClass:
 			hyperparam_plot_names = self.target_eval_dict['hyp_names']
 
 		# Get the chains from the samples
-		chains = self.sampler.chain[:,burnin:].reshape(-1,
+		chains = self.sampler.get_chain()[burnin:].reshape(-1,
 			len(hyperparam_plot_names))
 
 		# Iterate through groups of hyperparameters and make the plots
@@ -457,7 +474,7 @@ class HierarchicalClass:
 				# TODO: Make this faster. .1 seconds is a bit slow.
 		if hyperparam_plot_names is None:
 			hyperparam_plot_names = self.target_eval_dict['hyp_names']
-		chains = self.sampler.chain[:,burnin:].reshape(-1,
+		chains = self.sampler.get_chain()[burnin:].reshape(-1,
 			len(hyperparam_plot_names))
 
 		for li in range(len(self.lens_params)):
