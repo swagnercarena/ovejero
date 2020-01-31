@@ -364,7 +364,7 @@ class HierarchicalClass:
 			self.cur_state = None
 		else:
 			print('No chains found at %s'%(save_path))
-			self.cur_state = (np.random.randn(n_walkers, ndim)*0.05 + 
+			self.cur_state = (np.random.rand(n_walkers, ndim)*0.05 + 
 				self.target_eval_dict['hyps'])
 			# Inflate lower and upper bounds since this can otherwise
 			# cause none of the initial samples to be non -np.inf.
@@ -386,9 +386,9 @@ class HierarchicalClass:
 						f_counter +=1
 						self.cur_state[w_i] = self.cur_state[np.random.randint(
 							n_walkers)]
-				if f_counter > n_walkers*0.5:
-					raise RuntimeError('Too few (%d) of the initial'%(
-						f_counter/n_walkers)+'walkers have finite probability!')
+				if f_counter > n_walkers*0.7:
+					raise RuntimeError('Too few (%.3f) of the initial'%(
+						1-f_counter/n_walkers)+'walkers have finite probability!')
 
 		# Initialize backend hdf5 file that will store samples as we go
 		self.backend = emcee.backends.HDFBackend(save_path)
@@ -398,7 +398,7 @@ class HierarchicalClass:
 
 		self.sampler_init = True
 
-	def run_sampler(self,n_samps):
+	def run_sampler(self,n_samps,progress='notebook'):
 		"""
 		Run an emcee sampler to get a posterior on the hyperparameters.
 
@@ -411,7 +411,7 @@ class HierarchicalClass:
 		if self.sampler_init == False:
 			raise RuntimeError('Must initialize sampler before running sampler')
 
-		self.sampler.run_mcmc(self.cur_state,n_samps,progress='notebook')
+		self.sampler.run_mcmc(self.cur_state,n_samps,progress=progress)
 
 		self.cur_state = None
 

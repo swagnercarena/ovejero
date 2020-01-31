@@ -172,14 +172,14 @@ cfg.bnn_omega = dict(
                                           dist='beta',
                                           a=4.0,
                                           b=4.0,
-                                          lower=-0.55,
-                                          upper=0.55),
+                                          lower=-0.4,
+                                          upper=0.4),
                                 e2 = dict(
                                           dist='beta',
                                           a=4.0,
                                           b=4.0,
-                                          lower=-0.55,
-                                          upper=0.55),
+                                          lower=-0.4,
+                                          upper=0.4),
                                 ),
 
                  agn_light = dict(

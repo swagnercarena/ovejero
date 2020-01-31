@@ -5,7 +5,7 @@ from addict import Dict
 cfg = Dict()
 
 cfg.name = 'gamma'
-cfg.seed = 1123 # random seed
+cfg.seed = 1204 # random seed
 cfg.bnn_prior_class = 'DiagonalBNNPrior'
 cfg.n_data = 200 # number of images to generate
 cfg.train_vs_val = 'val'
@@ -60,42 +60,42 @@ cfg.bnn_omega = dict(
                                  # Normal(mu, sigma^2)
                                  center_x = dict(
                                           dist='normal', # one of ['normal', 'beta']
-                                          mu=0.0,
-                                          sigma=0.102), # two pixels
+                                          mu=0.05,
+                                          sigma=0.05), # two pixels
                                  center_y = dict(
                                           dist='normal',
-                                          mu=0.0,
-                                          sigma=0.102), # two pixels
+                                          mu=-0.05,
+                                          sigma=0.05), # two pixels
                                  # Lognormal(mu, sigma^2)
                                  gamma = dict(
                                               dist='lognormal',
-                                              mu=0.7,
-                                              sigma=0.1),
+                                              mu=0.8,
+                                              sigma=0.02),
                                  theta_E = dict(
                                                 dist='lognormal',
-                                                mu=0.0,
-                                                sigma=0.1),
+                                                mu=0.05,
+                                                sigma=0.01),
                                  # Beta(a, b)
                                  e1 = dict(
                                            dist='beta',
                                            a=4.0,
                                            b=4.0,
-                                           lower=-0.55, # This is ~ q>0.3
-                                           upper=0.55),
+                                           lower=0.0, # This is ~ q>0.3
+                                           upper=0.2),
                                  e2 = dict(
                                            dist='beta',
                                            a=4.0,
                                            b=4.0,
-                                           lower=-0.55,
-                                           upper=0.55,),
+                                           lower=-0.2,
+                                           upper=0.0,),
                                  ),
 
                  external_shear = dict(
                                        profile='SHEAR_GAMMA_PSI',
                                        gamma_ext = dict(
                                                          dist='lognormal',
-                                                         mu=-2.73, # See overleaf doc
-                                                         sigma=1.05),
+                                                         mu=-2.43, # See overleaf doc
+                                                         sigma=0.1),
                                        psi_ext = dict(
                                                      dist='generalized_normal',
                                                      mu=0.0,
