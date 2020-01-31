@@ -282,12 +282,25 @@ class HierarchicalClassTest(unittest.TestCase):
 		self.assertAlmostEqual(np.max(np.abs(self.hclass.predict_samps[:,:,1]-
 			g2)),0)
 
-		# TODO: I should also be testing pt_omegai since it's generated here.
+		# Just make sure this is set and set using the interim dict.
+		np.testing.assert_almost_equal(self.hclass.pt_omegai,
+			self.hclass.log_p_theta_omega(
+			self.hclass.lens_samps,self.hclass.interim_eval_dict['hyps'], 
+			self.hclass.interim_eval_dict))
+
+		# Now check that if we offer a save path it gets used.
+		save_path = self.root_path + 'save_samps.npy'
+		self.hclass.gen_samples(100,save_path)
+		orig_samps = np.copy(self.hclass.lens_samps)
+		self.hclass.gen_samples(100,save_path)
+
+		np.testing.assert_almost_equal(orig_samps,self.hclass.lens_samps)
 
 		# Clean up the files we generated
 		os.remove(self.normalization_constants_path)
 		os.remove(self.normalized_param_path)
 		os.remove(self.tf_record_path)
+		os.remove(save_path)
 
 	def test_log_post_omega(self):
 		# Test that the log_p_theta_omega function returns the correct value 

@@ -227,7 +227,7 @@ class HierarchicalClass:
 		# No need to calculate the volume since this is just a constant.
 		return 0
 
-	def gen_samples(self,num_samples):
+	def gen_samples(self,num_samples,sample_save_path=None):
 		"""
 		Generate samples of lens parameters theta for use in hierarchical
 		inference.
@@ -235,62 +235,75 @@ class HierarchicalClass:
 		Parameters
 		----------
 			num_samples (int): The number of samples to draw per lens.
+			sample_save_path (str): A path to save/load the samples. If None
+				samples will not be saved. Path should have extension .npy.
 		"""
 
-		# Most of the work will be done by the InferenceClass. The only
-		# additional work we'll do here is undoing the polar to cartesian
-		# transformation and the log transformation.
-		self.infer_class.gen_samples(num_samples)
+		if sample_save_path is None or not os.path.isfile(sample_save_path):
+			if sample_save_path is not None:
+				print('No samples found. Saving samples to %s'%(
+					sample_save_path))
+			# Most of the work will be done by the InferenceClass. The only
+			# additional work we'll do here is undoing the polar to cartesian
+			# transformation and the log transformation.
+			self.infer_class.gen_samples(num_samples)
 
-		# We'll steal the samples from bnn_infer and transform them
-		# back into the original parameter space.
-		self.predict_samps = self.infer_class.predict_samps
-		self.lens_samps = np.zeros_like(self.predict_samps)
+			# We'll steal the samples from bnn_infer and transform them
+			# back into the original parameter space.
+			self.predict_samps = self.infer_class.predict_samps
+			self.lens_samps = np.zeros_like(self.predict_samps)
 
-		# Even for parameters that have not been changed between baobab
-		# and training time, we still need to make sure their position
-		# in the new array is correct.
-		for f_param in self.final_params:
-			if f_param in self.lens_params:
-				p_l = self.lens_params.index(f_param)
-				p_f = self.final_params.index(f_param)
-				self.lens_samps[:,:,p_l] = self.predict_samps[:,:,p_f]
+			# Even for parameters that have not been changed between baobab
+			# and training time, we still need to make sure their position
+			# in the new array is correct.
+			for f_param in self.final_params:
+				if f_param in self.lens_params:
+					p_l = self.lens_params.index(f_param)
+					p_f = self.final_params.index(f_param)
+					self.lens_samps[:,:,p_l] = self.predict_samps[:,:,p_f]
 
-		# Go through all the parameters that were put into log space and
-		# put them back into their original form.
-		for log_param in self.lens_params_log:
-			log_p_l = self.lens_params.index(log_param)
-			log_p_f = self.final_params.index(log_param+'_log')
-			self.lens_samps[:,:,log_p_l] = np.exp(
-				self.predict_samps[:,:,log_p_f])
+			# Go through all the parameters that were put into log space and
+			# put them back into their original form.
+			for log_param in self.lens_params_log:
+				log_p_l = self.lens_params.index(log_param)
+				log_p_f = self.final_params.index(log_param+'_log')
+				self.lens_samps[:,:,log_p_l] = np.exp(
+					self.predict_samps[:,:,log_p_f])
 
-		# Go through all the parameters that were put into cartesian
-		# coordinates and put them back in polar coordinates.
-		for gamps_pref, param_rat, param_ang in zip(
-			self.gampsi['gampsi_parameter_prefixes'],
-			self.gampsi['gampsi_params_rat'],
-			self.gampsi['gampsi_params_ang']):
-			param_g1 = gamps_pref+'_g1'
-			param_g2 = gamps_pref+'_g2'
-			pg1i = self.final_params.index(param_g1)
-			pg2i = self.final_params.index(param_g2)
-			rati = self.lens_params.index(param_rat)
-			angi = self.lens_params.index(param_ang)
+			# Go through all the parameters that were put into cartesian
+			# coordinates and put them back in polar coordinates.
+			for gamps_pref, param_rat, param_ang in zip(
+				self.gampsi['gampsi_parameter_prefixes'],
+				self.gampsi['gampsi_params_rat'],
+				self.gampsi['gampsi_params_ang']):
+				param_g1 = gamps_pref+'_g1'
+				param_g2 = gamps_pref+'_g2'
+				pg1i = self.final_params.index(param_g1)
+				pg2i = self.final_params.index(param_g2)
+				rati = self.lens_params.index(param_rat)
+				angi = self.lens_params.index(param_ang)
 
-			self.lens_samps[:,:,rati] = np.sqrt(np.square(
-				self.predict_samps[:,:,pg1i]) + np.square(
-				self.predict_samps[:,:,pg2i]))
-			self.lens_samps[:,:,angi] = np.arctan2(
-				self.predict_samps[:,:,pg2i],
-				self.predict_samps[:,:,pg1i])/2
+				self.lens_samps[:,:,rati] = np.sqrt(np.square(
+					self.predict_samps[:,:,pg1i]) + np.square(
+					self.predict_samps[:,:,pg2i]))
+				self.lens_samps[:,:,angi] = np.arctan2(
+					self.predict_samps[:,:,pg2i],
+					self.predict_samps[:,:,pg1i])/2
 
-		# TODO: We need a much better way to deal with this! But for now
-		# we're just going to force it.
-		hard_fix_params = ['lens_mass_e1','lens_mass_e2']
-		for lens_param in hard_fix_params:
-			fixi = self.lens_params.index(lens_param)
-			self.lens_samps[self.lens_samps[:,:,fixi]<-0.55,fixi] = -0.55+1e-5
-			self.lens_samps[self.lens_samps[:,:,fixi]>0.55,fixi] = 0.55-1e-5
+			# TODO: We need a much better way to deal with this! But for now
+			# we're just going to force it.
+			hard_fix_params = ['lens_mass_e1','lens_mass_e2']
+			for lens_param in hard_fix_params:
+				fixi = self.lens_params.index(lens_param)
+				self.lens_samps[self.lens_samps[:,:,fixi]<-0.55,fixi] =-0.55+1e-5
+				self.lens_samps[self.lens_samps[:,:,fixi]>0.55,fixi] = 0.55-1e-5
+
+			if sample_save_path is not None:
+				np.save(sample_save_path,self.lens_samps)
+
+		else:
+			print('Loading samples from %s'%(sample_save_path))
+			self.lens_samps = np.load(sample_save_path)
 
 		self.pt_omegai = self.log_p_theta_omega(self.lens_samps,
 			self.interim_eval_dict['hyps'], self.interim_eval_dict)
