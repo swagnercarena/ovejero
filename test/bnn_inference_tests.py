@@ -516,15 +516,15 @@ class BNNInferenceTest(unittest.TestCase):
 		np.testing.assert_almost_equal(pred_1,self.infer_class.predict_samps)
 
 		# Test that none of the plotting routines break
-		self.infer_class.gen_coverage_plots()
+		self.infer_class.gen_coverage_plots(block=False)
 		plt.close()
 		self.infer_class.report_stats()
-		self.infer_class.plot_posterior_contours(1)
+		self.infer_class.plot_posterior_contours(1,block=False)
 		plt.close()
 		plt.close()
-		self.infer_class.comp_al_ep_unc()
+		self.infer_class.comp_al_ep_unc(block=False)
 		plt.close()
-		self.infer_class.plot_calibration()
+		self.infer_class.plot_calibration(block=False)
 		plt.close()
 
 		# Clean up the files we generated
