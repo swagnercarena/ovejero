@@ -6,6 +6,7 @@ from ovejero import bnn_inference, data_tools, bnn_alexnet
 import numpy as np
 import pandas as pd
 import tensorflow as tf
+import matplotlib.pyplot as plt
 
 class BNNInferenceTest(unittest.TestCase):
 
@@ -505,7 +506,7 @@ class BNNInferenceTest(unittest.TestCase):
 		# Replace the real model with our fake model and generate samples
 		self.infer_class.model = diag_model
 		# Provide a save path to then check that we get the same data
-		save_path = self.root_path + 'test_gen_samps'
+		save_path = self.root_path + 'test_gen_samps/'
 		self.infer_class.gen_samples(10000,save_path)
 
 		pred_1 = np.copy(self.infer_class.predict_samps)
@@ -514,11 +515,26 @@ class BNNInferenceTest(unittest.TestCase):
 
 		np.testing.assert_almost_equal(pred_1,self.infer_class.predict_samps)
 
+		# Test that none of the plotting routines break
+		self.infer_class.gen_coverage_plots()
+		plt.close()
+		self.infer_class.report_stats()
+		self.infer_class.plot_posterior_contours(1)
+		plt.close()
+		plt.close()
+		self.infer_class.comp_al_ep_unc()
+		plt.close()
+		self.infer_class.plot_calibration()
+		plt.close()
+
 		# Clean up the files we generated
 		os.remove(self.normalization_constants_path)
 		os.remove(self.tf_record_path)
 		os.remove(save_path+'pred.npy')
 		os.remove(save_path+'al_samp.npy')
+		os.remove(save_path+'images.npy')
+		os.remove(save_path+'y_test.npy')
+		os.rmdir(save_path)
 
 	def test_calc_p_dlt(self):
 		# Test that the calc_p_dlt returns the correct percentages for some
