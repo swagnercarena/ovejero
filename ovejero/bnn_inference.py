@@ -18,6 +18,7 @@ import matplotlib.pyplot as plt
 import corner
 import tensorflow as tf
 import tensorflow_probability as tfp
+import os
 
 class InferenceClass:
 	"""
@@ -158,7 +159,7 @@ class InferenceClass:
 			al_samp[:,:,lpi,:] *= param_std
 			al_samp[:,:,:,lpi] *= param_std
 
-	def gen_samples(self,num_samples):
+	def gen_samples(self,num_samples,sample_save_path=None):
 		"""
 		Generate the y prediction and the associated covariance matrix
 		by marginalizing over both network and output uncertainty.
@@ -167,118 +168,142 @@ class InferenceClass:
 		----------
 			num_samples (int): The number of samples used to marginalize over
 				the network's uncertainty.
+			sample_save_path (str): A path to save/load the samples. If None
+				samples will not be saved. Do not include .npy, this will be
+				appended (since two files will be generated).
 		"""
-		# Extract image and output batch from tf dataset
-		for image_batch, yt_batch in self.tf_dataset_v.take(1):
-			self.images = image_batch
-			self.y_test = yt_batch.numpy()
 
-		# This is where we will save the samples for each prediction. We will
-		# use this to numerically extract the covariance.
-		predict_samps = np.zeros((num_samples,self.batch_size,self.num_params))
-		# We also want to store a sampling of the aleatoric noise being
-		# predicted to get a handle on how it compares to the epistemic
-		# uncertainty.
-		al_samp = np.zeros((num_samples,self.batch_size,self.num_params,
-			self.num_params))
-		# Generate our samples
-		for samp in tqdm(range(num_samples)):
-			output = self.model.predict(self.images) 
-			# How we extract uncertanties will depend on the type of network in
-			# question.
-			if self.bnn_type == 'diag':
-				# In the diagonal case we only need to add Gaussian random noise
-				# scaled by the variane.
-				y_pred, std_pred = tf.split(output,num_or_size_splits=2,axis=-1)
-				std_pred = tf.exp(std_pred)
-				# Draw a random sample of noise and add that noise to our 
-				# predicted value.
-				noise = tf.random.normal((self.batch_size,
-					self.num_params))*std_pred
-				p_samps_tf = y_pred+noise
-				a_samps_tf = tf.linalg.diag(std_pred)
+		if sample_save_path is None or not os.path.isfile(sample_save_path+
+			'pred.npy'):
+			if sample_save_path is not None:
+				print('No samples found. Saving samples to %s'%(sample_save_path))
+			# Extract image and output batch from tf dataset
+			for image_batch, yt_batch in self.tf_dataset_v.take(1):
+				self.images = image_batch
+				self.y_test = yt_batch.numpy()
 
-				# Extract the numpy from the tensorflow
-				predict_samps[samp] = p_samps_tf.numpy()
-				al_samp[samp] = a_samps_tf.numpy()
+			# This is where we will save the samples for each prediction. We will
+			# use this to numerically extract the covariance.
+			predict_samps = np.zeros((num_samples,self.batch_size,
+				self.num_params))
+			# We also want to store a sampling of the aleatoric noise being
+			# predicted to get a handle on how it compares to the epistemic
+			# uncertainty.
+			al_samp = np.zeros((num_samples,self.batch_size,self.num_params,
+				self.num_params))
+			# Generate our samples
+			for samp in tqdm(range(num_samples)):
+				output = self.model.predict(self.images) 
+				# How we extract uncertanties will depend on the type of network in
+				# question.
+				if self.bnn_type == 'diag':
+					# In the diagonal case we only need to add Gaussian random 
+					# noise scaled by the variane.
+					y_pred, std_pred = tf.split(output,num_or_size_splits=2,
+						axis=-1)
+					std_pred = tf.exp(std_pred)
+					# Draw a random sample of noise and add that noise to our 
+					# predicted value.
+					noise = tf.random.normal((self.batch_size,
+						self.num_params))*std_pred
+					p_samps_tf = y_pred+noise
+					a_samps_tf = tf.linalg.diag(std_pred)
 
-			elif self.bnn_type == 'full':
-				# In the full covariance case we need to explicitly construcct
-				# our covariance matrix. This mostly follow the code in
-				# bnn_alexnet full_covariance_loss function.
-				# Divide our output into the prediction and the precision matrix
-				# elements.
-				L_elements_len = int(self.num_params*(self.num_params+1)/2)
-				y_pred, L_mat_elements = tf.split(output,
-					num_or_size_splits=[self.num_params,L_elements_len],axis=-1)
-				# Transform our matrix elements into a precision matrix and the
-				# precision matrix into a covariance matrix.
-				prec_mats, _ = self.loss_class.construct_precision_matrix(
-					L_mat_elements)
-				cov_mats = tf.linalg.inv(prec_mats)
-				# Sample noise using our covariance matrices
-				mvn = tfp.distributions.MultivariateNormalFullCovariance(
-					loc=y_pred,covariance_matrix=cov_mats)
-				p_samps_tf = mvn.sample(1)
+					# Extract the numpy from the tensorflow
+					predict_samps[samp] = p_samps_tf.numpy()
+					al_samp[samp] = a_samps_tf.numpy()
 
-				# Extract the numpy from the tensorflow
-				predict_samps[samp] = p_samps_tf.numpy()
-				al_samp[samp] = cov_mats.numpy()
+				elif self.bnn_type == 'full':
+					# In the full covariance case we need to explicitly 
+					# construct our covariance matrix. This mostly follow the 
+					# code in bnn_alexnet full_covariance_loss function.
+					# Divide our output into the prediction and the precision
+					# matrix elements.
+					L_elements_len = int(self.num_params*(self.num_params+1)/2)
+					y_pred, L_mat_elements = tf.split(output,
+						num_or_size_splits=[self.num_params,L_elements_len],
+						axis=-1)
+					# Transform our matrix elements into a precision matrix and
+					# the precision matrix into a covariance matrix.
+					prec_mats, _ = self.loss_class.construct_precision_matrix(
+						L_mat_elements)
+					cov_mats = tf.linalg.inv(prec_mats)
+					# Sample noise using our covariance matrices
+					mvn = tfp.distributions.MultivariateNormalFullCovariance(
+						loc=y_pred,covariance_matrix=cov_mats)
+					p_samps_tf = mvn.sample(1)
 
-			elif self.bnn_type == 'gmm':
-				# In the gmm case, we do the same thing as the bnn case, but
-				# draw which of the two posteriors to draw from.
-				L_elements_len = int(self.num_params*(self.num_params+1)/2)
-				y_pred1, L_mat_elements1, y_pred2, L_mat_elements2, pi_logit = tf.split(
-					output,num_or_size_splits = [self.num_params,L_elements_len,
-					self.num_params,L_elements_len,1],axis=-1)
+					# Extract the numpy from the tensorflow
+					predict_samps[samp] = p_samps_tf.numpy()
+					al_samp[samp] = cov_mats.numpy()
 
-				# Set the probability between 0 and 1.
-				pi = tf.sigmoid(pi_logit)
+				elif self.bnn_type == 'gmm':
+					# In the gmm case, we do the same thing as the bnn case, but
+					# draw which of the two posteriors to draw from.
+					L_elements_len = int(self.num_params*(self.num_params+1)/2)
+					y_pred1,L_mat_elements1,y_pred2,L_mat_elements2,pi_logit = (
+						tf.split(output,num_or_size_splits = [self.num_params,
+							L_elements_len,self.num_params,L_elements_len,1],
+							axis=-1))
 
-				# Now build the precision matrix for our two models and extract the
-				# diagonal components used for the loss calculation
-				prec_mat1, _ = self.loss_class.construct_precision_matrix(
-					L_mat_elements1)
-				# We have to flatten the covariance matrices for the condition
-				# step later on.
-				cov_mats1 = tf.reshape(tf.linalg.inv(prec_mat1),(self.batch_size,
-					-1))
-				prec_mat2, _ = self.loss_class.construct_precision_matrix(
-					L_mat_elements2)
-				cov_mats2 = tf.reshape(tf.linalg.inv(prec_mat2),(self.batch_size,
-					-1))
+					# Set the probability between 0 and 1.
+					pi = tf.sigmoid(pi_logit)
 
-				# Use random draws from a uniform distribution to select between the
-				# two outputs
-				switch = tf.random.uniform((self.batch_size,1))
-				y_pred = tf.where(switch<pi,y_pred1,y_pred2)
-				cov_mats = tf.reshape(tf.where(switch<pi,cov_mats1,cov_mats2),
-					(self.batch_size,self.num_params,self.num_params))
+					# Now build the precision matrix for our two models and extract the
+					# diagonal components used for the loss calculation
+					prec_mat1, _ = self.loss_class.construct_precision_matrix(
+						L_mat_elements1)
+					# We have to flatten the covariance matrices for the condition
+					# step later on.
+					cov_mats1 = tf.reshape(tf.linalg.inv(prec_mat1),(
+						self.batch_size,-1))
+					prec_mat2, _ = self.loss_class.construct_precision_matrix(
+						L_mat_elements2)
+					cov_mats2 = tf.reshape(tf.linalg.inv(prec_mat2),(
+						self.batch_size,-1))
 
-				# Draw from the alleatoric posterior.
-				mvn = tfp.distributions.MultivariateNormalFullCovariance(
-					loc=y_pred,covariance_matrix=cov_mats)
-				p_samps_tf = mvn.sample(1)
+					# Use random draws from a uniform distribution to select between the
+					# two outputs
+					switch = tf.random.uniform((self.batch_size,1))
+					y_pred = tf.where(switch<pi,y_pred1,y_pred2)
+					cov_mats = tf.reshape(tf.where(switch<pi,cov_mats1,cov_mats2),
+						(self.batch_size,self.num_params,self.num_params))
 
-				# Extract the numpy from the tensorflow
-				predict_samps[samp] = p_samps_tf.numpy()
-				al_samp[samp] = cov_mats.numpy()
+					# Draw from the alleatoric posterior.
+					mvn = tfp.distributions.MultivariateNormalFullCovariance(
+						loc=y_pred,covariance_matrix=cov_mats)
+					p_samps_tf = mvn.sample(1)
 
-			else:
-				raise NotImplementedError('gen_pred_cov does not yet support '+
-					'%s models'%(self.bnn_type))
+					# Extract the numpy from the tensorflow
+					predict_samps[samp] = p_samps_tf.numpy()
+					al_samp[samp] = cov_mats.numpy()
 
-		self.fix_flip_pairs(predict_samps,self.y_test)
-		self.undo_param_norm(predict_samps,self.y_test,al_samp)
+				else:
+					raise NotImplementedError('gen_pred_cov does not yet support'+
+						' %s models'%(self.bnn_type))
 
-		self.predict_samps = predict_samps
-		self.al_cov = np.mean(al_samp,axis=0)
-		self.y_pred = np.mean(predict_samps,axis=0)
-		self.y_std = np.std(predict_samps,axis=0)
+			self.fix_flip_pairs(predict_samps,self.y_test)
+			self.undo_param_norm(predict_samps,self.y_test,al_samp)
+
+			self.predict_samps = predict_samps
+			self.al_samp = al_samp
+
+			# Save the samples if desired.
+			if sample_save_path is not None:
+				np.save(sample_save_path+'pred.npy',self.predict_samps)
+				np.save(sample_save_path+'al_samp.npy',self.al_samp)
+
+		else:
+			print('Loading samples from %s'%(sample_save_path))
+			self.predict_samps = np.load(sample_save_path+'pred.npy')
+			self.al_samp = np.load(sample_save_path+'al_samp.npy')
+
+		self.al_cov = np.mean(self.al_samp,axis=0)
+		self.y_pred = np.mean(self.predict_samps,axis=0)
+		self.y_std = np.std(self.predict_samps,axis=0)
 		self.y_cov = np.zeros((self.batch_size,self.num_params,self.num_params))
 		for bi in range(self.batch_size):
-			self.y_cov[bi] = np.cov(predict_samps[:,bi,:],rowvar=False)
+			self.y_cov[bi] = np.cov(self.predict_samps[:,bi,:],rowvar=False)
 
 		self.samples_init = True
 
