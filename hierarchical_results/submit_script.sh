@@ -22,4 +22,4 @@ pip3 install tensorflow==2.1.0 --user
 cd /home/users/swagnerc/Phil/ovejero
 python3 setup.py install --user
 cd /home/users/swagnerc/Phil/ovejero/hierarchical_results
-python3 run_hierarchical_inference.py ${1} ${2} ${3} ${4} ${5} ${6} ${7}
+python3 -m run_hierarchical_inference ${1} ${2} ${3} ${4} ${5} ${6} ${7}
