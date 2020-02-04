@@ -14,4 +14,4 @@
 
 ml python/3.6.1
 cd /home/users/swagnerc/Phil/ovejero/hierarchical_results
-python3 -m run_hierarchical_inference ${1} ${2} ${3} ${4} ${5} ${6} ${7}
+python3 -m run_hierarchical_inference ${1} ${2} ${3} ${4} ${5} ${6} ${7} ${8}

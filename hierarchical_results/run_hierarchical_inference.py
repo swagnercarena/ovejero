@@ -3,6 +3,8 @@ import argparse, os
 
 parser = argparse.ArgumentParser(description='Run hiearchical inference on'+
 	' a specific test set')
+parser.add_argument('config_path', type=str,
+	help='The path to the ovejero config used to train the model.')
 parser.add_argument('target_baobab_omega_path', type=str,
 	help='The boabab config containing the target distribution')
 parser.add_argument('test_dataset_path', type=str, 
@@ -22,7 +24,7 @@ args = parser.parse_args()
 
 # First specify the config path
 root_path = os.getcwd()[:-20]
-config_path = root_path + 'configs/nn1.json'
+config_path = args.config_path
 
 # We also need the path to the baobab configs for the interim and target omega
 interim_baobab_omega_path = root_path + 'configs/baobab_configs/train_diagonal.py'
