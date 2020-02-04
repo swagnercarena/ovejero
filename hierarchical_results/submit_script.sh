@@ -13,13 +13,5 @@
 #SBATCH --mail-type=FAIL
 
 ml python/3.6.1
-ml gcc/9.1.0
-cd /home/users/swagnerc/Phil/fastell4py
-python3 setup.py install --user
-cd /home/users/swagnerc/Phil/baobab
-pip3 install -e . -r requirements.txt
-pip3 install tensorflow==2.1.0 --user
-cd /home/users/swagnerc/Phil/ovejero
-python3 setup.py install --user
 cd /home/users/swagnerc/Phil/ovejero/hierarchical_results
 python3 -m run_hierarchical_inference ${1} ${2} ${3} ${4} ${5} ${6} ${7}
