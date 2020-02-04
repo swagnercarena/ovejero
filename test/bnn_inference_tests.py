@@ -6,6 +6,7 @@ from ovejero import bnn_inference, data_tools, bnn_alexnet
 import numpy as np
 import pandas as pd
 import tensorflow as tf
+import matplotlib.pyplot as plt
 
 class BNNInferenceTest(unittest.TestCase):
 
@@ -460,6 +461,80 @@ class BNNInferenceTest(unittest.TestCase):
 		# Clean up the files we generated
 		os.remove(self.normalization_constants_path)
 		os.remove(self.tf_record_path)
+
+	def test_gen_samples_save(self):
+
+		# First we have to make a fake model whose statistics are very well
+		# defined.
+		class ToyModel():
+			def __init__(self,mean,covariance,batch_size,al_std):
+				# We want to make sure our performance is consistent for a
+				# test
+				np.random.seed(4)
+				self.mean=mean
+				self.covariance = covariance
+				self.batch_size = batch_size
+				self.al_std = al_std
+			def predict(self,image):
+				# We won't actually be using the image. We just want it for
+				# testing.
+				return tf.constant(np.concatenate([np.random.multivariate_normal(
+					self.mean,self.covariance,self.batch_size),np.zeros((
+					self.batch_size,len(self.mean)))+self.al_std],axis=-1),
+					tf.float32)
+
+		# Start with a simple covariance matrix example.
+		mean = np.ones(self.num_params)*2
+		covariance = np.diag(np.ones(self.num_params))
+		al_std = -1000
+		diag_model = ToyModel(mean,covariance,self.batch_size,al_std)
+
+		# We don't want any flipping going on
+		self.infer_class.flip_mat_list = [np.diag(np.ones(self.num_params))]
+
+		# Create tf record. This won't be used, but it has to be there for
+		# the function to be able to pull some images.
+		# Make fake norms data
+		fake_norms = {}
+		for lens_param in self.lens_params:
+			fake_norms[lens_param] = np.array([0.0,1.0])
+		fake_norms = pd.DataFrame(data=fake_norms)
+		fake_norms.to_csv(self.normalization_constants_path,index=False)
+		data_tools.generate_tf_record(self.root_path,self.lens_params,
+			self.lens_params_path,self.tf_record_path)
+
+		# Replace the real model with our fake model and generate samples
+		self.infer_class.model = diag_model
+		# Provide a save path to then check that we get the same data
+		save_path = self.root_path + 'test_gen_samps/'
+		self.infer_class.gen_samples(10000,save_path)
+
+		pred_1 = np.copy(self.infer_class.predict_samps)
+		# Generate again and make sure they are equivalent
+		self.infer_class.gen_samples(10000,save_path)
+
+		np.testing.assert_almost_equal(pred_1,self.infer_class.predict_samps)
+
+		# Test that none of the plotting routines break
+		self.infer_class.gen_coverage_plots(block=False)
+		plt.close()
+		self.infer_class.report_stats()
+		self.infer_class.plot_posterior_contours(1,block=False)
+		plt.close()
+		plt.close()
+		self.infer_class.comp_al_ep_unc(block=False)
+		plt.close()
+		self.infer_class.plot_calibration(block=False)
+		plt.close()
+
+		# Clean up the files we generated
+		os.remove(self.normalization_constants_path)
+		os.remove(self.tf_record_path)
+		os.remove(save_path+'pred.npy')
+		os.remove(save_path+'al_samp.npy')
+		os.remove(save_path+'images.npy')
+		os.remove(save_path+'y_test.npy')
+		os.rmdir(save_path)
 
 	def test_calc_p_dlt(self):
 		# Test that the calc_p_dlt returns the correct percentages for some
