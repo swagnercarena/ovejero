@@ -10,6 +10,9 @@
 #SBATCH --mem 8000
 #SBATCH -o /home/users/swagnerc/slurm_out/h_inf_%j.out # Standard output
 #SBATCH -e /home/users/swagnerc/slurm_out/h_inf_%j.err # Standard error
+#SBATCH --mail-type=FAIL
 
-cd /home/users/swagnerc/Phil/ovejero/hierarchical_results
+source ~/.bashrc 
+export PYTHONUSERBASE=$HOME/.local/lib/python3.6/site-packages/
+cd /home/users/swagnerc/Phil/ovejero/hierarchical_results/
 python run_hierarchical_inference.py ${1} ${2} ${3} ${4} ${5} ${6} ${7}
