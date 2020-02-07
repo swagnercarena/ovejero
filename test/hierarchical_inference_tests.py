@@ -1,5 +1,4 @@
 import unittest, os, json
-# import tensorflow as tf
 from ovejero import hierarchical_inference, model_trainer
 from baobab import configs
 from baobab import distributions
@@ -171,31 +170,31 @@ class HierarchicalClassTest(unittest.TestCase):
 		hyp = np.array([-2.73,1.05,0.0,0.5*np.pi,10.0,-0.5*np.pi,0.5*np.pi,0.0,
 			0.102,0.0,0.102,4.0,4.0,-0.55,0.55,4.0,4.0,-0.55,0.55,0.7,0.1,0.0,
 			0.1])
-		samples = np.ones((2,2,8))*0.3
+		samples = np.ones((8,2,2))*0.3
 
 
 		def hand_calc_log_pdf(samples,hyp):
 			# Add each one of the probabilities
-			scipy_pdf = stats.lognorm.logpdf(samples[:,:,0],scale=np.exp(hyp[0]),
+			scipy_pdf = stats.lognorm.logpdf(samples[0],scale=np.exp(hyp[0]),
 				s=hyp[1])
 
 			dist = stats.gennorm(beta=hyp[4],loc=hyp[2],scale=hyp[3])
-			scipy_pdf += dist.logpdf(samples[:,:,1])-np.log(dist.cdf(hyp[6]) - 
+			scipy_pdf += dist.logpdf(samples[1])-np.log(dist.cdf(hyp[6]) - 
 				dist.cdf(hyp[5]))
 
-			scipy_pdf += stats.norm.logpdf(samples[:,:,2],loc=hyp[7],
+			scipy_pdf += stats.norm.logpdf(samples[2],loc=hyp[7],
 				scale=hyp[8])
-			scipy_pdf += stats.norm.logpdf(samples[:,:,3],loc=hyp[9],
+			scipy_pdf += stats.norm.logpdf(samples[3],loc=hyp[9],
 				scale=hyp[10])
 
-			scipy_pdf += stats.beta.logpdf(samples[:,:,4],a=hyp[11],b=hyp[12],
+			scipy_pdf += stats.beta.logpdf(samples[4],a=hyp[11],b=hyp[12],
 				loc=hyp[13],scale=hyp[14]-hyp[13])
-			scipy_pdf += stats.beta.logpdf(samples[:,:,5],a=hyp[15],b=hyp[16],
+			scipy_pdf += stats.beta.logpdf(samples[5],a=hyp[15],b=hyp[16],
 				loc=hyp[17],scale=hyp[18]-hyp[17])
 
-			scipy_pdf += stats.lognorm.logpdf(samples[:,:,6],scale=np.exp(
+			scipy_pdf += stats.lognorm.logpdf(samples[6],scale=np.exp(
 				hyp[19]),s=hyp[20])
-			scipy_pdf += stats.lognorm.logpdf(samples[:,:,7],scale=np.exp(
+			scipy_pdf += stats.lognorm.logpdf(samples[7],scale=np.exp(
 				hyp[21]),s=hyp[22])
 
 			return scipy_pdf
@@ -204,7 +203,7 @@ class HierarchicalClassTest(unittest.TestCase):
 			samples,hyp,self.hclass.target_eval_dict)-
 			hand_calc_log_pdf(samples,hyp))),0)
 
-		samples = np.random.uniform(size=(2,2,8))*0.3
+		samples = np.random.uniform(size=(8,2,2))*0.3
 		self.assertAlmostEqual(np.max(np.abs(self.hclass.log_p_theta_omega(
 			samples,hyp,self.hclass.target_eval_dict)-
 			hand_calc_log_pdf(samples,hyp))),0)
@@ -271,10 +270,10 @@ class HierarchicalClassTest(unittest.TestCase):
 		# Check that the parameters that got changed did so in the right way.
 		# First check theta_e
 		self.assertAlmostEqual(np.max(np.abs(self.hclass.predict_samps[:,:,-1]-
-			np.log(self.hclass.lens_samps[:,:,-1]))),0)
+			np.log(self.hclass.lens_samps[-1]))),0)
 		# Now check the catersian to polar for shears.
-		gamma = self.hclass.lens_samps[:,:,0]
-		ang = self.hclass.lens_samps[:,:,1]
+		gamma = self.hclass.lens_samps[0]
+		ang = self.hclass.lens_samps[1]
 		g1 = gamma*np.cos(2*ang)
 		g2 = gamma*np.sin(2*ang)
 		self.assertAlmostEqual(np.max(np.abs(self.hclass.predict_samps[:,:,0]-
@@ -308,31 +307,31 @@ class HierarchicalClassTest(unittest.TestCase):
 		hyp = np.array([-2.73,1.05,0.0,0.5*np.pi,10.0,-0.5*np.pi,0.5*np.pi,0.0,
 			0.102,0.0,0.102,4.0,4.0,-0.55,0.55,4.0,4.0,-0.55,0.55,0.7,0.1,0.0,
 			0.1])
-		samples = np.ones((2,2,8))*0.3
+		samples = np.ones((8,2,2))*0.3
 
 
 		def hand_calc_log_pdf(samples,hyp):
 			# Add each one of the probabilities
-			scipy_pdf = stats.lognorm.logpdf(samples[:,:,0],scale=np.exp(hyp[0]),
+			scipy_pdf = stats.lognorm.logpdf(samples[0],scale=np.exp(hyp[0]),
 				s=hyp[1])
 
 			dist = stats.gennorm(beta=hyp[4],loc=hyp[2],scale=hyp[3])
-			scipy_pdf += dist.logpdf(samples[:,:,1])-np.log(dist.cdf(hyp[6]) - 
+			scipy_pdf += dist.logpdf(samples[1])-np.log(dist.cdf(hyp[6]) - 
 				dist.cdf(hyp[5]))
 
-			scipy_pdf += stats.norm.logpdf(samples[:,:,2],loc=hyp[7],
+			scipy_pdf += stats.norm.logpdf(samples[2],loc=hyp[7],
 				scale=hyp[8])
-			scipy_pdf += stats.norm.logpdf(samples[:,:,3],loc=hyp[9],
+			scipy_pdf += stats.norm.logpdf(samples[3],loc=hyp[9],
 				scale=hyp[10])
 
-			scipy_pdf += stats.beta.logpdf(samples[:,:,4],a=hyp[11],b=hyp[12],
+			scipy_pdf += stats.beta.logpdf(samples[4],a=hyp[11],b=hyp[12],
 				loc=hyp[13],scale=hyp[14]-hyp[13])
-			scipy_pdf += stats.beta.logpdf(samples[:,:,5],a=hyp[15],b=hyp[16],
+			scipy_pdf += stats.beta.logpdf(samples[5],a=hyp[15],b=hyp[16],
 				loc=hyp[17],scale=hyp[18]-hyp[17])
 
-			scipy_pdf += stats.lognorm.logpdf(samples[:,:,6],scale=np.exp(
+			scipy_pdf += stats.lognorm.logpdf(samples[6],scale=np.exp(
 				hyp[19]),s=hyp[20])
-			scipy_pdf += stats.lognorm.logpdf(samples[:,:,7],scale=np.exp(
+			scipy_pdf += stats.lognorm.logpdf(samples[7],scale=np.exp(
 				hyp[21]),s=hyp[22])
 
 			return scipy_pdf
@@ -350,7 +349,7 @@ class HierarchicalClassTest(unittest.TestCase):
 		self.assertAlmostEqual(self.hclass.log_post_omega(hyp),post_hand,
 			places=places)
 
-		samples = np.random.uniform(size=(2,2,8))*0.3
+		samples = np.random.uniform(size=(8,2,2))*0.3
 		self.hclass.lens_samps=samples
 		self.hclass.pt_omegai = self.hclass.log_p_theta_omega(
 			self.hclass.lens_samps,
@@ -376,7 +375,7 @@ class HierarchicalClassTest(unittest.TestCase):
 		n_walkers = 60
 
 		# Make some fake samples.
-		samples = np.ones((2,2,8))*0.3
+		samples = np.ones((8,2,2))*0.3
 		self.hclass.lens_samps=samples
 		self.hclass.samples_init=True
 		self.hclass.pt_omegai = self.hclass.log_p_theta_omega(
@@ -405,7 +404,7 @@ class HierarchicalClassTest(unittest.TestCase):
 		n_samps = 10
 
 		# Make some fake samples.
-		samples = np.ones((2,2,8))*0.3
+		samples = np.ones((8,2,2))*0.3
 		self.hclass.lens_samps=samples
 		self.hclass.samples_init=True
 		self.hclass.pt_omegai = self.hclass.log_p_theta_omega(

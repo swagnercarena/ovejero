@@ -520,7 +520,7 @@ class InferenceClass:
 		plt.fill_between(percentages,p_images+p_dlt_std,p_images-p_dlt_std,
 			color=color_map[1],alpha=0.3)
 		plt.xlabel('Percentage')
-		plt.ylabel('Percent of Images that have x% of draws with p(draws)>p(truth)')
+		plt.ylabel('Percent of Images that have x% of draws with d(draws)>d(truth)')
 		plt.title('Calibration of Network Posterior')
 		if legend is None:
 			plt.legend(['Perfect Calibration','Network Calibration'])

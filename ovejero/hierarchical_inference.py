@@ -176,8 +176,8 @@ class HierarchicalClass:
 
 		Parameters
 		----------
-			samples (np.array): A numpy array with dimensions (n_samps,batch_size,
-				n_params)
+			samples (np.array): A numpy array with dimensions (n_params,n_samps,
+				batch_size)
 			hyp (np.array): A numpy array with dimensions (n_hyperparameters). 
 				These are the hyperparameters that will be used for evaluation.
 			eval_dict (dict): A dictionary from build_evaluation_dictionary to
@@ -194,11 +194,11 @@ class HierarchicalClass:
 		# We iterate through each lens parameter and carry out the evaluation
 
 		# TODO: Make this faster. .1 seconds is a bit slow.
-		logpdf = np.zeros((samples.shape[0],samples.shape[1]))
+		logpdf = np.zeros((samples.shape[1],samples.shape[2]))
 
 		for li in range(len(self.lens_params)):
 			lens_param = self.lens_params[li]
-			logpdf += eval_dict[lens_param]['eval_fn'](samples[:,:,li],
+			logpdf += eval_dict[lens_param]['eval_fn'](samples[li],
 				*hyp[eval_dict[lens_param]['hyp_ind']])
 		logpdf[np.isnan(logpdf)] = -np.inf
 
@@ -304,6 +304,11 @@ class HierarchicalClass:
 		else:
 			print('Loading samples from %s'%(sample_save_path))
 			self.lens_samps = np.load(sample_save_path)
+
+		# For numba, we need to change the order of the samples for fast
+		# evaluation.
+		self.lens_samps = np.ascontiguousarray(np.transpose(self.lens_samps,
+			axes=(2,0,1)))
 
 		self.pt_omegai = self.log_p_theta_omega(self.lens_samps,
 			self.interim_eval_dict['hyps'], self.interim_eval_dict)
@@ -494,18 +499,21 @@ class HierarchicalClass:
 			# Grab the lens parameters, the samples, and indices of the
 			# hyperparameters
 			lens_param = self.lens_params[li]
-			samples = self.lens_samps[:,:,li].flatten()
+			samples = self.lens_samps[li].flatten()
 			hyp_ind = self.target_eval_dict[lens_param]['hyp_ind']
 			hyp_s = np.min(hyp_ind)
 			hyp_e = np.max(hyp_ind)+1
+			plt_min = max(np.mean(samples)-6*np.std(samples),
+				np.min(samples)-0.1)
+			plt_max = min(np.mean(samples)+6*np.std(samples),
+				np.max(samples)+0.1)
 
 			# Select the range of parameter values to evaluate the pdf at
-			eval_pdf_at = np.linspace(np.min(samples)-0.1,np.max(samples)+0.1,
-				1000)
+			eval_pdf_at = np.linspace(plt_min,plt_max,1000)
 
 			# Plot the samples for the parameter
 			plt.hist(samples,bins=100,density=True,align='mid',
-				label='BNN samples',color='#a1dab4')
+				label='BNN samples',color='#a1dab4',range=(plt_min,plt_max))
 
 			# Sample 100 chains and plot them
 			n_chains_plot = 50
@@ -531,6 +539,7 @@ class HierarchicalClass:
 
 			plt.legend()
 			plt.xlabel(lens_param)
+			plt.xlim([plt_min,plt_max])
 			plt.legend()
 			plt.show()
 
