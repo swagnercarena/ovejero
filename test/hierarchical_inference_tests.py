@@ -199,20 +199,23 @@ class HierarchicalClassTest(unittest.TestCase):
 
 			return scipy_pdf
 
-		self.assertAlmostEqual(np.max(np.abs(self.hclass.log_p_theta_omega(
-			samples,hyp,self.hclass.target_eval_dict)-
+		self.assertAlmostEqual(np.max(np.abs(
+			hierarchical_inference.log_p_theta_omega(samples,hyp,
+				self.hclass.target_eval_dict,self.hclass.lens_params)-
 			hand_calc_log_pdf(samples,hyp))),0)
 
 		samples = np.random.uniform(size=(8,2,2))*0.3
-		self.assertAlmostEqual(np.max(np.abs(self.hclass.log_p_theta_omega(
-			samples,hyp,self.hclass.target_eval_dict)-
+		self.assertAlmostEqual(np.max(np.abs(
+			hierarchical_inference.log_p_theta_omega(samples,hyp,
+				self.hclass.target_eval_dict,self.hclass.lens_params)-
 			hand_calc_log_pdf(samples,hyp))),0)
 
 		hyp = np.array([-1.02,1.5,0.1,0.49*np.pi,10.0,-np.pi,np.pi,0.1,
 			0.1,0.1,0.1,3.0,3.0,-0.75,0.75,3.0,3.0,-0.75,0.75,0.6,0.11,0.01,
 			0.2])
-		self.assertAlmostEqual(np.max(np.abs(self.hclass.log_p_theta_omega(
-			samples,hyp,self.hclass.target_eval_dict)-
+		self.assertAlmostEqual(np.max(np.abs(
+			hierarchical_inference.log_p_theta_omega(samples,hyp,
+				self.hclass.target_eval_dict,self.hclass.lens_params)-
 			hand_calc_log_pdf(samples,hyp))),0)
 
 	def test_gen_samples(self):
@@ -265,15 +268,15 @@ class HierarchicalClassTest(unittest.TestCase):
 
 		# First, make sure all of the values of lens_samps were filled out.
 		for pi in range(self.num_params):
-			self.assertGreater(np.sum(self.hclass.lens_samps[:,:,pi]),0)
+			self.assertGreater(np.sum(hierarchical_inference.lens_samps[pi]),0)
 
 		# Check that the parameters that got changed did so in the right way.
 		# First check theta_e
 		self.assertAlmostEqual(np.max(np.abs(self.hclass.predict_samps[:,:,-1]-
-			np.log(self.hclass.lens_samps[-1]))),0)
+			np.log(hierarchical_inference.lens_samps[-1]))),0)
 		# Now check the catersian to polar for shears.
-		gamma = self.hclass.lens_samps[0]
-		ang = self.hclass.lens_samps[1]
+		gamma = hierarchical_inference.lens_samps[0]
+		ang = hierarchical_inference.lens_samps[1]
 		g1 = gamma*np.cos(2*ang)
 		g2 = gamma*np.sin(2*ang)
 		self.assertAlmostEqual(np.max(np.abs(self.hclass.predict_samps[:,:,0]-
@@ -282,18 +285,20 @@ class HierarchicalClassTest(unittest.TestCase):
 			g2)),0)
 
 		# Just make sure this is set and set using the interim dict.
-		np.testing.assert_almost_equal(self.hclass.pt_omegai,
-			self.hclass.log_p_theta_omega(
-			self.hclass.lens_samps,self.hclass.interim_eval_dict['hyps'], 
-			self.hclass.interim_eval_dict))
+		np.testing.assert_almost_equal(self.hclass.prob_class.pt_omegai,
+			hierarchical_inference.log_p_theta_omega(
+				hierarchical_inference.lens_samps,
+				self.hclass.interim_eval_dict['hyps'], 
+				self.hclass.interim_eval_dict,self.hclass.lens_params))
 
 		# Now check that if we offer a save path it gets used.
 		save_path = self.root_path + 'save_samps.npy'
 		self.hclass.gen_samples(100,save_path)
-		orig_samps = np.copy(self.hclass.lens_samps)
+		orig_samps = np.copy(hierarchical_inference.lens_samps)
 		self.hclass.gen_samples(100,save_path)
 
-		np.testing.assert_almost_equal(orig_samps,self.hclass.lens_samps)
+		np.testing.assert_almost_equal(orig_samps,
+			hierarchical_inference.lens_samps)
 
 		# Clean up the files we generated
 		os.remove(self.normalization_constants_path)
@@ -337,25 +342,28 @@ class HierarchicalClassTest(unittest.TestCase):
 			return scipy_pdf
 
 		# Initialize the fake sampling in our hclass
-		self.hclass.lens_samps=samples
-		self.hclass.samples_init=True
-		self.hclass.pt_omegai = self.hclass.log_p_theta_omega(
-			self.hclass.lens_samps,
-			self.hclass.interim_eval_dict['hyps'], self.hclass.interim_eval_dict)
+		hierarchical_inference.lens_samps=samples
+		self.hclass.prob_class.set_samples()
+		self.hclass.prob_class.pt_omegai=hierarchical_inference.log_p_theta_omega(
+			hierarchical_inference.lens_samps,
+			self.hclass.interim_eval_dict['hyps'], self.hclass.interim_eval_dict,
+			self.hclass.lens_params)
 
 		places = 7
 		post_hand = np.sum(special.logsumexp(hand_calc_log_pdf(samples,hyp)-
-			self.hclass.pt_omegai,axis=0))
+			self.hclass.prob_class.pt_omegai,axis=0))
 		self.assertAlmostEqual(self.hclass.log_post_omega(hyp),post_hand,
 			places=places)
 
 		samples = np.random.uniform(size=(8,2,2))*0.3
-		self.hclass.lens_samps=samples
-		self.hclass.pt_omegai = self.hclass.log_p_theta_omega(
-			self.hclass.lens_samps,
-			self.hclass.interim_eval_dict['hyps'], self.hclass.interim_eval_dict)
+		hierarchical_inference.lens_samps=samples
+		self.hclass.prob_class.set_samples()
+		self.hclass.prob_class.pt_omegai=hierarchical_inference.log_p_theta_omega(
+			hierarchical_inference.lens_samps,
+			self.hclass.interim_eval_dict['hyps'], self.hclass.interim_eval_dict,
+			self.hclass.lens_params)
 		post_hand = np.sum(special.logsumexp(hand_calc_log_pdf(samples,hyp)-
-			self.hclass.pt_omegai,axis=0))
+			self.hclass.prob_class.pt_omegai,axis=0))
 		self.assertAlmostEqual(self.hclass.log_post_omega(hyp),post_hand,
 			places=places)
 
@@ -363,7 +371,7 @@ class HierarchicalClassTest(unittest.TestCase):
 			0.1,0.1,0.1,3.0,3.0,-0.75,0.75,3.0,3.0,-0.75,0.75,0.6,0.11,0.01,
 			0.2])
 		post_hand = np.sum(special.logsumexp(hand_calc_log_pdf(samples,hyp)-
-			self.hclass.pt_omegai,axis=0))
+			self.hclass.prob_class.pt_omegai,axis=0))
 		self.assertAlmostEqual(self.hclass.log_post_omega(hyp),post_hand,
 			places=places)
 
@@ -371,16 +379,17 @@ class HierarchicalClassTest(unittest.TestCase):
 
 	def test_initialize_sampler(self):
 		# Test that the walker initialization is correct.
-		test_chains_path = self.root_path + 'test_chains.h5'
+		test_chains_path = self.root_path + 'test_chains_is.h5'
 		n_walkers = 60
 
 		# Make some fake samples.
 		samples = np.ones((8,2,2))*0.3
-		self.hclass.lens_samps=samples
-		self.hclass.samples_init=True
-		self.hclass.pt_omegai = self.hclass.log_p_theta_omega(
-			self.hclass.lens_samps,
-			self.hclass.interim_eval_dict['hyps'], self.hclass.interim_eval_dict)
+		hierarchical_inference.lens_samps=samples
+		self.hclass.prob_class.set_samples()
+		self.hclass.prob_class.pt_omegai=hierarchical_inference.log_p_theta_omega(
+			hierarchical_inference.lens_samps,
+			self.hclass.interim_eval_dict['hyps'], self.hclass.interim_eval_dict,
+			self.hclass.lens_params)
 		
 		self.hclass.initialize_sampler(n_walkers,test_chains_path)
 
@@ -399,17 +408,18 @@ class HierarchicalClassTest(unittest.TestCase):
 	def test_run_sampler(self):
 		# Here, we're mostly just testing things don't crash since the
 		# work is being done by emcee.
-		test_chains_path = self.root_path + 'test_chains.h5'
+		test_chains_path = self.root_path + 'test_chains_rs.h5'
 		n_walkers = 60
 		n_samps = 10
 
 		# Make some fake samples.
 		samples = np.ones((8,2,2))*0.3
-		self.hclass.lens_samps=samples
-		self.hclass.samples_init=True
-		self.hclass.pt_omegai = self.hclass.log_p_theta_omega(
-			self.hclass.lens_samps,
-			self.hclass.interim_eval_dict['hyps'], self.hclass.interim_eval_dict)
+		hierarchical_inference.lens_samps=samples
+		self.hclass.prob_class.set_samples()
+		self.hclass.prob_class.pt_omegai=hierarchical_inference.log_p_theta_omega(
+			hierarchical_inference.lens_samps,
+			self.hclass.interim_eval_dict['hyps'], self.hclass.interim_eval_dict,
+			self.hclass.lens_params)
 		
 		self.hclass.initialize_sampler(n_walkers,test_chains_path)
 		self.hclass.run_sampler(n_samps)

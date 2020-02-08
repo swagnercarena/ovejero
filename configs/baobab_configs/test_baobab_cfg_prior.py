@@ -93,28 +93,20 @@ cfg.bnn_omega = dict(
                                                 ),
                                  # Beta(a, b)
                                  e1 = dict(
-                                           dist='beta',
-                                           a=4.0,
-                                           b=4.0,
-                                           lower=-0.1, # This is ~ q>0.3
-                                           upper=0.1,
+                                           dist='normal',
+                                           mu=0.0,
+                                           sigma=0.03,
                                            hyper_prior=dict(
-                                                     a = [0,np.inf],
-                                                     b = [0,np.inf],
-                                                     lower = [-np.inf,np.inf],
-                                                     upper = [-np.inf,np.inf])
+                                                     mu = [-np.inf,np.inf],
+                                                     sigma = [0,np.inf])
                                            ),
                                  e2 = dict(
-                                           dist='beta',
-                                           a=4.0,
-                                           b=4.0,
-                                           lower=-0.1,
-                                           upper=0.1,
+                                           dist='normal',
+                                           mu=0.0,
+                                           sigma=0.03,
                                            hyper_prior=dict(
-                                                     a = [0,np.inf],
-                                                     b = [0,np.inf],
-                                                     lower = [-np.inf,np.inf],
-                                                     upper = [-np.inf,np.inf])
+                                                     mu = [-np.inf,np.inf],
+                                                     sigma = [0,np.inf])
                                            ),
                                  ),
 

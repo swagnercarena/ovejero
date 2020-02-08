@@ -1,8 +1,6 @@
 import os
 import numpy as np
 from addict import Dict
-from astropy.cosmology import WMAP9 as cosmo
-from astropy import units as u
 
 cfg = Dict()
 
