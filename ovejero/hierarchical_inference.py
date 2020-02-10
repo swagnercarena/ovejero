@@ -20,6 +20,7 @@ from ovejero import bnn_inference, data_tools, model_trainer
 from inspect import signature
 import emcee, os, glob, corner, copy
 import matplotlib.pyplot as plt
+from matplotlib.lines import Line2D
 
 # This is ugly, but we have to set lens samples as a global variable for the
 # pooling to work well. Otherwise the data is pickled and unpickled each time
@@ -221,6 +222,9 @@ class ProbabilityClass:
 		global lens_samps
 		# Add the prior on omega
 		lprior = self.log_p_omega(hyp)
+
+		if lprior == -np.inf:
+			return lprior
 
 		# Calculate the probability of each datapoint given omega
 		pt_omega = log_p_theta_omega(lens_samps, hyp, self.target_eval_dict,
@@ -572,6 +576,8 @@ class HierarchicalClass:
 			len(hyperparam_plot_names))
 		global lens_samps
 
+		color_map = ["#a1dab4","#41b6c4","#2c7fb8","#253494"]
+
 		for li in range(len(self.lens_params)):
 			# Grab the lens parameters, the samples, and indices of the
 			# hyperparameters
@@ -590,35 +596,68 @@ class HierarchicalClass:
 
 			# Plot the samples for the parameter
 			plt.hist(samples,bins=100,density=True,align='mid',
-				label='BNN samples',color='#a1dab4',range=(plt_min,plt_max))
+				color=color_map[0],range=(plt_min,plt_max))
 
 			# Sample 100 chains and plot them
 			n_chains_plot = 50
 			for chain in chains[np.random.randint(len(chains),size=n_chains_plot)]:
 				chain_eval = np.exp(self.target_eval_dict[lens_param]['eval_fn'](
 				eval_pdf_at,*chain[hyp_s:hyp_e]))
-				plt.plot(eval_pdf_at,chain_eval,color="#41b6c4", lw=2, 
+				plt.plot(eval_pdf_at,chain_eval,color=color_map[1], lw=2, 
 					alpha=5/n_chains_plot)
 
 			# Plot the true distribution these parameters were being drawn
 			# from.
 			truth_eval = np.exp(self.target_eval_dict[lens_param]['eval_fn'](
 				eval_pdf_at,*self.target_eval_dict['hyps'][hyp_s:hyp_e]))
-			plt.plot(eval_pdf_at,truth_eval,color="#2c7fb8", lw=2.5, 
-				label='True Distribution')
+			plt.plot(eval_pdf_at,truth_eval,color=color_map[2], lw=2.5)
 
 			# Plot the interim distribution these parameters were being drawn
 			# from.
+			hyp_ind = self.interim_eval_dict[lens_param]['hyp_ind']
+			hyp_s = np.min(hyp_ind)
+			hyp_e = np.max(hyp_ind)+1
 			truth_eval = np.exp(self.interim_eval_dict[lens_param]['eval_fn'](
 				eval_pdf_at,*self.interim_eval_dict['hyps'][hyp_s:hyp_e]))
-			plt.plot(eval_pdf_at,truth_eval,color="#253494", lw=2.5, 
-				label='Interim Distribution')
+			plt.plot(eval_pdf_at,truth_eval,color=color_map[3], lw=2.5)
 
-			plt.legend()
+			# Construct the legend.
+			custom_lines = [Line2D([0], [0], color=color_map[0], lw=4),
+				Line2D([0], [0], color=color_map[1], lw=4),
+				Line2D([0], [0], color=color_map[2], lw=4),
+				Line2D([0], [0], color=color_map[3], lw=4)]
+			plt.legend(custom_lines, ['BNN Samples', 'Posterior Samples',
+				'True Distribution','Interim Distribution'])
+
 			plt.xlabel(lens_param)
 			plt.xlim([plt_min,plt_max])
-			plt.legend()
 			plt.show()
+
+	def plot_reweighted_lens_posterior(self,burnin,image_index):
+		"""
+		Plot the original and reweighted posterior contours for a specific image 
+		along with the image itself.
+		
+		Parameters
+		----------
+			burnin (int): How many of the initial samples to drop as burnin
+			image_index (int): The integer index of the image in the validation 
+				set to plot the posterior of.
+		"""
+		# First plot the image and print its parameter values
+		# plt.imshow(self.bnn_infer.images[image_index][:,:,0])
+		# plt.colorbar()
+		# plt.show()
+		# for pi in range(self.num_params):
+		# 	print(self.final_params[pi],self.y_test[image_index][pi])
+
+		# # Now show the posterior contour for the image
+		# corner.corner(self.predict_samps[:,image_index,:],bins=20,
+		# 		labels=self.final_params_print_names,show_titles=True, 
+		# 		plot_datapoints=False,label_kwargs=dict(fontsize=13),
+		# 		truths=self.y_test[image_index],levels=[0.68,0.95],
+		# 		dpi=1600, color=contour_color,fill_contours=True)
+		# plt.show(block)
 
 
 

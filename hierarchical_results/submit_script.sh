@@ -12,6 +12,10 @@
 #SBATCH -e /home/users/swagnerc/slurm_out/h_inf_%j.err # Standard error
 #SBATCH --mail-type=FAIL
 
+cd /home/users/swagnerc/Phil/baobab
+pip install -e . -r requirements.txt
+cd /home/users/swagnerc/Phil/ovejero
+python setup.py install --user
 ml python/3.6.1
 cd /home/users/swagnerc/Phil/ovejero/hierarchical_results
 python3 -m run_hierarchical_inference ${1} ${2} ${3} ${4} ${5} ${6} ${7} ${8}
