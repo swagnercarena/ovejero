@@ -293,18 +293,27 @@ class HierarchicalClassTest(unittest.TestCase):
 
 		# Now check that if we offer a save path it gets used.
 		save_path = self.root_path + 'save_samps.npy'
-		self.hclass.gen_samples(100,save_path)
+		bnn_save_path = self.root_path + 'test_bnn_samps/'
+		self.hclass.gen_samples(100,save_path,bnn_save_path)
 		orig_samps = np.copy(hierarchical_inference.lens_samps)
-		self.hclass.gen_samples(100,save_path)
+		orig_bnn_samps = np.copy(self.hclass.infer_class.predict_samps)
+		self.hclass.gen_samples(100,save_path,bnn_save_path)
 
 		np.testing.assert_almost_equal(orig_samps,
 			hierarchical_inference.lens_samps)
+		np.testing.assert_almost_equal(orig_bnn_samps,
+			self.hclass.infer_class.predict_samps)
 
 		# Clean up the files we generated
 		os.remove(self.normalization_constants_path)
 		os.remove(self.normalized_param_path)
 		os.remove(self.tf_record_path)
 		os.remove(save_path)
+		os.remove(bnn_save_path+'pred.npy')
+		os.remove(bnn_save_path+'al_samp.npy')
+		os.remove(bnn_save_path+'images.npy')
+		os.remove(bnn_save_path+'y_test.npy')
+		os.rmdir(bnn_save_path)
 
 	def test_log_post_omega(self):
 		# Test that the log_p_theta_omega function returns the correct value 

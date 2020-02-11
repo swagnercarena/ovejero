@@ -320,7 +320,8 @@ class HierarchicalClass:
 		"""
 		return self.prob_class.log_p_omega(hyp)
 
-	def gen_samples(self,num_samples,sample_save_path=None):
+	def gen_samples(self,num_samples,sample_save_path=None,
+		bnn_save_path=None):
 		"""
 		Generate samples of lens parameters theta for use in hierarchical
 		inference.
@@ -330,7 +331,14 @@ class HierarchicalClass:
 			num_samples (int): The number of samples to draw per lens.
 			sample_save_path (str): A path to save/load the samples. If None
 				samples will not be saved. Path should have extension .npy.
+			bnn_save_path (str): A path to the directory to save/load the
+				bnn sample information. Will be passed to the bnn_inference
+				class.
 		"""
+
+		# First check that if one path is specified, the other is specified.
+		if sample_save_path is not None and bnn_save_path is None:
+			raise RuntimeError('Must specify both save paths!')
 
 		if sample_save_path is None or not os.path.isfile(sample_save_path):
 			if sample_save_path is not None:
@@ -339,7 +347,10 @@ class HierarchicalClass:
 			# Most of the work will be done by the InferenceClass. The only
 			# additional work we'll do here is undoing the polar to cartesian
 			# transformation and the log transformation.
-			self.infer_class.gen_samples(num_samples)
+			if bnn_save_path is not None:
+				self.infer_class.gen_samples(num_samples,bnn_save_path)
+			else:
+				self.infer_class.gen_samples(num_samples)
 
 			# We'll steal the samples from bnn_infer and transform them
 			# back into the original parameter space.
@@ -397,6 +408,7 @@ class HierarchicalClass:
 
 		else:
 			print('Loading samples from %s'%(sample_save_path))
+			self.infer_class.gen_samples(num_samples,bnn_save_path)
 			lens_samps = np.load(sample_save_path)
 
 		# For numba, we need to change the order of the samples for fast
