@@ -171,7 +171,7 @@ class InferenceClass:
 				the network's uncertainty.
 			sample_save_dir (str): A path to a folder to save/load the samples. 
 				If None samples will not be saved. Do not include .npy, this will
-				be appended (since two files will be generated).
+				be appended (since several files will be generated).
 		"""
 
 		if sample_save_dir is None or not os.path.isdir(sample_save_dir):

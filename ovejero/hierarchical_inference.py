@@ -320,8 +320,7 @@ class HierarchicalClass:
 		"""
 		return self.prob_class.log_p_omega(hyp)
 
-	def gen_samples(self,num_samples,sample_save_path=None,
-		bnn_save_path=None):
+	def gen_samples(self,num_samples,sample_save_path=None):
 		"""
 		Generate samples of lens parameters theta for use in hierarchical
 		inference.
@@ -329,26 +328,20 @@ class HierarchicalClass:
 		Parameters
 		----------
 			num_samples (int): The number of samples to draw per lens.
-			sample_save_path (str): A path to save/load the samples. If None
-				samples will not be saved. Path should have extension .npy.
-			bnn_save_path (str): A path to the directory to save/load the
-				bnn sample information. Will be passed to the bnn_inference
-				class.
+			sample_save_dir (str): A path to a folder to save/load the samples. 
+				If None samples will not be saved. Do not include .npy, this will
+				be appended (since several files will be generated).
 		"""
 
-		# First check that if one path is specified, the other is specified.
-		if sample_save_path is not None and bnn_save_path is None:
-			raise RuntimeError('Must specify both save paths!')
-
-		if sample_save_path is None or not os.path.isfile(sample_save_path):
+		if sample_save_path is None or not os.path.isdir(sample_save_path):
 			if sample_save_path is not None:
 				print('No samples found. Saving samples to %s'%(
 					sample_save_path))
 			# Most of the work will be done by the InferenceClass. The only
 			# additional work we'll do here is undoing the polar to cartesian
 			# transformation and the log transformation.
-			if bnn_save_path is not None:
-				self.infer_class.gen_samples(num_samples,bnn_save_path)
+			if sample_save_path is not None:
+				self.infer_class.gen_samples(num_samples,sample_save_path)
 			else:
 				self.infer_class.gen_samples(num_samples)
 
@@ -404,12 +397,12 @@ class HierarchicalClass:
 				lens_samps[lens_samps[:,:,fixi]>0.55,fixi] = 0.55-1e-5
 
 			if sample_save_path is not None:
-				np.save(sample_save_path,lens_samps)
+				np.save(sample_save_path+'lens_samps.npy',lens_samps)
 
 		else:
 			print('Loading samples from %s'%(sample_save_path))
-			self.infer_class.gen_samples(num_samples,bnn_save_path)
-			lens_samps = np.load(sample_save_path)
+			self.infer_class.gen_samples(num_samples,sample_save_path)
+			lens_samps = np.load(sample_save_path+'lens_samps.npy')
 
 		# For numba, we need to change the order of the samples for fast
 		# evaluation.
