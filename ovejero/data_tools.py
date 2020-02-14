@@ -149,7 +149,7 @@ def generate_tf_record(root_path,lens_params,lens_params_path,tf_record_path):
 		tf_record_path (str): The path to which the tf_record will be saved
 	"""
 	# Pull the list of numpy filepaths from the directory
-	npy_file_list =  glob.glob(root_path+'X*.npy')
+	npy_file_list =  glob.glob(os.path.join(root_path,'X*.npy'))
 	# Open label csv
 	lens_params_csv = pd.read_csv(lens_params_path, index_col=None)
 	# Initialize the writer object and write the lens data

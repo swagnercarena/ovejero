@@ -42,7 +42,8 @@ class InferenceClass:
 			verbose=True)
 
 		# Load the validation set we're going to use.
-		self.tf_record_path_v = (cfg['validation_params']['root_path']+
+		self.tf_record_path_v = os.path.join(
+			cfg['validation_params']['root_path'],
 			cfg['validation_params']['tf_record_path'])
 		# Load the parameters and the batch size needed for computation
 		self.final_params = cfg['training_params']['final_params']
@@ -137,7 +138,8 @@ class InferenceClass:
 		"""
 
 		# Get the normalization constants used from the csv file.
-		normalization_constants_path = (self.cfg['training_params']['root_path']+
+		normalization_constants_path = os.path.join(
+			self.cfg['training_params']['root_path'],
 			self.cfg['dataset_params']['normalization_constants_path'])
 		norm_const_dict = pd.read_csv(normalization_constants_path, 
 			index_col=None)

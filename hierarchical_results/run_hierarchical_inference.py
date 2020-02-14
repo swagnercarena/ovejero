@@ -28,7 +28,8 @@ root_path = os.getcwd()[:-20]
 config_path = args.config_path
 
 # We also need the path to the baobab configs for the interim and target omega
-interim_baobab_omega_path = root_path + 'configs/baobab_configs/train_diagonal.py'
+interim_baobab_omega_path = os.path.join(root_path,
+	'configs/baobab_configs/train_diagonal.py')
 target_baobab_omega_path = args.target_baobab_omega_path
 
 test_dataset_path = args.test_dataset_path

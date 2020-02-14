@@ -50,7 +50,7 @@ def config_checker(cfg):
 
 	# Load the check json file
 	root_path = os.path.dirname(os.path.abspath(__file__))
-	with open(root_path+'/check.json','r') as json_f:
+	with open(os.path.join(root_path,'check.json'),'r') as json_f:
 		cfg_ref = json.load(json_f)
 
 	recursive_key_checker(cfg,cfg_ref)
@@ -96,20 +96,22 @@ def prepare_tf_record(cfg,root_path,tf_record_path,final_params,train_or_test):
 			saved. If train, the training normalizations will be used.
 	"""
 	# Path to csv containing lens parameters.
-	lens_params_path = root_path + cfg['dataset_params']['lens_params_path']
+	lens_params_path = os.path.join(root_path,
+		cfg['dataset_params']['lens_params_path'])
 	# The list of lens parameters that should be trained on. We will
 	# append to this, so we want to make a copy.
 	lens_params = copy.copy(cfg['dataset_params']['lens_params'])
 	# Where to save the lens parameters to after the preprocessing 
 	# transformations
-	new_param_path = root_path + cfg['dataset_params']['new_param_path']
+	new_param_path = os.path.join(root_path,
+		cfg['dataset_params']['new_param_path'])
 	# Where to save the normalization constants to. Note that we take the
 	# root path associated with the training_params here, even if validation
 	# params root path was passed in. This is because we always want to use
 	# the training norms!
-	normalization_constants_path = cfg['training_params'][
-		'root_path'] + cfg['dataset_params'][
-		'normalization_constants_path']
+	normalization_constants_path = os.path.join(
+		cfg['training_params']['root_path'],
+		cfg['dataset_params']['normalization_constants_path'])
 	# Parameters to convert to log space
 	if 'lens_params_log' in cfg['dataset_params']:
 		lens_params_log = cfg['dataset_params']['lens_params_log']
@@ -184,8 +186,9 @@ def get_normed_pixel_scale(cfg,pixel_scale):
 	# Get the parameters we need to read the normalization from
 	shift_params = cfg['training_params']['shift_params']
 	# Adjust the pixel scale by the normalization
-	normalization_constants_path = cfg['training_params']['root_path'] + cfg[
-		'dataset_params']['normalization_constants_path']
+	normalization_constants_path = os.path.join(
+		cfg['training_params']['root_path'],
+		cfg['dataset_params']['normalization_constants_path'])
 	norm_const_dict = pd.read_csv(normalization_constants_path, index_col=None)
 	# Set the normed pixel scale for each parameter
 	normed_pixel_scale = {}
@@ -299,9 +302,11 @@ def main():
 	# The same but for validation
 	root_path_v = cfg['validation_params']['root_path']
 	# The filename of the TFRecord for training data
-	tf_record_path_t = root_path_t+cfg['training_params']['tf_record_path']
+	tf_record_path_t = os.path.join(root_path_t,
+		cfg['training_params']['tf_record_path'])
 	# The same but for validation
-	tf_record_path_v = root_path_v+cfg['validation_params']['tf_record_path']
+	tf_record_path_v = os.path.join(root_path_v,
+		cfg['validation_params']['tf_record_path'])
 	# The final parameters that need to be in tf_record_path
 	final_params = cfg['training_params']['final_params']
 	# The path to the model weights. If they already exist they will be loaded
@@ -328,7 +333,7 @@ def main():
 	tf.random.set_seed(random_seed)
 
 	# Number of steps per epoch is number of examples over the batch size
-	npy_file_list =  glob.glob(root_path_t+'X*.npy')
+	npy_file_list =  glob.glob(os.path.join(root_path_t,'X*.npy'))
 	steps_per_epoch = len(npy_file_list)//batch_size
 
 	print('Checking for training data.')
