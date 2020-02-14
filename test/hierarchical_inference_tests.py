@@ -6,6 +6,7 @@ import numpy as np
 from scipy import stats, special
 import tensorflow as tf
 import pandas as pd
+import matplotlib.pyplot as plt
 
 class HierarchicalnferenceTest(unittest.TestCase):
 
@@ -437,6 +438,42 @@ class HierarchicalClassTest(unittest.TestCase):
 		self.assertEqual(chains.shape[1],n_walkers)
 
 		self.assertGreater(np.max(np.abs(chains[:,-1]-chains[:,-2])),0)
+
+		os.remove(test_chains_path)
+
+	def test_plots(self):
+		# Here, we're mostly just testing things don't crash again.
+		test_chains_path = self.root_path + 'test_chains_tp.h5'
+		n_walkers = 60
+		n_samps = 10
+		burnin = 0
+
+		# Make some fake samples.
+		samples = np.random.uniform(size=(8,2,40))*0.3
+		hierarchical_inference.lens_samps=samples
+		self.hclass.prob_class.set_samples()
+		self.hclass.prob_class.pt_omegai=hierarchical_inference.log_p_theta_omega(
+			hierarchical_inference.lens_samps,
+			self.hclass.interim_eval_dict['hyps'], self.hclass.interim_eval_dict,
+			self.hclass.lens_params)
+		
+		self.hclass.initialize_sampler(n_walkers,test_chains_path)
+		self.hclass.run_sampler(n_samps)
+
+		chains = self.hclass.sampler.get_chain()
+		hyperparam_plot_names = ['test']*chains.shape[-1]
+
+		block = False
+		self.hclass.plot_chains(block=block)
+		plt.close()
+		self.hclass.plot_corner(burnin,block=block)
+		plt.close()
+		self.hclass.plot_distributions(burnin,block=block)
+		plt.close()
+		self.hclass.plot_corner(burnin,hyperparam_plot_names,block=block)
+		plt.close()
+		self.hclass.plot_distributions(burnin,hyperparam_plot_names,block=block)
+		plt.close()
 
 		os.remove(test_chains_path)
 

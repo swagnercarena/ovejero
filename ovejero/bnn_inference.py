@@ -291,17 +291,22 @@ class InferenceClass:
 			# Save the samples if desired.
 			if sample_save_dir is not None:
 				os.mkdir(sample_save_dir)
-				np.save(sample_save_dir+'pred.npy',self.predict_samps)
-				np.save(sample_save_dir+'al_samp.npy',self.al_samp)
-				np.save(sample_save_dir+'images.npy',self.images)
-				np.save(sample_save_dir+'y_test.npy',self.y_test)
+				np.save(os.path.join(sample_save_dir,'pred.npy'),
+					self.predict_samps)
+				np.save(os.path.join(sample_save_dir,'al_samp.npy'),
+					self.al_samp)
+				np.save(os.path.join(sample_save_dir,'images.npy'),
+					self.images)
+				np.save(os.path.join(sample_save_dir,'y_test.npy'),
+					self.y_test)
 
 		else:
 			print('Loading samples from %s'%(sample_save_dir))
-			self.predict_samps = np.load(sample_save_dir+'pred.npy')
-			self.al_samp = np.load(sample_save_dir+'al_samp.npy')
-			self.images = np.load(sample_save_dir+'images.npy')
-			self.y_test = np.load(sample_save_dir+'y_test.npy')
+			self.predict_samps = np.load(os.path.join(sample_save_dir,
+				'pred.npy'))
+			self.al_samp = np.load(os.path.join(sample_save_dir,'al_samp.npy'))
+			self.images = np.load(os.path.join(sample_save_dir,'images.npy'))
+			self.y_test = np.load(os.path.join(sample_save_dir,'y_test.npy'))
 
 		self.al_cov = np.mean(self.al_samp,axis=0)
 		self.y_pred = np.mean(self.predict_samps,axis=0)
