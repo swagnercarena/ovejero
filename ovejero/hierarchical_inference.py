@@ -320,7 +320,7 @@ class HierarchicalClass:
 		"""
 		return self.prob_class.log_p_omega(hyp)
 
-	def gen_samples(self,num_samples,sample_save_path=None):
+	def gen_samples(self,num_samples,sample_save_dir=None):
 		"""
 		Generate samples of lens parameters theta for use in hierarchical
 		inference.
@@ -333,15 +333,15 @@ class HierarchicalClass:
 				be appended (since several files will be generated).
 		"""
 
-		if sample_save_path is None or not os.path.isdir(sample_save_path):
-			if sample_save_path is not None:
+		if sample_save_dir is None or not os.path.isdir(sample_save_dir):
+			if sample_save_dir is not None:
 				print('No samples found. Saving samples to %s'%(
-					sample_save_path))
+					sample_save_dir))
 			# Most of the work will be done by the InferenceClass. The only
 			# additional work we'll do here is undoing the polar to cartesian
 			# transformation and the log transformation.
-			if sample_save_path is not None:
-				self.infer_class.gen_samples(num_samples,sample_save_path)
+			if sample_save_dir is not None:
+				self.infer_class.gen_samples(num_samples,sample_save_dir)
 			else:
 				self.infer_class.gen_samples(num_samples)
 
@@ -396,13 +396,14 @@ class HierarchicalClass:
 				lens_samps[lens_samps[:,:,fixi]<-0.55,fixi] =-0.55+1e-5
 				lens_samps[lens_samps[:,:,fixi]>0.55,fixi] = 0.55-1e-5
 
-			if sample_save_path is not None:
-				np.save(sample_save_path+'lens_samps.npy',lens_samps)
+			if sample_save_dir is not None:
+				np.save(os.path.join(sample_save_dir,'lens_samps.npy'),
+					lens_samps)
 
 		else:
-			print('Loading samples from %s'%(sample_save_path))
-			self.infer_class.gen_samples(num_samples,sample_save_path)
-			lens_samps = np.load(sample_save_path+'lens_samps.npy')
+			print('Loading samples from %s'%(sample_save_dir))
+			self.infer_class.gen_samples(num_samples,sample_save_dir)
+			lens_samps = np.load(os.path.join(sample_save_dir,'lens_samps.npy'))
 
 		# For numba, we need to change the order of the samples for fast
 		# evaluation.
@@ -506,7 +507,8 @@ class HierarchicalClass:
 		self.cur_state = None
 
 
-	def plot_chains(self,burnin=None,hyperparam_plot_names=None):
+	def plot_chains(self,burnin=None,hyperparam_plot_names=None,
+		block=True):
 		"""
 		Plot the chains resulting from the emcee to figure out what
 		the correct burnin is.
@@ -516,6 +518,7 @@ class HierarchicalClass:
 			burnin (int): How many of the initial samples to drop as burnin
 			hyperparam_plot_names ([str,...]): A list containing the names
 				of the hyperparameters to be used during plotting
+			block (bool): If true, block excecution after plt.show() command
 		"""
 		if hyperparam_plot_names is None:
 			hyperparam_plot_names = self.target_eval_dict['hyp_names']
@@ -531,10 +534,10 @@ class HierarchicalClass:
 			plt.ylabel(hyperparam_plot_names[ci])
 			plt.xlabel('sample')
 			plt.axhline(self.target_eval_dict['hyps'][ci],c='k')
-			plt.show()
+			plt.show(block)
 			ci += 1
 
-	def plot_corner(self,burnin,hyperparam_plot_names=None):
+	def plot_corner(self,burnin,hyperparam_plot_names=None,block=True):
 		"""
 		Plot the corner plot of chains resulting from the emcee
 
@@ -543,6 +546,7 @@ class HierarchicalClass:
 			burnin (int): How many of the initial samples to drop as burnin
 			hyperparam_plot_names ([str,...]): A list containing the names
 				of the hyperparameters to be used during plotting
+			block (bool): If true, block excecution after plt.show() command
 		"""
 		if hyperparam_plot_names is None:
 			hyperparam_plot_names = self.target_eval_dict['hyp_names']
@@ -562,9 +566,9 @@ class HierarchicalClass:
 				label_kwargs=dict(fontsize=10),
 				truths=self.target_eval_dict['hyps'][hyp_s:hyp_e],
 				levels=[0.68,0.95],color='#FFAA00',fill_contours=True)
-			plt.show()
+			plt.show(block)
 
-	def plot_distributions(self,burnin,hyperparam_plot_names=None):
+	def plot_distributions(self,burnin,hyperparam_plot_names=None,block=True):
 		"""
 		Plot the 
 
@@ -573,6 +577,7 @@ class HierarchicalClass:
 			burnin (int): How many of the initial samples to drop as burnin
 			hyperparam_plot_names ([str,...]): A list containing the names
 				of the hyperparameters to be used during plotting
+			block (bool): If true, block excecution after plt.show() command
 		"""
 				# TODO: Make this faster. .1 seconds is a bit slow.
 		if hyperparam_plot_names is None:
@@ -636,9 +641,9 @@ class HierarchicalClass:
 
 			plt.xlabel(lens_param)
 			plt.xlim([plt_min,plt_max])
-			plt.show()
+			plt.show(block)
 
-	def plot_reweighted_lens_posterior(self,burnin,image_index):
+	def plot_reweighted_lens_posterior(self,burnin,image_index,block=True):
 		"""
 		Plot the original and reweighted posterior contours for a specific image 
 		along with the image itself.
@@ -648,6 +653,7 @@ class HierarchicalClass:
 			burnin (int): How many of the initial samples to drop as burnin
 			image_index (int): The integer index of the image in the validation 
 				set to plot the posterior of.
+			block (bool): If true, block excecution after plt.show() command
 		"""
 		# First plot the image and print its parameter values
 		# plt.imshow(self.bnn_infer.images[image_index][:,:,0])

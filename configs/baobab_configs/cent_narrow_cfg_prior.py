@@ -125,14 +125,10 @@ cfg.bnn_omega = dict(
                                                      mu=0.0,
                                                      alpha=0.5*np.pi,
                                                      p=10.0,
-                                                     lower=-0.5*np.pi,
-                                                     upper=0.5*np.pi,
                                                      hyper_prior = dict(
                                                                  mu = [-np.inf,np.inf],
                                                                  alpha = [0,np.inf],
-                                                                 p = [0,np.inf],
-                                                                 lower = [-np.inf,np.inf],
-                                                                 upper = [-np.inf,np.inf])
+                                                                 p = [0,np.inf])
                                                      ),
                                        ),
 
