@@ -271,7 +271,7 @@ class HierarchicalClass:
 			target_baobab_omega_path)
 		self.num_params = len(self.lens_params)
 		self.norm_images = cfg['training_params']['norm_images']
-		n_npy_files =  len(glob.glob(test_dataset_path+'X*.npy'))
+		n_npy_files =  len(glob.glob(os.path.join(test_dataset_path,'X*.npy')))
 		self.cfg['training_params']['batch_size'] = n_npy_files
 		# Build the evaluation dictionaries from the 
 		self.interim_eval_dict = build_evaluation_dictionary(
