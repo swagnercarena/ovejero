@@ -102,9 +102,9 @@ def build_evaluation_dictionary(baobab_cfg,lens_params,
 
 	return eval_dict
 
-def log_p_theta_omega(samples, hyp, eval_dict,lens_params):
+def log_p_xi_omega(samples, hyp, eval_dict,lens_params):
 	"""
-	Calculate log p(theta|omega) - the probability of the lens parameters in
+	Calculate log p(xi|omega) - the probability of the lens parameters in
 	the data given the proposed lens parameter distribution.
 
 	Parameters
@@ -121,7 +121,7 @@ def log_p_theta_omega(samples, hyp, eval_dict,lens_params):
 	Returns
 	-------
 		np.array: A numpy array of the shape (n_samps,batch_size) containing
-			the log p(theta|omega) for each sample.
+			the log p(xi|omega) for each sample.
 	"""
 	
 	# We iterate through each lens parameter and carry out the evaluation
@@ -193,7 +193,7 @@ class ProbabilityClass:
 		# Now that we have the samples, we can calculate the probability
 		# of the samples given the interim prior.
 		global lens_samps
-		self.pt_omegai = log_p_theta_omega(lens_samps,
+		self.pt_omegai = log_p_xi_omega(lens_samps,
 			self.interim_eval_dict['hyps'], self.interim_eval_dict,
 			self.lens_params)
 		# Set initialziation variable to True.
@@ -227,7 +227,7 @@ class ProbabilityClass:
 			return lprior
 
 		# Calculate the probability of each datapoint given omega
-		pt_omega = log_p_theta_omega(lens_samps, hyp, self.target_eval_dict,
+		pt_omega = log_p_xi_omega(lens_samps, hyp, self.target_eval_dict,
 			self.lens_params)
 		# We've already calculated the value of pt_omegai when we generated
 		# the samples. Now we just need to sum them correctly. Note that the
@@ -322,7 +322,7 @@ class HierarchicalClass:
 
 	def gen_samples(self,num_samples,sample_save_dir=None):
 		"""
-		Generate samples of lens parameters theta for use in hierarchical
+		Generate samples of lens parameters xi for use in hierarchical
 		inference.
 
 		Parameters
@@ -570,7 +570,7 @@ class HierarchicalClass:
 
 	def plot_distributions(self,burnin,hyperparam_plot_names=None,block=True):
 		"""
-		Plot the 
+		Plot the posteriors from our MCMC sampling of Omega.
 
 		Parameters
 		----------
@@ -579,7 +579,6 @@ class HierarchicalClass:
 				of the hyperparameters to be used during plotting
 			block (bool): If true, block excecution after plt.show() command
 		"""
-				# TODO: Make this faster. .1 seconds is a bit slow.
 		if hyperparam_plot_names is None:
 			hyperparam_plot_names = self.target_eval_dict['hyp_names']
 		chains = self.sampler.get_chain()[burnin:].reshape(-1,
@@ -643,7 +642,39 @@ class HierarchicalClass:
 			plt.xlim([plt_min,plt_max])
 			plt.show(block)
 
-	def plot_reweighted_lens_posterior(self,burnin,image_index,block=True):
+	def calculate_sample_weights(self,n_p_omega_samps,burnin):
+		"""
+		Calculate the weights from the posterior on Omega needed for
+		reweighting.
+
+		Parameters
+		----------
+			n_p_omega_samps (int): The number of samples from p(Omega|{d}) to 
+				use in the reweighting.
+		"""
+		# Define the global variables we'll use.
+		global lens_samps
+		# First we'll get samples from the chain we'll use to reweight our 
+		# contour.
+		samples = self.sampler.get_chain()[burnin:].reshape(-1,
+			self.target_eval_dict['hyp_len'])
+		samples = samples[np.random.choice(samples.shape[0],
+			size=n_p_omega_samps,replace=False)]
+		# Calculate the log posterior on xi required for the reweighting term
+		# for each sample.
+		lpos = np.zeros((n_p_omega_samps,lens_samps.shape[1],
+			lens_samps.shape[2]))
+		for s_i, sample in enumerate(samples):
+			lpos[s_i] = log_p_xi_omega(lens_samps, sample, self.target_eval_dict,
+				self.lens_params)
+		lpi = self.prob_class.pt_omegai
+		# Calculate the weights using the log posterior samples
+		weights = np.mean(np.exp(lpos-lpi),axis=0)
+		return weights
+
+	def plot_reweighted_lens_posterior(self,burnin,image_index,plot_limits=None,
+		n_p_omega_samps = 100, color_map = ["#FFAA00","#41b6c4"],
+		block=True):
 		"""
 		Plot the original and reweighted posterior contours for a specific image 
 		along with the image itself.
@@ -653,23 +684,58 @@ class HierarchicalClass:
 			burnin (int): How many of the initial samples to drop as burnin
 			image_index (int): The integer index of the image in the validation 
 				set to plot the posterior of.
+			plot_limits ([(float,float),..]): A list of float tuples that define
+				the maximum and minimum plot range for each posterior parameter.
+			n_p_omega_samps (int): The number of samples from p(Omega|{d}) to 
+				use in the reweighting.
+			color_map ([str,...]): The colors to use in the contour plotting.
 			block (bool): If true, block excecution after plt.show() command
 		"""
-		# First plot the image and print its parameter values
-		# plt.imshow(self.bnn_infer.images[image_index][:,:,0])
-		# plt.colorbar()
-		# plt.show()
-		# for pi in range(self.num_params):
-		# 	print(self.final_params[pi],self.y_test[image_index][pi])
+		# Plot the contours without the reweighting first.
+		fig = corner.corner(self.infer_class.predict_samps[:,image_index,:],bins=20,
+				labels=self.infer_class.final_params_print_names,show_titles=True, 
+				plot_datapoints=False,label_kwargs=dict(fontsize=13),
+				truths=self.infer_class.y_test[image_index],levels=[0.68,0.95],
+				dpi=1600, color=color_map[0],fill_contours=True,
+				range=plot_limits)
 
-		# # Now show the posterior contour for the image
-		# corner.corner(self.predict_samps[:,image_index,:],bins=20,
-		# 		labels=self.final_params_print_names,show_titles=True, 
-		# 		plot_datapoints=False,label_kwargs=dict(fontsize=13),
-		# 		truths=self.y_test[image_index],levels=[0.68,0.95],
-		# 		dpi=1600, color=contour_color,fill_contours=True)
-		# plt.show(block)
+		weights = self.calculate_sample_weights(n_p_omega_samps,burnin)
+		weights /= np.sum(weights,axis=0)
+		weights = weights[:,image_index]
+		
+		corner.corner(self.infer_class.predict_samps[:,image_index,:],bins=20,
+				labels=self.infer_class.final_params_print_names,show_titles=True, 
+				plot_datapoints=False,label_kwargs=dict(fontsize=13),
+				truths=self.infer_class.y_test[image_index],levels=[0.68,0.95],
+				dpi=1600, color=color_map[1],fill_contours=True,
+				weights=weights, fig=fig,range=plot_limits)
 
+	def plot_reweighted_calibration(self,burnin,n_perc_points,
+		n_p_omega_samps=100,color_map=['#1b9e77','#d95f02','#7570b3'],
+		legend=['Perfect Calibration','Bare Network','Reweighted Network']):
+		"""	
+		Plot the calibration plot reweighted using the samples of Omega
+
+		Parameters
+		----------
+			burnin (int): How many of the initial samples to drop as burnin
+			n_perc_point (int): The number of percentages to probe in the
+				plotting.
+			n_p_omega_samps (int): The number of samples from p(Omega|{d}) to 
+				use in the reweighting.
+			color_map ([str,...]): The colors to use in the calibration
+				plots. Must include 3 colors.
+		"""
+		# For the first plot we can just use the original BNN code.
+		fig = self.infer_class.plot_calibration(color_map=color_map,
+			n_perc_points=n_perc_points,show_plot=False,legend=legend)
+
+		weights = self.calculate_sample_weights(n_p_omega_samps,burnin)
+		weights /= np.mean(weights,axis=0)
+
+		fig = self.infer_class.plot_calibration(color_map=color_map[1:],
+			n_perc_points=n_perc_points,figure=fig,show_plot=False,
+			weights=weights,legend=legend)
 
 
 

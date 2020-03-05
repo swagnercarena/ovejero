@@ -36,7 +36,7 @@ cfg.observation = dict(
                   exposure_time=5400.0, # exposure time per image (in seconds)
                   sky_brightness=20.1, # sky brightness (in magnitude per square arcseconds)
                   num_exposures=10, # number of exposures that are combined
-                  background_noise=0.0, # overrides exposure_time, sky_brightness, read_noise, num_exposures
+                  background_noise=None, # overrides exposure_time, sky_brightness, read_noise, num_exposures
                   )
 
 cfg.psf = dict(
@@ -142,10 +142,9 @@ cfg.bnn_omega = dict(
                                 profile='SERSIC_ELLIPSE', # only available type now
                                 # Lognormal(mu, sigma^2)
                                 magnitude = dict(
-                                             dist='normal',
-                                             mu=21,
-                                             sigma=1.5,
-                                             lower=0.0),
+                                             dist='uniform',
+                                             lower=25,
+                                             upper=22),
                                 n_sersic = dict(
                                                 dist='lognormal',
                                                 mu=0.7,

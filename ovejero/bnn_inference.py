@@ -20,6 +20,7 @@ import corner
 import tensorflow as tf
 import tensorflow_probability as tfp
 import os
+import numba
 
 class InferenceClass:
 	"""
@@ -319,13 +320,15 @@ class InferenceClass:
 
 		self.samples_init = True
 
-	def gen_coverage_plots(self,color_map = ["#377eb8", "#4daf4a","#e41a1c",
-		"#984ea3"],block=True):
+	def gen_coverage_plots(self,num_lenses = None,
+		color_map = ["#377eb8", "#4daf4a","#e41a1c","#984ea3"],block=True):
 		"""
 		Generate plots for the coverage of each of the parameters.
 
 		Parameters
 		----------
+			num_lenses (int): The number of lenses to include in the coverage 
+				plots. If None, use them all.
 			color_map ([str,...]): A list of at least 4 colors that will be used
 				for plotting the different coverage probabilities.
 			block (bool): If true, block excecution after plt.show() command.
@@ -335,23 +338,31 @@ class InferenceClass:
 		
 		plt.figure(figsize=(16,18))
 		error = self.y_pred - self.y_test
-		cov_masks = [np.abs(error)<=self.y_std, np.abs(error)<2*self.y_std, 
-			np.abs(error)<3*self.y_std, np.abs(error)>=3*self.y_std]
+		y_std = self.y_std
+		y_test = self.y_test
+		y_pred = self.y_pred
+		if num_lenses is not None:
+			error = error[:num_lenses]
+			y_std = y_std[:num_lenses]
+			y_test = y_test[:num_lenses]
+			y_pred = y_pred[:num_lenses]
+		cov_masks = [np.abs(error)<=y_std, np.abs(error)<2*y_std, 
+			np.abs(error)<3*y_std, np.abs(error)>=3*y_std]
 		cov_masks_names = ['1 sigma =', '2 sigma =', '3 sigma =', '>3 sigma =']
 		for i in range(len(self.final_params)):
 			plt.subplot(3, int(np.ceil(self.num_params/3)), i+1)
 			for cm_i in range(len(cov_masks)-1,-1,-1):
 				cov_mask = cov_masks[cm_i][:,i]
-				yt_plot = self.y_test[cov_mask,i]
-				yp_plot = self.y_pred[cov_mask,i]
-				ys_plot = self.y_std[cov_mask,i]
+				yt_plot = y_test[cov_mask,i]
+				yp_plot = y_pred[cov_mask,i]
+				ys_plot = y_std[cov_mask,i]
 				plt.errorbar(yt_plot,yp_plot,yerr=ys_plot, fmt='.', 
 					c=color_map[cm_i],
 					label=cov_masks_names[cm_i]+'%.2f'%(
-						np.sum(cov_mask)/self.batch_size))
+						np.sum(cov_mask)/len(error)))
 			# plot confidence interval
-			straight = np.linspace(np.min(self.y_pred[:,i]), 
-				np.max(self.y_pred[:,i]),10)
+			straight = np.linspace(np.min(y_pred[:,i]), 
+				np.max(y_pred[:,i]),10)
 			plt.plot(straight, straight, label='',color='k')
 			plt.title(self.final_params_print_names[i])
 			plt.ylabel('Prediction')
@@ -453,21 +464,49 @@ class InferenceClass:
 		fig.axes[0].set_yticklabels([0]+self.final_params_print_names)
 		plt.colorbar()
 
-	def calc_p_dlt(self):
+	def calc_p_dlt(self,weights=None):
 		"""
 		Calculate the percentage of draws from the predicted distribution with
 		||draws||_2 > ||truth||_2 for all of the examples in the batch
 
+		Parameters
+		----------
+			weights (np.array): An array with dimension (n_lens_samples,
+				n_lenses) that is will be used to reweight the posterior.
+
 		Notes
 		-----
-			p_dlt will be set a property of the class
+			p_dlt will be set as a property of the class
 		"""
-		self.p_dlt = np.sum(np.square(self.predict_samps-self.y_pred),
-			axis=-1) < np.sum(np.square(self.y_test-self.y_pred),axis=-1)
-		self.p_dlt = np.mean(self.p_dlt,axis=0)
+		# Factor weights into the mean.
+		if weights is None:
+			y_mean = self.y_pred
+		else:
+			y_mean = np.mean(np.expand_dims(weights,axis=-1)*
+				self.predict_samps,axis=0)
+
+		# The metric for the distance calculation. Using numba for speed.
+		@numba.njit
+		def d_m(dif,cov):
+			d_metric = np.zeros(dif.shape[0:2])
+			for i in range(d_metric.shape[0]):
+				for j in range(d_metric.shape[1]):
+					d_metric[i,j] = np.dot(dif[i,j],np.dot(cov,dif[i,j]))
+			return d_metric
+
+		# Use emperical covariance for distance metric
+		cov_emp = np.cov(self.y_test.T)
+		self.p_dlt = (d_m(self.predict_samps-y_mean,cov_emp)<
+			d_m(np.expand_dims(self.y_test-y_mean,axis=0),cov_emp))
+
+		# Calculate p_dlt factoring in the weights if needed.
+		if weights is None:
+			self.p_dlt = np.mean(self.p_dlt,axis=0)
+		else:
+			self.p_dlt = np.mean(self.p_dlt*weights,axis=0)
 
 	def plot_calibration(self,color_map=["#377eb8", "#4daf4a"],n_perc_points=20,
-		figure=None,legend=None,show_plot=True,block=True):
+		figure=None,legend=None,show_plot=True,block=True,weights=None):
 		"""
 		Plot the percentage of draws from the predicted distributions with
 		||draws||_2 > ||truth||_2 for our different batch examples.
@@ -500,7 +539,7 @@ class InferenceClass:
 			raise RuntimeError('Must generate samples before plotting')
 		# Go through each of our examples and see what percentage of draws have
 		# ||draws||_2 < ||truth||_2 (essentially doing integration by radius).
-		self.calc_p_dlt()
+		self.calc_p_dlt(weights)
 		
 		# Plot what percentage of images have at most x% of draws with 
 		# p(draws)>p(true).

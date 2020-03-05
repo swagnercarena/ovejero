@@ -165,8 +165,8 @@ class HierarchicalClassTest(unittest.TestCase):
 			0.1])
 		self.assertEqual(self.hclass.log_p_omega(hyp),0)
 
-	def test_log_p_theta_omega(self):
-		# Test that the log_p_theta_omega function returns the correct value 
+	def test_log_p_xi_omega(self):
+		# Test that the log_p_xi_omega function returns the correct value 
 		# for some sample data points.
 		hyp = np.array([-2.73,1.05,0.0,0.5*np.pi,10.0,-0.5*np.pi,0.5*np.pi,0.0,
 			0.102,0.0,0.102,4.0,4.0,-0.55,0.55,4.0,4.0,-0.55,0.55,0.7,0.1,0.0,
@@ -201,13 +201,13 @@ class HierarchicalClassTest(unittest.TestCase):
 			return scipy_pdf
 
 		self.assertAlmostEqual(np.max(np.abs(
-			hierarchical_inference.log_p_theta_omega(samples,hyp,
+			hierarchical_inference.log_p_xi_omega(samples,hyp,
 				self.hclass.target_eval_dict,self.hclass.lens_params)-
 			hand_calc_log_pdf(samples,hyp))),0)
 
 		samples = np.random.uniform(size=(8,2,2))*0.3
 		self.assertAlmostEqual(np.max(np.abs(
-			hierarchical_inference.log_p_theta_omega(samples,hyp,
+			hierarchical_inference.log_p_xi_omega(samples,hyp,
 				self.hclass.target_eval_dict,self.hclass.lens_params)-
 			hand_calc_log_pdf(samples,hyp))),0)
 
@@ -215,7 +215,7 @@ class HierarchicalClassTest(unittest.TestCase):
 			0.1,0.1,0.1,3.0,3.0,-0.75,0.75,3.0,3.0,-0.75,0.75,0.6,0.11,0.01,
 			0.2])
 		self.assertAlmostEqual(np.max(np.abs(
-			hierarchical_inference.log_p_theta_omega(samples,hyp,
+			hierarchical_inference.log_p_xi_omega(samples,hyp,
 				self.hclass.target_eval_dict,self.hclass.lens_params)-
 			hand_calc_log_pdf(samples,hyp))),0)
 
@@ -287,7 +287,7 @@ class HierarchicalClassTest(unittest.TestCase):
 
 		# Just make sure this is set and set using the interim dict.
 		np.testing.assert_almost_equal(self.hclass.prob_class.pt_omegai,
-			hierarchical_inference.log_p_theta_omega(
+			hierarchical_inference.log_p_xi_omega(
 				hierarchical_inference.lens_samps,
 				self.hclass.interim_eval_dict['hyps'], 
 				self.hclass.interim_eval_dict,self.hclass.lens_params))
@@ -316,7 +316,7 @@ class HierarchicalClassTest(unittest.TestCase):
 		os.rmdir(save_path)
 
 	def test_log_post_omega(self):
-		# Test that the log_p_theta_omega function returns the correct value 
+		# Test that the log_p_xi_omega function returns the correct value 
 		# for some sample data points.
 		hyp = np.array([-2.73,1.05,0.0,0.5*np.pi,10.0,-0.5*np.pi,0.5*np.pi,0.0,
 			0.102,0.0,0.102,4.0,4.0,-0.55,0.55,4.0,4.0,-0.55,0.55,0.7,0.1,0.0,
@@ -353,7 +353,7 @@ class HierarchicalClassTest(unittest.TestCase):
 		# Initialize the fake sampling in our hclass
 		hierarchical_inference.lens_samps=samples
 		self.hclass.prob_class.set_samples()
-		self.hclass.prob_class.pt_omegai=hierarchical_inference.log_p_theta_omega(
+		self.hclass.prob_class.pt_omegai=hierarchical_inference.log_p_xi_omega(
 			hierarchical_inference.lens_samps,
 			self.hclass.interim_eval_dict['hyps'], self.hclass.interim_eval_dict,
 			self.hclass.lens_params)
@@ -367,7 +367,7 @@ class HierarchicalClassTest(unittest.TestCase):
 		samples = np.random.uniform(size=(8,2,2))*0.3
 		hierarchical_inference.lens_samps=samples
 		self.hclass.prob_class.set_samples()
-		self.hclass.prob_class.pt_omegai=hierarchical_inference.log_p_theta_omega(
+		self.hclass.prob_class.pt_omegai=hierarchical_inference.log_p_xi_omega(
 			hierarchical_inference.lens_samps,
 			self.hclass.interim_eval_dict['hyps'], self.hclass.interim_eval_dict,
 			self.hclass.lens_params)
@@ -395,7 +395,7 @@ class HierarchicalClassTest(unittest.TestCase):
 		samples = np.ones((8,2,2))*0.3
 		hierarchical_inference.lens_samps=samples
 		self.hclass.prob_class.set_samples()
-		self.hclass.prob_class.pt_omegai=hierarchical_inference.log_p_theta_omega(
+		self.hclass.prob_class.pt_omegai=hierarchical_inference.log_p_xi_omega(
 			hierarchical_inference.lens_samps,
 			self.hclass.interim_eval_dict['hyps'], self.hclass.interim_eval_dict,
 			self.hclass.lens_params)
@@ -425,7 +425,7 @@ class HierarchicalClassTest(unittest.TestCase):
 		samples = np.ones((8,2,2))*0.3
 		hierarchical_inference.lens_samps=samples
 		self.hclass.prob_class.set_samples()
-		self.hclass.prob_class.pt_omegai=hierarchical_inference.log_p_theta_omega(
+		self.hclass.prob_class.pt_omegai=hierarchical_inference.log_p_xi_omega(
 			hierarchical_inference.lens_samps,
 			self.hclass.interim_eval_dict['hyps'], self.hclass.interim_eval_dict,
 			self.hclass.lens_params)
@@ -452,7 +452,7 @@ class HierarchicalClassTest(unittest.TestCase):
 		samples = np.random.uniform(size=(8,2,40))*0.3
 		hierarchical_inference.lens_samps=samples
 		self.hclass.prob_class.set_samples()
-		self.hclass.prob_class.pt_omegai=hierarchical_inference.log_p_theta_omega(
+		self.hclass.prob_class.pt_omegai=hierarchical_inference.log_p_xi_omega(
 			hierarchical_inference.lens_samps,
 			self.hclass.interim_eval_dict['hyps'], self.hclass.interim_eval_dict,
 			self.hclass.lens_params)
