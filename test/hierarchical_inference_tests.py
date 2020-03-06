@@ -477,5 +477,52 @@ class HierarchicalClassTest(unittest.TestCase):
 
 		os.remove(test_chains_path)
 
+	def test_calculate_samples_weights(self):
+		# Test that the weights calculated are as expected.
+		# First we set some samples
+		samples = np.ones((8,2,2))*0.3
+		hierarchical_inference.lens_samps = samples
+
+		# We want some hyperparameters to test. W'll only put two groups of
+		# samples in our fake chain.
+		hyp1 = np.array([-2.73,1.05,0.0,0.5*np.pi,10.0,-0.5*np.pi,0.5*np.pi,0.0,
+			0.102,0.0,0.102,4.0,4.0,-0.55,0.55,4.0,4.0,-0.55,0.55,0.7,0.1,0.0,
+			0.1])
+		hyp2 = np.array([-2.72,1.05,0.0,0.5*np.pi,10.0,-0.5*np.pi,0.5*np.pi,0.0,
+			0.102,0.0,0.102,4.0,4.0,-0.55,0.55,4.0,4.0,-0.55,0.55,0.6,0.1,0.0,
+			0.1])
+
+		# Make a fake samples
+		class FakeSampler():
+			def __init__(self,hyp1,hyp2):
+				self.chain = np.zeros((10,len(hyp1)))
+				self.chain[:5] = hyp1
+				self.chain[5:] = hyp2
+
+			def get_chain(self):
+				return self.chain
+
+		# Make our fake sampler and port that in.
+		self.hclass.sampler = FakeSampler(hyp1,hyp2)
+
+		lpxi1 = hierarchical_inference.log_p_xi_omega(samples,hyp1,
+			self.hclass.target_eval_dict,self.hclass.lens_params)
+		lpxi2 = hierarchical_inference.log_p_xi_omega(samples,hyp2,
+			self.hclass.target_eval_dict,self.hclass.lens_params)
+		lpi = hierarchical_inference.log_p_xi_omega(samples,
+			self.hclass.interim_eval_dict['hyps'],
+			self.hclass.interim_eval_dict,self.hclass.lens_params)
+		self.hclass.prob_class.pt_omegai = lpi
+
+		# Calculate weights with function
+		n_p_omega_samps = 10
+		burnin = 0
+		weights = self.hclass.calculate_sample_weights(n_p_omega_samps,burnin)
+
+		# Calculate the weights we expect by hand.
+		hand_weights = 0.5*(np.exp(lpxi1-lpi)+np.exp(lpxi2-lpi))
+		np.testing.assert_almost_equal(weights,hand_weights)
+
+		self.hclass.sampler = None
 
 
