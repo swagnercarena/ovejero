@@ -464,7 +464,7 @@ class InferenceClass:
 		fig.axes[0].set_yticklabels([0]+self.final_params_print_names)
 		plt.colorbar()
 
-	def calc_p_dlt(self,weights=None):
+	def calc_p_dlt(self,weights=None,cov_emp=None):
 		"""
 		Calculate the percentage of draws from the predicted distribution with
 		||draws||_2 > ||truth||_2 for all of the examples in the batch
@@ -473,6 +473,8 @@ class InferenceClass:
 		----------
 			weights (np.array): An array with dimension (n_lens_samples,
 				n_lenses) that is will be used to reweight the posterior.
+			cov_emp (np.array): An array to use as the covariance in the distance
+				calculation. If None will be estimated from the data.
 
 		Notes
 		-----
@@ -495,7 +497,8 @@ class InferenceClass:
 			return d_metric
 
 		# Use emperical covariance for distance metric
-		cov_emp = np.cov(self.y_test.T)
+		if cov_emp is None:
+			cov_emp = np.cov(self.y_test.T)
 		self.p_dlt = (d_m(self.predict_samps-y_mean,cov_emp)<
 			d_m(np.expand_dims(self.y_test-y_mean,axis=0),cov_emp))
 

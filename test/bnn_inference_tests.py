@@ -542,12 +542,14 @@ class BNNInferenceTest(unittest.TestCase):
 
 		# Check a simple case
 		size = int(1e6)
-		self.infer_class.predict_samps = np.random.normal(size=size).reshape(
-			(size//10,10,1))
+		self.infer_class.predict_samps = np.random.normal(size=size*2).reshape(
+			(size//10,10,2))
+		self.infer_class.predict_samps[:,:,1]=0
 		self.infer_class.y_pred = np.mean(self.infer_class.predict_samps,axis=0)
-		self.infer_class.y_test = np.array([1,2,3,4,5,6,7,8,9,10]).reshape((10,1))
+		self.infer_class.y_test = np.array([[1,2,3,4,5,6,7,8,9,10],
+			[0,0,0,0,0,0,0,0,0,0]],dtype=np.float32).T
 
-		self.infer_class.calc_p_dlt()
+		self.infer_class.calc_p_dlt(cov_emp=np.diag(np.ones(2)))
 		percentages = [0.682689,0.954499,0.997300,0.999936,0.999999]+[1.0]*5
 		for p_i in range(len(percentages)):
 			self.assertAlmostEqual(percentages[p_i],self.infer_class.p_dlt[p_i],
@@ -556,10 +558,12 @@ class BNNInferenceTest(unittest.TestCase):
 		# Shift the mean
 		size = int(1e6)
 		self.infer_class.predict_samps = np.random.normal(loc=2,
-			size=size).reshape((size//10,10,1))
+			size=size*2).reshape((size//10,10,2))
+		self.infer_class.predict_samps[:,:,1]=0
 		self.infer_class.y_pred = np.mean(self.infer_class.predict_samps,axis=0)
-		self.infer_class.y_test = np.array([1,2,3,4,5,6,7,8,9,10]).reshape((10,1))
-		self.infer_class.calc_p_dlt()
+		self.infer_class.y_test = np.array([[1,2,3,4,5,6,7,8,9,10],
+			[0,0,0,0,0,0,0,0,0,0]],dtype=np.float32).T
+		self.infer_class.calc_p_dlt(cov_emp=np.diag(np.ones(2)))
 		percentages = [0.682689,0,0.682689,0.954499,0.997300,0.999936]+[1.0]*4
 		for p_i in range(len(percentages)):
 			self.assertAlmostEqual(percentages[p_i],self.infer_class.p_dlt[p_i],
@@ -575,8 +579,21 @@ class BNNInferenceTest(unittest.TestCase):
 			size//10,10,1))*5
 		self.infer_class.y_pred = np.mean(self.infer_class.predict_samps,axis=0)
 		self.infer_class.y_test = np.array([[1,2,3,4,5,6,7,8,9,10],[0]*10]).T
-		self.infer_class.calc_p_dlt()
+		self.infer_class.calc_p_dlt(cov_emp=np.diag(np.ones(2)))
 		percentages = [1/5,2/5,3/5,4/5,1,1]+[1.0]*4
+		for p_i in range(len(percentages)):
+			self.assertAlmostEqual(percentages[p_i],self.infer_class.p_dlt[p_i],
+				places=2)
+
+		# Expand to higher dimensions
+		size = int(1e6)
+		self.infer_class.predict_samps = np.random.normal(loc=0,
+			size=size*2).reshape((size//2,2,2))*5
+		self.infer_class.predict_samps[:,:,1]=0
+		self.infer_class.y_pred = np.mean(self.infer_class.predict_samps,axis=0)
+		self.infer_class.y_test = np.array([[0,np.sqrt(2)],[0]*2]).T
+		self.infer_class.calc_p_dlt()
+		percentages = [0,0.223356]
 		for p_i in range(len(percentages)):
 			self.assertAlmostEqual(percentages[p_i],self.infer_class.p_dlt[p_i],
 				places=2)
