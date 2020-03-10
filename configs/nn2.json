@@ -17,22 +17,7 @@
         "batch_size": 512,
         "dropout_regularizer": 1e-06,
         "n_epochs": 80,
-        "flip_pairs": [
-            [
-                0,
-                1
-            ],
-            [
-                4,
-                5
-            ],
-            [
-                0,
-                1,
-                4,
-                5
-            ]
-        ],
+        "flip_pairs": [],
         "random_seed": 1138,
         "img_dim": 64,
         "kernel_regularizer": 1e-05,
