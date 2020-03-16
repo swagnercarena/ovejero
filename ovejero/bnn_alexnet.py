@@ -133,12 +133,11 @@ class ConcreteDropout(Layer):
 			initializer=self.kernel_initializer, name='kernel')
 		self.bias = self.add_weight(shape=(self.output_dim,),
 			initializer=self.bias_initializer,name='bias')
+		# Although we define p in logit space, we then apply the sigmoid 
+		# operation to get the desired value between 0 and 1.
 		self.p_logit = self.add_weight(name='p_logit',shape=(1,),
 			initializer=initializers.RandomUniform(self.init_min, 
 				self.init_max), trainable=True)
-		# Although we define p in logit space, we then apply the sigmoid 
-		# operation to get the desired value between 0 and 1.
-		self.p = K.sigmoid(self.p_logit[0])
 
 		# Because of issues with Keras, these functions need to be defined
 		# here.
@@ -158,7 +157,7 @@ class ConcreteDropout(Layer):
 			"""
 			# Although we define p in logit space, we then apply the sigmoid 
 			# operation to get the desired value between 0 and 1.
-			p = K.sigmoid(p_logit[0])
+			p = K.sum(K.sigmoid(p_logit))
 			regularizer = p * K.log(p)
 			regularizer += (1.0 - p) + K.log(1.0 - p)
 			regularizer *= self.dropout_regularizer * input_dim
@@ -179,7 +178,7 @@ class ConcreteDropout(Layer):
 					kernel regularization term.
 			"""
 			regularizer = self.kernel_regularizer * K.sum(
-				K.square(kernel)) / (1.0 - self.p)
+				K.square(kernel)) / (1.0 - K.sum(K.sigmoid(self.p_logit)))
 			return regularizer
 
 		
@@ -216,11 +215,12 @@ class ConcreteDropout(Layer):
 		# formulation allows for a derivative with respect to p.
 		unif_noise = K.random_uniform(shape=K.shape(inputs),
 			seed=self.random_seed)
-		drop_prob = (K.log(self.p+eps) - K.log(1.0-self.p+eps) 
-			+ K.log(unif_noise + eps) - K.log(1.0 - unif_noise + eps))
+		drop_prob = (K.log(K.sigmoid(self.p_logit)+eps) - K.log(1.0-
+			K.sigmoid(self.p_logit)+eps) + K.log(unif_noise + eps) - 
+			K.log(1.0 - unif_noise + eps))
 		drop_prob = K.sigmoid(drop_prob/self.temp)
 		inputs *= (1.0 - drop_prob)
-		inputs /= (1.0 - self.p) 
+		inputs /= (1.0 - K.sigmoid(self.p_logit)) 
 
 		# Now just carry out the basic operations of a Dense layer.
 		output = K.dot(inputs, self.kernel)
@@ -337,12 +337,11 @@ class SpatialConcreteDropout(Conv2D):
 		input_dim = input_shape[3]
 		
 		# kernel already set by inherited build function.
+		# Although we define p in logit space, we then apply the sigmoid 
+		# operation to get the desired value between 0 and 1.
 		self.p_logit = self.add_weight(name='p_logit',shape=(1,),
 			initializer=initializers.RandomUniform(self.init_min, 
 				self.init_max), trainable=True)
-		# Although we define p in logit space, we then apply the sigmoid 
-		# operation to get the desired value between 0 and 1.
-		self.p = K.sigmoid(self.p_logit[0])
 
 		# Because of issues with Keras, these functions need to be defined
 		# here.
@@ -362,7 +361,7 @@ class SpatialConcreteDropout(Conv2D):
 			"""
 			# Although we define p in logit space, we then apply the sigmoid 
 			# operation to get the desired value between 0 and 1.
-			p = K.sigmoid(p_logit[0])
+			p = K.sum(K.sigmoid(p_logit))
 			regularizer = p * K.log(p)
 			regularizer += (1.0 - p) + K.log(1.0 - p)
 			regularizer *= self.dropout_regularizer * input_dim
@@ -383,7 +382,7 @@ class SpatialConcreteDropout(Conv2D):
 					kernel regularization term.
 			"""
 			regularizer = self.cd_kernel_regularizer * K.sum(
-				K.square(kernel)) / (1.0 - self.p)
+				K.square(kernel)) / (1.0 - K.sum(K.sigmoid(self.p_logit)))
 			return regularizer
 
 		
@@ -420,11 +419,12 @@ class SpatialConcreteDropout(Conv2D):
 		noise_shape = (input_shape[0], 1, 1, input_shape[3])
 		unif_noise = K.random_uniform(shape=noise_shape,
 			seed=self.random_seed)
-		drop_prob = (K.log(self.p+eps) - K.log(1.0-self.p+eps) 
-			+ K.log(unif_noise + eps) - K.log(1.0 - unif_noise + eps))
+		drop_prob = (K.log(K.sigmoid(self.p_logit)+eps) - 
+			K.log(1.0-K.sigmoid(self.p_logit)+eps) + K.log(unif_noise + eps)
+			- K.log(1.0 - unif_noise + eps))
 		drop_prob = K.sigmoid(drop_prob/self.temp)
 		inputs *= (1.0 - drop_prob)
-		inputs /= (1.0 - self.p) 
+		inputs /= (1.0 - K.sigmoid(self.p_logit)) 
 
 		# Now just carry out the basic operations of a Dense layer.
 		return super(SpatialConcreteDropout, self).call(inputs)

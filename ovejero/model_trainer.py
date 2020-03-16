@@ -262,6 +262,7 @@ def model_loss_builder(cfg, verbose=False):
 
 	model = bnn_alexnet.concrete_alexnet((img_dim, img_dim, 1), num_outputs,
 		kernel_regularizer=kr,dropout_regularizer=dr,random_seed=random_seed)
+	print(model.losses)
 
 	adam = Adam(lr=learning_rate,amsgrad=False,decay=decay)
 	model.compile(loss=loss, optimizer=adam, metrics=[loss,mse_loss])

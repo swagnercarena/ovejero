@@ -372,18 +372,20 @@ class InferenceClass:
 
 	def report_stats(self):
 		"""
-		Print out performance statistics of the model. So far this includes median
-		error on each parameter.
+		Print out performance statistics of the model. So far this includes rmse,
+		median error, and median std on each parameter.
 		"""
 		if self.samples_init == False:
 			raise RuntimeError('Must generate samples before statistics are '+
 				'reported')
 		# Median error on each parameter
+		rmse = np.sqrt(np.mean(np.square(self.y_pred-self.y_test),axis=0))
 		medians = np.median(np.abs(self.y_pred-self.y_test),axis=0)
 		med_std = np.median(self.y_std,axis=0)
-		print('Parameter, Median Abs Error, Median Std')
+		print('Parameter, RMSE, Median Abs Error, Median Std')
 		for param_i in range(len(self.final_params)):
-			print(self.final_params[param_i],medians[param_i],med_std[param_i])
+			print(self.final_params[param_i],rmse[param_i],medians[param_i],
+				med_std[param_i])
 
 	def plot_posterior_contours(self,image_index,contour_color='#FFAA00',
 		block=True):
@@ -517,7 +519,8 @@ class InferenceClass:
 			self.p_dlt = np.mean(self.p_dlt*weights,axis=0)
 
 	def plot_calibration(self,color_map=["#377eb8", "#4daf4a"],n_perc_points=20,
-		figure=None,legend=None,show_plot=True,block=True,weights=None):
+		figure=None,legend=None,show_plot=True,block=True,weights=None,
+		title=None):
 		"""
 		Plot the percentage of draws from the predicted distributions with
 		||draws||_2 > ||truth||_2 for our different batch examples.
@@ -533,6 +536,10 @@ class InferenceClass:
 			show_plot (bool): If true, call plt.show() at the end of the
 				function.
 			block (bool): If true, block excecution after plt.show() command.
+			weights (np.array): An array with dimension (n_lens_samples,
+				n_lenses) that is will be used to reweight the posterior.
+			title (str): The title to use for the plot. If None will use a
+				default title.
 
 
 		Returns
@@ -557,7 +564,7 @@ class InferenceClass:
 		percentages = np.linspace(0.0,1.0,n_perc_points)
 		p_images = np.zeros_like(percentages)
 		if figure is None:
-			figure = plt.figure(figsize=(6,6))
+			figure = plt.figure(figsize=(8,8),dpi=800)
 			plt.plot(percentages,percentages,c=color_map[0],ls='--')
 
 		# We'll estimate the uncertainty in our plat using a jacknife method.
@@ -578,7 +585,10 @@ class InferenceClass:
 			color=color_map[1],alpha=0.3)
 		plt.xlabel('Percentage')
 		plt.ylabel('Percent of Images that have x% of draws with d(draws)>d(truth)')
-		plt.title('Calibration of Network Posterior')
+		if title is None:
+			plt.title('Calibration of Network Posterior')
+		else:
+			plt.title(title)
 		if legend is None:
 			plt.legend(['Perfect Calibration','Network Calibration'])
 		else:

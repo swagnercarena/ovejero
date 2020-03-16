@@ -1,3 +1,5 @@
+# TODO Sebastian: write a test that checks that all of the losses and outputs
+# are responsive to p_logit
 import unittest, os
 # Eliminate TF warning in tests
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'

@@ -526,7 +526,7 @@ class BNNInferenceTest(unittest.TestCase):
 		plt.close()
 		self.infer_class.comp_al_ep_unc(block=False,norm_diagonal=False)
 		plt.close()
-		self.infer_class.plot_calibration(block=False)
+		self.infer_class.plot_calibration(block=False,title='test')
 		plt.close()
 
 		# Clean up the files we generated
