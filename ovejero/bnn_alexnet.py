@@ -885,7 +885,7 @@ def p_value(model):
 		loss = []
 		for layer in model.layers:
 			if 'dropout' in layer.name:
-				loss.extend(layer.weights[2])
+				loss.append(layer.weights[2])
 		return tf.reduce_mean(loss)
 
 	return p_fake_loss
