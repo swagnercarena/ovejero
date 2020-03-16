@@ -867,6 +867,27 @@ class LensingLossFunctions:
 		loss_stack = tf.stack(loss_list,axis=-1)
 		return tf.reduce_min(loss_stack,axis=-1)
 
+def p_value(model):
+	"""
+	Returns the average value of the dropout in each concrete layer.
 
+	Parameters
+	----------
+		model (keras.Model): A Keras model from with the dropout values will be
+			extracted.
+
+	Notes
+	-----
+		This is a hack.
+	"""
+	def p_fake_loss(y_true,y_pred):
+		# We won't be using either y_true or y_pred
+		loss = []
+		for layer in model.layers:
+			if 'dropout' in layer.name:
+				loss.extend(layer.weights[2])
+		return tf.reduce_mean(loss)
+
+	return p_fake_loss
 
 

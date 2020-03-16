@@ -264,7 +264,10 @@ def model_loss_builder(cfg, verbose=False):
 		kernel_regularizer=kr,dropout_regularizer=dr,random_seed=random_seed)
 
 	adam = Adam(lr=learning_rate,amsgrad=False,decay=decay)
-	model.compile(loss=loss, optimizer=adam, metrics=[loss,mse_loss])
+	# The final metric here is a hack to be able to track the average dropout
+	# value.
+	model.compile(loss=loss, optimizer=adam, metrics=[loss,mse_loss,
+		bnn_alexnet.p_value(model)])
 	if verbose:
 		print('Is model built: ' + str(model.built))
 
