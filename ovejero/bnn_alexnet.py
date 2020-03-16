@@ -159,7 +159,7 @@ class ConcreteDropout(Layer):
 			# operation to get the desired value between 0 and 1.
 			p = K.sum(K.sigmoid(p_logit))
 			regularizer = p * K.log(p)
-			regularizer += (1.0 - p) + K.log(1.0 - p)
+			regularizer += (1.0 - p) * K.log(1.0 - p)
 			regularizer *= self.dropout_regularizer * input_dim
 			return regularizer
 
