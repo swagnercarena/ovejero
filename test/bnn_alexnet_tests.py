@@ -45,7 +45,7 @@ class BNNTests(unittest.TestCase):
 		self.assertGreater(np.mean(np.abs(input_layer.numpy()-output_layer.numpy()
 			)),0)
 		self.assertAlmostEqual(np.mean(input_layer.numpy()),
-			np.mean(output_layer.numpy()),places=3)
+			np.mean(output_layer.numpy()),places=2)
 
 		dropout_rate = 0.9
 		d_layer = bnn_alexnet.AlwaysDropout(dropout_rate)
@@ -53,7 +53,7 @@ class BNNTests(unittest.TestCase):
 		self.assertGreater(np.mean(np.abs(input_layer.numpy()-output_layer.numpy()
 			)),0)
 		self.assertAlmostEqual(np.mean(input_layer.numpy()),
-			np.mean(output_layer.numpy()),places=3)
+			np.mean(output_layer.numpy()),places=2)
 		self.assertEqual(np.median(output_layer.numpy()),0.0)
 
 	def test_ConcreteDropout(self):

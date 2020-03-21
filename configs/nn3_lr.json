@@ -2,6 +2,7 @@
     "training_params": {
         "tf_record_path": "tf_record_train",
         "bnn_type": "gmm",
+        "dropout_type":"standard",
         "learning_rate": 1e-05,
         "final_params": [
             "external_shear_g1",
@@ -16,6 +17,7 @@
         "root_path": "/home/swagnercarena/ovejero/datasets/train/",
         "batch_size": 512,
         "dropout_regularizer": 1e-08,
+        "dropout_rate": 0.05,
         "n_epochs": 80,
         "flip_pairs": [],
         "random_seed": 1138,

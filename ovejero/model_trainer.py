@@ -232,12 +232,14 @@ def model_loss_builder(cfg, verbose=False):
 	# model.
 	kr = cfg['training_params']['kernel_regularizer']
 	dr = cfg['training_params']['dropout_regularizer']
+	dropout_rate = cfg['training_params']['dropout_rate']
 	# If the any of the parameters contain excentricities then the e1/e2
 	# pair should be included in the flip list for the correct loss function
 	# behavior. See the example config files.
 	flip_pairs = cfg['training_params']['flip_pairs']
 	# The type of BNN output (either diag, full, or gmm).
 	bnn_type = cfg['training_params']['bnn_type']
+	dropout_type = cfg['training_params']['dropout_type']
 	# The path to the model weights. If they already exist they will be loaded
 	model_weights = cfg['training_params']['model_weights']
 	# Finally set the random seed we will use for training
@@ -259,15 +261,23 @@ def model_loss_builder(cfg, verbose=False):
 		raise RuntimeError('BNN type %s does not exist'%(bnn_type))
 	# The mse loss doesn't depend on model type.
 	mse_loss = loss_class.mse_loss
-
-	model = bnn_alexnet.concrete_alexnet((img_dim, img_dim, 1), num_outputs,
-		kernel_regularizer=kr,dropout_regularizer=dr,random_seed=random_seed)
-
 	adam = Adam(lr=learning_rate,amsgrad=False,decay=decay)
-	# The final metric here is a hack to be able to track the average dropout
-	# value.
-	model.compile(loss=loss, optimizer=adam, metrics=[loss,mse_loss,
-		bnn_alexnet.p_value(model)])
+
+	if dropout_type == 'concrete':
+		model = bnn_alexnet.concrete_alexnet((img_dim, img_dim, 1), num_outputs,
+			kernel_regularizer=kr,dropout_regularizer=dr,random_seed=random_seed)
+		# The final metric here is a hack to be able to track the average dropout
+		# value.
+		model.compile(loss=loss, optimizer=adam, metrics=[loss,mse_loss,
+			bnn_alexnet.p_value(model)])
+	elif dropout_type == 'standard':
+		model = bnn_alexnet.dropout_alexnet((img_dim, img_dim, 1), num_outputs,
+			kernel_regularizer=kr,dropout_rate=dropout_rate)
+		model.compile(loss=loss, optimizer=adam, metrics=[loss,mse_loss])
+	else:
+		raise ValueError('dropout type %s is not an option.'%(dropout_type) + 
+			' Either standard or concrete')
+
 	if verbose:
 		print('Is model built: ' + str(model.built))
 
@@ -376,7 +386,7 @@ def main():
 
 	tensorboard = TensorBoard(log_dir=tensorboard_log_dir,update_freq='batch')
 	modelcheckpoint = ModelCheckpoint(model_weights,monitor='val_loss',
-		save_best_only=True,period=1)
+		save_best_only=True,save_freq='epoch')
 
 	# TODO add validation data.
 	model.fit(tf_dataset_t,callbacks=[tensorboard, modelcheckpoint],

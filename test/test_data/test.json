@@ -1,12 +1,14 @@
 {
     "training_params": {
         "bnn_type": "gmm",
+        "dropout_type": "standard",
         "batch_size": 10,
         "n_epochs": 10,
         "learning_rate": 0.0001,
         "decay": 3e-06,
         "kernel_regularizer": 1e-05,
-        "dropout_regularizer": 1e-06,
+        "dropout_rate": 0.1,
+        "dropout_regularizer": null,
         "root_path": "./test_data/",
         "tf_record_path": "tf_record_test",
         "final_params": [
@@ -19,22 +21,7 @@
             "lens_mass_gamma",
             "lens_mass_theta_E_log"
         ],
-        "flip_pairs": [
-            [
-                0,
-                1
-            ],
-            [
-                4,
-                5
-            ],
-            [
-                0,
-                1,
-                4,
-                5
-            ]
-        ],
+        "flip_pairs": [],
         "img_dim": 128,
         "model_weights": "./test_data/test_model.h5",
         "tensorboard_log_dir": "./test_data/test.log",
