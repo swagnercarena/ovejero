@@ -18,7 +18,7 @@
         "batch_size": 128,
         "dropout_regularizer": 1e-04,
         "dropout_rate": 0.3,
-        "n_epochs": 80,
+        "n_epochs": 160,
         "flip_pairs": [],
         "random_seed": 1138,
         "img_dim": 64,
