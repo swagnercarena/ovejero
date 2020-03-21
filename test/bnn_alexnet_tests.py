@@ -13,6 +13,48 @@ class BNNTests(unittest.TestCase):
 	def __init__(self, *args, **kwargs):
 		super(BNNTests, self).__init__(*args, **kwargs)
 		self.random_seed = 1234
+		tf.random.set_seed(self.random_seed)
+		np.random.seed(self.random_seed)
+
+	def test_AlwaysDropout(self):
+		# Test that the implementation of Always dropout behaves as expected.
+		# Start with no dropout and make sure that behaves how you want it to.
+		input_layer = tf.ones((200,200,200))
+		dropout_rate = 0
+		d_layer = bnn_alexnet.AlwaysDropout(dropout_rate)
+		output_layer = d_layer(input_layer)
+		np.testing.assert_equal(input_layer.numpy(),output_layer.numpy())
+
+		dropout_rate = 0.1
+		d_layer = bnn_alexnet.AlwaysDropout(dropout_rate)
+		output_layer = d_layer(input_layer)
+		# Test that the two arrays aren't equal.
+		self.assertGreater(np.mean(np.abs(input_layer.numpy()-output_layer.numpy()
+			)),0)
+		# Test that the mean value hasn't changed (remember we divide the output
+		# by the dropout rate so the mean is unchanged)
+		self.assertAlmostEqual(np.mean(input_layer.numpy()),
+			np.mean(output_layer.numpy()),places=3)
+		# Test that the median value is as expected.
+		self.assertAlmostEqual(np.median(output_layer.numpy()),1/0.9,places=5)
+
+		# Repeat the above tests for other dropout rates.
+		dropout_rate = 0.5
+		d_layer = bnn_alexnet.AlwaysDropout(dropout_rate)
+		output_layer = d_layer(input_layer)
+		self.assertGreater(np.mean(np.abs(input_layer.numpy()-output_layer.numpy()
+			)),0)
+		self.assertAlmostEqual(np.mean(input_layer.numpy()),
+			np.mean(output_layer.numpy()),places=3)
+
+		dropout_rate = 0.9
+		d_layer = bnn_alexnet.AlwaysDropout(dropout_rate)
+		output_layer = d_layer(input_layer)
+		self.assertGreater(np.mean(np.abs(input_layer.numpy()-output_layer.numpy()
+			)),0)
+		self.assertAlmostEqual(np.mean(input_layer.numpy()),
+			np.mean(output_layer.numpy()),places=3)
+		self.assertEqual(np.median(output_layer.numpy()),0.0)
 
 	def test_ConcreteDropout(self):
 		# Test that our implementation of ConcreteDropout works as expected.
@@ -47,7 +89,7 @@ class BNNTests(unittest.TestCase):
 		kernel_reg = cd_layer.losses[1].numpy()
 		# We know what we set p to
 		p = 0.1
-		p_logit_correct = p * np.log(p) + (1-p)+np.log(1-p)
+		p_logit_correct = p * np.log(p) + (1-p)*np.log(1-p)
 		p_logit_correct *= dropout_regularizer * 200
 		self.assertAlmostEqual(p_logit_reg, p_logit_correct)
 		kernel_correct = kernel_regularizer * np.sum(np.square(
@@ -96,7 +138,7 @@ class BNNTests(unittest.TestCase):
 		kernel_reg = cd_layer.losses[1].numpy()
 		# We know what we set p to
 		p = 0.1
-		p_logit_correct = p * np.log(p) + (1-p)+np.log(1-p)
+		p_logit_correct = p * np.log(p) + (1-p)*np.log(1-p)
 		p_logit_correct *= dropout_regularizer * 64
 		self.assertAlmostEqual(p_logit_reg, p_logit_correct)
 		kernel_correct = kernel_regularizer * np.sum(np.square(
@@ -140,6 +182,38 @@ class BNNTests(unittest.TestCase):
 			if 'concrete' in layer.name and l_i < len(model.layers)-1:
 				self.assertEqual(layer.activation,tf.keras.activations.relu)
 			l_i += 1
+
+	def test_dropout_alexnet(self):
+		# Test that the models initialized agree with what we intended
+		layer_names = ['input','always_dropout','conv2d','max_pooling2d',
+			'always_dropout','conv2d','max_pooling2d','always_dropout',
+			'conv2d','always_dropout','conv2d','always_dropout',
+			'conv2d','max_pooling2d','flatten','always_dropout','dense',
+			'always_dropout','dense','always_dropout','dense']
+
+		image_size = (100,100,1)
+		num_params = 8
+		model = bnn_alexnet.dropout_alexnet(image_size, num_params, 
+			kernel_regularizer=1e-6,dropout_rate=0.1)
+		input_shapes = [[],(100,100,1),(100,100,1),(48,48,64),
+			(24,24,64),(24,24,64),(24,24,192),(12,12,192),(12,12,192),
+			(12,12,384),(12,12,384),(12,12,384),(12,12,384),(12,12,256),
+			(6,6,256),(9216,),(9216,),(4096,),(4096,),(4096,),(4096,)]
+		output_shapes = [[]]+input_shapes[2:] + [(num_params,)]
+
+		# All I can really check is that the layers are of the right type and
+		# have the right shapes
+		for l_i, layer in enumerate(model.layers):
+			self.assertTrue(layer_names[l_i] in layer.name)
+			self.assertEqual(layer.dtype,tf.float32)
+			self.assertEqual(layer.input_shape[1:],input_shapes[l_i])
+			self.assertEqual(layer.output_shape[1:],output_shapes[l_i])
+			# Check that all the concrete dropout layer except the last have
+			# a ReLU activation function.
+			if 'conv2d' in layer.name:
+				self.assertEqual(layer.activation,tf.keras.activations.relu)
+			if 'dense' in layer.name and l_i < len(model.layers)-1:
+				self.assertEqual(layer.activation,tf.keras.activations.relu)
 
 class LensingLossFunctionsTests(unittest.TestCase):
 
@@ -573,4 +647,21 @@ class LensingLossFunctionsTests(unittest.TestCase):
 		self.assertEqual(diag_loss.shape,(2,))
 		self.assertEqual(diag_loss[0],diag_loss[1])
 		self.assertAlmostEqual(diag_loss[0],scipy_nlp,places=4)
+
+	def test_p_value(self):
+		# Test that the p_value function correctly return the mean p_value of the
+		# function.
+		# Initialize a model an test the the function returns the desired value.
+		image_size = (100,100,1)
+		num_params = 8
+		model = bnn_alexnet.concrete_alexnet(image_size, num_params, 
+			kernel_regularizer=1e-6,dropout_regularizer=1e-5)
+		p_fake_loss = bnn_alexnet.p_value(model)
+		self.assertAlmostEqual(p_fake_loss(None,None).numpy(),0.1)
+
+		model = bnn_alexnet.concrete_alexnet(image_size, num_params, 
+			kernel_regularizer=1e-6,dropout_regularizer=1e-5,
+			init_min=0.3,init_max=0.3)
+		p_fake_loss = bnn_alexnet.p_value(model)
+		self.assertAlmostEqual(p_fake_loss(None,None).numpy(),0.3)
 

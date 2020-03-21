@@ -448,7 +448,6 @@ class InferenceClass:
 		vmin = min(np.min(al_median),np.min(y_cov_median))
 		if vmin == 0:
 			vmin = np.min(y_cov_median)
-		print(vmin,vmax)
 		# Plot the aleatoric covariance
 		im = axes[0].imshow(al_median, norm=LogNorm(vmin=vmin, vmax=vmax))
 		axes[0].set_title('Median Aleatoric Covariance')

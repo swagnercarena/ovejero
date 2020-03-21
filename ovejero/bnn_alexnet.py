@@ -13,8 +13,73 @@ import numpy as np
 from tensorflow.keras import initializers, activations
 import tensorflow.keras.backend as K
 from tensorflow.keras.models import Model
-from tensorflow.keras.layers import Flatten, Conv2D, MaxPooling2D, Input
+from tensorflow.keras.layers import Flatten, Conv2D, MaxPooling2D, Input, Dense
 from tensorflow.keras.layers import Layer, InputSpec
+
+class AlwaysDropout(Layer):
+	"""
+	This class applies dropout to an input both during training and inference.
+	This is consistent with the BNN methodology.
+	"""
+	def __init__(self, dropout_rate, **kwargs):
+		"""
+		Initialize the AlwaysDropout layer.
+
+		Parameters
+		----------
+			dropout_rate (float): A number in the range [0,1) that will serve
+				as the dropout rate for the layer. A larger rate means more
+				dropout.
+		"""
+		super(AlwaysDropout, self).__init__(**kwargs)
+		# Check for a bad dropout input
+		if dropout_rate >= 1.0 or dropout_rate < 0.0:
+			raise ValueError('dropout rate of %f not between 0 and 1'%(
+				dropout_rate))
+		# Save the dropout rate for later.
+		self.dropout_rate = dropout_rate
+
+	def call(self, inputs, training=None):
+		"""
+		The function that takes the inputs (likely outputs of a previous layer)
+		and conducts dropout.
+
+		Parameters
+		----------
+		inputs (tf.Keras.Layer): The inputs to the Dense layer.
+		training (bool): A required input for call. Setting training to 
+			true or false does nothing because always dropout behaves the
+			same way in both cases.
+
+		Returns
+		-------
+		(tf.Keras.Layer): The output of the Dense layer.
+		"""
+		return tf.nn.dropout(inputs, self.dropout_rate)
+
+	def get_config(self):
+		"""
+		Return the configuration dictionary required by Keras.
+		"""
+		config = {'dropout_rate': self.dropout_rate}
+		base_config = super(AlwaysDropout, self).get_config()
+		return dict(list(base_config.items()) + list(config.items()))
+
+	def compute_output_shape(self, input_shape):
+		"""
+		Compute the shape of the output given the input. Needed for Keras
+		layer.
+
+		Parameters
+		----------
+		input_shape ((int,...)): The shape of the input to our Dense layer.
+
+		Returns
+		-------
+		((int,...)): The output shape of the layer.
+		"""
+		return input_shape
+
 
 def cd_regularizer(p, kernel, kernel_regularizer, dropout_regularizer, 
 	input_dim):
@@ -363,7 +428,7 @@ class SpatialConcreteDropout(Conv2D):
 			# operation to get the desired value between 0 and 1.
 			p = K.sum(K.sigmoid(p_logit))
 			regularizer = p * K.log(p)
-			regularizer += (1.0 - p) + K.log(1.0 - p)
+			regularizer += (1.0 - p) * K.log(1.0 - p)
 			regularizer *= self.dropout_regularizer * input_dim
 			return regularizer
 
@@ -446,12 +511,84 @@ class SpatialConcreteDropout(Conv2D):
 		return super(SpatialConcreteDropout, self).compute_output_shape(
 			input_shape)
 
+def dropout_alexnet(img_size, num_params, kernel_regularizer=1e-6,
+	dropout_rate=0.1,random_seed=None):
+	"""
+	Build the tensorflow graph for the alexnet BNN.
+
+	Parameters
+	----------
+		img_size ((int,int,int)): A tupe with shape (pix,pix,freq) that describes 
+			the size of the input images
+		num_params (int): The number of lensing parameters to predict
+		kernel_regularizer (float): The strength of the l2 norm (associated to 
+			the strength of the prior on the weights)
+		dropout_rate (float): The dropout rate to use for the layers.
+		random_seed (int): A seed to use in the random function calls. If None 
+			no explicit seed will be used.
+
+	Returns
+	-------
+		(tf.Tensor): The model (i.e. the tensorflow graph for the model)
+	"""
+
+	# Initialize model
+	inputs = Input(shape=img_size)
+
+	# Layer 1
+	# model.add(AlwaysDropout(dropout_rate))
+	x = AlwaysDropout(dropout_rate)(inputs)
+	x = Conv2D(filters=64, kernel_size=(5,5), strides=(2,2), 
+		padding='valid', activation='relu', input_shape=img_size)(x)
+	x = MaxPooling2D(pool_size=(3,3), strides=(2,2), padding='same')(x)
+
+	# Layer 2
+	x = AlwaysDropout(dropout_rate)(x)
+	x = Conv2D(filters=192, kernel_size=(5,5), strides=(1,1), 
+		padding='same', activation='relu')(x)
+	x = MaxPooling2D(pool_size=(3,3), strides=(2,2), padding='same')(x)
+
+	# Layer 3
+	x = AlwaysDropout(dropout_rate)(x)
+	x = Conv2D(filters=384, kernel_size=(3,3), strides=(1,1), 
+		padding='same', activation='relu')(x)
+
+	# Layer 4
+	x = AlwaysDropout(dropout_rate)(x)
+	x = Conv2D(filters=384, kernel_size=(3,3), strides=(1,1), 
+		padding='same', activation='relu')(x)
+
+	# Layer 5
+	x = AlwaysDropout(dropout_rate)(x)
+	x = Conv2D(filters=256, kernel_size=(3,3), strides=(1,1), 
+		padding='same', activation='relu')(x)
+	x = MaxPooling2D(pool_size=(3,3), strides=(2,2), padding='same')(x)
+
+	# Pass to fully connected layers
+	x = Flatten()(x)
+
+	# Layer 6
+	x = AlwaysDropout(dropout_rate)(x)
+	x = Dense(4096, activation='relu')(x)
+
+	# Layer 7
+	x = AlwaysDropout(dropout_rate)(x)
+	x = Dense(4096, activation='relu')(x)
+
+	# Output
+	x = AlwaysDropout(dropout_rate)(x)
+	outputs = Dense(num_params)(x)
+
+	# Construct model
+	model = Model(inputs=inputs, outputs=outputs)
+
+	return model
 
 def concrete_alexnet(img_size, num_params, kernel_regularizer=1e-6,
 	dropout_regularizer=1e-5, init_min=0.1, init_max=0.1,
 	temp=0.1, random_seed=None):
 	"""
-	Build the tensorflow graph for the concrete dropout BNN.
+	Build the tensorflow graph for the concrete dropout alexnet BNN.
 
 	Parameters
 	----------
@@ -474,13 +611,19 @@ def concrete_alexnet(img_size, num_params, kernel_regularizer=1e-6,
 	Returns
 	-------
 		(tf.Tensor): The model (i.e. the tensorflow graph for the model)
+
+	Notes
+	-----
+		While the concrete dropout implementation works, the training of the
+		dropout terms is very slow. It's possible that modifying the learning
+		rate schedule may help.
 	"""
 
 	# Initialize model
 	inputs = Input(shape=img_size)
 
 	# Layer 1
-	# model.add(Always_Dropout(dropout_rate))
+	# model.add(AlwaysDropout(dropout_rate))
 	x = SpatialConcreteDropout(filters=64, kernel_size=(5,5), strides=(2,2), 
 		padding='valid', activation='relu', input_shape=img_size,
 		kernel_regularizer = kernel_regularizer,
@@ -878,7 +1021,8 @@ def p_value(model):
 
 	Notes
 	-----
-		This is a hack.
+		This is a hack that allows us to easily keep track of the dropout value
+		during training.
 	"""
 	def p_fake_loss(y_true,y_pred):
 		# We won't be using either y_true or y_pred
