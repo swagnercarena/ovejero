@@ -376,14 +376,16 @@ class LensingLossFunctionsTests(unittest.TestCase):
 
 		# Get the tf representation of the prec matrix
 		l_mat_elements_tf = tf.constant(l_mat_elements)
-		p_mat_tf, diag_tf = loss_class.construct_precision_matrix(
+		p_mat_tf, diag_tf, L_mat = loss_class.construct_precision_matrix(
 			l_mat_elements_tf)
 
 		# Make sure everything matches
-		self.assertAlmostEqual(np.sum(np.abs(p_mat_tf.numpy()-prec_mat)),0,
-			places=5)
+		np.testing.assert_almost_equal(p_mat_tf.numpy()[0],prec_mat,decimal=5)
 		diag_elements = np.array([1,3,6,10])
-		self.assertAlmostEqual(np.sum(np.abs(diag_tf.numpy()-diag_elements)),0)
+		np.testing.assert_almost_equal(diag_tf.numpy()[0],diag_elements)
+		for pi, p_mat_np in enumerate(p_mat_tf.numpy()):
+			np.testing.assert_almost_equal(p_mat_np,np.dot(
+				L_mat.numpy()[pi],L_mat.numpy()[pi].T))
 
 		# Rinse and repeat for a different number of elements with batching
 		num_params = 3
@@ -397,15 +399,15 @@ class LensingLossFunctionsTests(unittest.TestCase):
 
 		# Get the tf representation of the prec matrix
 		l_mat_elements_tf = tf.constant(l_mat_elements)
-		p_mat_tf, diag_tf = loss_class.construct_precision_matrix(
+		p_mat_tf, diag_tf, _ = loss_class.construct_precision_matrix(
 			l_mat_elements_tf)
 
 		# Make sure everything matches
 		for p_mat in p_mat_tf.numpy():
-			self.assertAlmostEqual(np.sum(np.abs(p_mat-prec_mat)),0)
+			np.testing.assert_almost_equal(p_mat,prec_mat)
 		diag_elements = np.array([1,3,6])
 		for diag in diag_tf.numpy():
-			self.assertAlmostEqual(np.sum(np.abs(diag-diag_elements)),0)
+			np.testing.assert_almost_equal(diag,diag_elements)
 
 	def test_log_gauss_full(self):
 		# Will not be used for this test, but must be passed in.
@@ -421,7 +423,7 @@ class LensingLossFunctionsTests(unittest.TestCase):
 				np.expand_dims(np.random.randn(int(num_params*(num_params+1)/2)),
 					axis=0),dtype=tf.float32)
 			
-			p_mat_tf, L_diag = loss_class.construct_precision_matrix(
+			p_mat_tf, L_diag, _ = loss_class.construct_precision_matrix(
 				l_mat_elements_tf)
 
 			p_mat = p_mat_tf.numpy()[0]
@@ -458,7 +460,7 @@ class LensingLossFunctionsTests(unittest.TestCase):
 
 		# Get out the covariance matrix in numpy
 		l_mat_elements_tf = tf.constant(L_elements,dtype=tf.float32)
-		p_mat_tf, L_diag = loss_class.construct_precision_matrix(
+		p_mat_tf, L_diag, _ = loss_class.construct_precision_matrix(
 			l_mat_elements_tf)
 		cov_mat = np.linalg.inv(p_mat_tf.numpy()[0])
 
@@ -538,9 +540,9 @@ class LensingLossFunctionsTests(unittest.TestCase):
 				np.expand_dims(np.random.randn(int(num_params*(num_params+1)/2)),
 					axis=0),dtype=tf.float32)
 			
-			p_mat_tf1, L_diag1 = loss_class.construct_precision_matrix(
+			p_mat_tf1, L_diag1, _ = loss_class.construct_precision_matrix(
 				l_mat_elements_tf1)
-			p_mat_tf2, L_diag2 = loss_class.construct_precision_matrix(
+			p_mat_tf2, L_diag2, _ = loss_class.construct_precision_matrix(
 				l_mat_elements_tf2)
 
 			cov_mat1 = np.linalg.inv(p_mat_tf1.numpy()[0])
@@ -583,7 +585,7 @@ class LensingLossFunctionsTests(unittest.TestCase):
 
 		# Get out the covariance matrix in numpy
 		l_mat_elements_tf = tf.constant(L_elements,dtype=tf.float32)
-		p_mat_tf, L_diag = loss_class.construct_precision_matrix(
+		p_mat_tf, L_diag, _ = loss_class.construct_precision_matrix(
 			l_mat_elements_tf)
 		cov_mat = np.linalg.inv(p_mat_tf.numpy()[0])
 

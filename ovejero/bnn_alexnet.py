@@ -862,7 +862,7 @@ class LensingLossFunctions:
 		# Calculate the actual precision matrix
 		prec_mat = tf.matmul(L_mat,tf.transpose(L_mat,perm=[0,2,1]))
 
-		return prec_mat, L_mat_diag
+		return prec_mat, L_mat_diag, L_mat
 
 	def log_gauss_full(self,y_true,y_pred,prec_mat,L_diag):
 		"""
@@ -913,7 +913,7 @@ class LensingLossFunctions:
 			num_or_size_splits=[self.num_params,L_elements_len],axis=-1)
 
 		# Build the precision matrix and extract the diagonal part
-		prec_mat, L_diag = self.construct_precision_matrix(L_mat_elements)
+		prec_mat, L_diag, _ = self.construct_precision_matrix(L_mat_elements)
 
 		# Add each possible flip to the loss list. We will then take the
 		# minimum.
@@ -991,8 +991,8 @@ class LensingLossFunctions:
 
 		# Now build the precision matrix for our two models and extract the
 		# diagonal components used for the loss calculation
-		prec_mat1, L_diag1 = self.construct_precision_matrix(L_mat_elements1)
-		prec_mat2, L_diag2 = self.construct_precision_matrix(L_mat_elements2)
+		prec_mat1, L_diag1, _ = self.construct_precision_matrix(L_mat_elements1)
+		prec_mat2, L_diag2, _ = self.construct_precision_matrix(L_mat_elements2)
 
 		# Add each possible flip to the loss list. We will then take the
 		# minimum.

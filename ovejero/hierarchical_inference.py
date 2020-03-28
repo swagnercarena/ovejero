@@ -534,7 +534,7 @@ class HierarchicalClass:
 			plt.ylabel(hyperparam_plot_names[ci])
 			plt.xlabel('sample')
 			plt.axhline(self.target_eval_dict['hyps'][ci],c='k')
-			plt.show(block)
+			plt.show(block=block)
 			ci += 1
 
 	def plot_corner(self,burnin,hyperparam_plot_names=None,block=True):
@@ -566,7 +566,7 @@ class HierarchicalClass:
 				label_kwargs=dict(fontsize=10),
 				truths=self.target_eval_dict['hyps'][hyp_s:hyp_e],
 				levels=[0.68,0.95],color='#FFAA00',fill_contours=True)
-			plt.show(block)
+			plt.show(block=block)
 
 	def plot_distributions(self,burnin,hyperparam_plot_names=None,block=True):
 		"""
@@ -640,7 +640,7 @@ class HierarchicalClass:
 
 			plt.xlabel(lens_param)
 			plt.xlim([plt_min,plt_max])
-			plt.show(block)
+			plt.show(block=block)
 
 	def calculate_sample_weights(self,n_p_omega_samps,burnin):
 		"""

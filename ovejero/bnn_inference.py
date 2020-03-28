@@ -228,12 +228,18 @@ class InferenceClass:
 						axis=-1)
 					# Transform our matrix elements into a precision matrix and
 					# the precision matrix into a covariance matrix.
-					prec_mats, _ = self.loss_class.construct_precision_matrix(
+					_, _, L_mat = self.loss_class.construct_precision_matrix(
 						L_mat_elements)
-					cov_mats = tf.linalg.inv(prec_mats)
-					# Sample noise using our covariance matrices
-					mvn = tfp.distributions.MultivariateNormalFullCovariance(
-						loc=y_pred,covariance_matrix=cov_mats)
+					# The tensorflow probability function wants the lower
+					# triangular decomposition matrix of the covariance matrix.
+					# The easiest way to do that is to build the covariance matrix
+					# and then extract the cholesky decomposition.
+					L_mat = tf.linalg.inv(tf.transpose(L_mat,perm=[0,2,1]))
+					cov_mats = tf.matmul(L_mat,tf.transpose(L_mat,perm=[0,2,1]))
+					L_mat = tf.linalg.cholesky(cov_mats)
+					# Sample noise using our lower triangular matrices
+					mvn = tfp.distributions.MultivariateNormalTriL(
+						loc=y_pred,scale_tril=L_mat)
 					p_samps_tf = mvn.sample(1)
 
 					# Extract the numpy from the tensorflow
@@ -254,27 +260,30 @@ class InferenceClass:
 
 					# Now build the precision matrix for our two models and extract the
 					# diagonal components used for the loss calculation
-					prec_mat1, _ = self.loss_class.construct_precision_matrix(
+					_, _, L_mat1 = self.loss_class.construct_precision_matrix(
 						L_mat_elements1)
 					# We have to flatten the covariance matrices for the condition
 					# step later on.
-					cov_mats1 = tf.reshape(tf.linalg.inv(prec_mat1),(
-						self.batch_size,-1))
-					prec_mat2, _ = self.loss_class.construct_precision_matrix(
+					L_mat1 = tf.reshape(tf.linalg.inv(tf.transpose(L_mat1,
+						perm=[0,2,1])),(self.batch_size,-1))
+					_, _, L_mat2 = self.loss_class.construct_precision_matrix(
 						L_mat_elements2)
-					cov_mats2 = tf.reshape(tf.linalg.inv(prec_mat2),(
-						self.batch_size,-1))
+					L_mat2 = tf.reshape(tf.linalg.inv(tf.transpose(L_mat2,
+						perm=[0,2,1])),(self.batch_size,-1))
 
 					# Use random draws from a uniform distribution to select between the
 					# two outputs
 					switch = tf.random.uniform((self.batch_size,1))
 					y_pred = tf.where(switch<pi,y_pred1,y_pred2)
-					cov_mats = tf.reshape(tf.where(switch<pi,cov_mats1,cov_mats2),
+					# See full for cause of this weird back and forth
+					L_mat = tf.reshape(tf.where(switch<pi,L_mat1,L_mat2),
 						(self.batch_size,self.num_params,self.num_params))
+					cov_mats = tf.matmul(L_mat,tf.transpose(L_mat,perm=[0,2,1]))
+					L_mat = tf.linalg.cholesky(cov_mats)
 
 					# Draw from the alleatoric posterior.
-					mvn = tfp.distributions.MultivariateNormalFullCovariance(
-						loc=y_pred,covariance_matrix=cov_mats)
+					mvn = tfp.distributions.MultivariateNormalTriL(
+						loc=y_pred,scale_tril=L_mat)
 					p_samps_tf = mvn.sample(1)
 
 					# Extract the numpy from the tensorflow
@@ -368,7 +377,7 @@ class InferenceClass:
 			plt.ylabel('Prediction')
 			plt.xlabel('True Value')
 			plt.legend()
-		plt.show(block)
+		plt.show(block=block)
 
 	def report_stats(self):
 		"""
@@ -407,7 +416,7 @@ class InferenceClass:
 		# First plot the image and print its parameter values
 		plt.imshow(self.images[image_index][:,:,0])
 		plt.colorbar()
-		plt.show(block)
+		plt.show(block=block)
 		for pi in range(self.num_params):
 			print(self.final_params[pi],self.y_test[image_index][pi])
 
@@ -417,7 +426,7 @@ class InferenceClass:
 				plot_datapoints=False,label_kwargs=dict(fontsize=13),
 				truths=self.y_test[image_index],levels=[0.68,0.95],
 				dpi=1600, color=contour_color,fill_contours=True)
-		plt.show(block)
+		plt.show(block=block)
 
 	def comp_al_ep_unc(self,block=True,norm_diagonal=True):
 		"""
@@ -462,7 +471,7 @@ class InferenceClass:
 		fig.subplots_adjust(right=0.8)
 		cbar_ax = fig.add_axes([0.85, 0.35, 0.05, 0.3])
 		fig.colorbar(im, cax=cbar_ax)
-		plt.show(block)
+		plt.show(block=block)
 
 		#Now we want to plot the ratio to get an idea for how dominant
 		# one is over the other.
@@ -593,7 +602,7 @@ class InferenceClass:
 		else:
 			plt.legend(legend)
 		if show_plot:
-			plt.show(block)
+			plt.show(block=block)
 
 		return figure
 
