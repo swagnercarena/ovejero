@@ -15,7 +15,7 @@
             "lens_mass_theta_E_log"
         ],
         "root_path": "/home/swagnercarena/ovejero/datasets/train/",
-        "batch_size": 128,
+        "batch_size": 512,
         "dropout_regularizer": 1e-04,
         "dropout_rate": 0.3,
         "n_epochs": 160,
