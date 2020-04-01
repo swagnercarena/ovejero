@@ -613,8 +613,8 @@ class InferenceClass:
 		"""
 		return np.min(np.abs(self.predict_samps-self.y_test),axis=0)
 
-	def plot_min_dist(self,comp_min_dist_array,colors=None,block=True,axes=None,
-		legend=None,n_cols=3,bins=30):
+	def plot_min_dist(self,comp_min_dist_array,colors=None,block=True,
+		legend=None,n_cols=3,bins=100,range_list=None):
 		"""
 		Plot the minimum distance between the true point and a point in our 
 		sample for each point in our sample.
@@ -626,30 +626,28 @@ class InferenceClass:
 		"""
 		# Get the minimum distance in each coordinate between the true point
 		# and the predicted samples
-		if axes is None:
-			fig = plt.subplots(figsize=(18,15),dpi=300)
-			new_axes = []
-		else:
-			new_axes = axes
+		fig = plt.subplots(figsize=(18,15),dpi=300)
 		# Doing a lot of work here just to get the plots to show up on a nice
 		# grid
 		for pi, print_name in enumerate(self.final_params_print_names):
-			if axes is None:
-				ax = plt.subplot2grid((math.ceil(
-					len(self.final_params_print_names)/n_cols),
-					n_cols), (pi//n_cols,pi%n_cols))
-				new_axes.append(ax)
+			ax = plt.subplot2grid((math.ceil(
+				len(self.final_params_print_names)/n_cols),
+				n_cols), (pi//n_cols,pi%n_cols))
+			if range_list is not None:
+				range_in = range_list[pi]
 			else:
-				ax = new_axes[pi]
+				range_in = None
 			ax.hist(comp_min_dist_array[:,:,pi].T,bins=bins,color=colors,
-				histtype='bar',linewidth=3,alpha=0.7,log=True)
-			# ax.set_yscale('log')
+				histtype='step',linewidth=3,alpha=0.7,cumulative=-1,
+				label=legend,range=range_in)
+			ax.set_yscale('log')
 			ax.set_title(r'Minimum $\Delta$%s for Validation Lenses'%(
 				print_name))
 			ax.set_ylabel('Number of Lenses')
 			ax.set_xlabel(r'$\Delta$%s'%(print_name))
-			if legend is not None:
-				ax.legend(legend)
+			ax.ticklabel_format(style='sci',scilimits=(1,20),axis='x')
+			ax.xaxis.major.formatter._useMathText = True
+			ax.legend()
 
 
 
