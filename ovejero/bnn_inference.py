@@ -450,7 +450,7 @@ class InferenceClass:
 		# Normalize by the diagonal term for plotting.
 		y_cov_diag = 1/np.sqrt(np.diag(y_cov_median))
 		if norm_diagonal is True:
-			al_median = (al_median*y_cov_diag)*y_cov_diag.T
+			al_median = (y_cov_diag*(al_median*y_cov_diag).T).T
 			y_cov_median = (y_cov_diag*(y_cov_median*y_cov_diag).T).T
 		# Get the maximum and minimum values
 		vmax = max(np.max(al_median),np.max(y_cov_median))
@@ -476,7 +476,7 @@ class InferenceClass:
 		#Now we want to plot the ratio to get an idea for how dominant
 		# one is over the other.
 		fig = plt.figure(figsize=(6,6))
-		plt.imshow(al_median/y_cov_median,vmax=1)
+		plt.imshow(al_median/y_cov_median,vmax=1,vmin=0)
 		plt.title('Median Aleatoric / Total Covariance')
 		fig.axes[0].set_xticklabels([0]+self.final_params_print_names)
 		fig.axes[0].set_yticklabels([0]+self.final_params_print_names)

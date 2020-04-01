@@ -261,7 +261,7 @@ def model_loss_builder(cfg, verbose=False):
 		raise RuntimeError('BNN type %s does not exist'%(bnn_type))
 	# The mse loss doesn't depend on model type.
 	mse_loss = loss_class.mse_loss
-	adam = Adam(lr=learning_rate,amsgrad=False,decay=decay)
+	adam = Adam(lr=learning_rate,amsgrad=False)#,decay=decay)
 
 	if dropout_type == 'concrete':
 		model = bnn_alexnet.concrete_alexnet((img_dim, img_dim, 1), num_outputs,
