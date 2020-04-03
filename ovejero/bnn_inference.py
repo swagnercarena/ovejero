@@ -180,6 +180,11 @@ class InferenceClass:
 			single_image (np.array): A numpy array for a single image to generate
 				samples for.
 		"""
+		# If we only have a single_image then we have to overide the config file.
+		if single_image is None:
+			batch_size = self.batch_size
+		else:
+			batch_size = 1
 
 		if sample_save_dir is None or not os.path.isdir(sample_save_dir):
 			if sample_save_dir is not None:
@@ -189,13 +194,11 @@ class InferenceClass:
 				for image_batch, yt_batch in self.tf_dataset_v.take(1):
 					self.images = image_batch
 					self.y_test = yt_batch.numpy()
-				batch_size = self.batch_size
 			else:
 				self.images = tf.convert_to_tensor(np.expand_dims(
 					np.expand_dims(single_image,axis=0),axis=-1))
 				# We cannot read y_test, so we will just set it to zeros.
 				self.y_test = np.zeros((1,self.num_params))
-				batch_size = 1
 
 			# This is where we will save the samples for each prediction. We will
 			# use this to numerically extract the covariance.
