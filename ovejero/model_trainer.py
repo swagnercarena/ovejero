@@ -20,6 +20,7 @@ import copy, glob
 # Import the code to construct the bnn and the data pipeline
 from ovejero import bnn_alexnet, data_tools
 
+
 def config_checker(cfg):
 	"""
 	Check that configuration file meets ovejero requirements. Throw an error
@@ -57,12 +58,12 @@ def config_checker(cfg):
 
 def load_config(config_path):
 	"""
-	Load a configuration file from the path and check that it meets the 
+	Load a configuration file from the path and check that it meets the
 	requirements.
 
 	Parameters
 	----------
-		config_path (str): The path to the config file to be loaded 
+		config_path (str): The path to the config file to be loaded
 
 	Returns
 	-------
@@ -101,7 +102,7 @@ def prepare_tf_record(cfg,root_path,tf_record_path,final_params,train_or_test):
 	# The list of lens parameters that should be trained on. We will
 	# append to this, so we want to make a copy.
 	lens_params = copy.copy(cfg['dataset_params']['lens_params'])
-	# Where to save the lens parameters to after the preprocessing 
+	# Where to save the lens parameters to after the preprocessing
 	# transformations
 	new_param_path = os.path.join(root_path,
 		cfg['dataset_params']['new_param_path'])
@@ -170,7 +171,7 @@ def prepare_tf_record(cfg,root_path,tf_record_path,final_params,train_or_test):
 
 def get_normed_pixel_scale(cfg,pixel_scale):
 	"""
-	Return a dictionary with the pixel scale normalized according to the 
+	Return a dictionary with the pixel scale normalized according to the
 	normalization of each shift parameter.
 
 	Parameters
@@ -180,7 +181,7 @@ def get_normed_pixel_scale(cfg,pixel_scale):
 
 	Returns
 	-------
-		(dict): A dictionary of the pixel scales renormalized in the same way as 
+		(dict): A dictionary of the pixel scales renormalized in the same way as
 			the shift parameters.
 	"""
 	# Get the parameters we need to read the normalization from
@@ -213,8 +214,8 @@ def model_loss_builder(cfg, verbose=False):
 	Returns
 	-------
 		(tf.keras.model, function): A bnn model of the type specified in config
-			and a callable function to construct the tesnorflow graph for the 
-			loss. 
+			and a callable function to construct the tesnorflow graph for the
+			loss.
 	"""
 	# Load the parameters we need from the config file. Some of these will
 	# be repeats from the main script.
@@ -275,7 +276,7 @@ def model_loss_builder(cfg, verbose=False):
 			kernel_regularizer=kr,dropout_rate=dropout_rate)
 		model.compile(loss=loss, optimizer=adam, metrics=[loss,mse_loss])
 	else:
-		raise ValueError('dropout type %s is not an option.'%(dropout_type) + 
+		raise ValueError('dropout type %s is not an option.'%(dropout_type) +
 			' Either standard or concrete')
 
 	if verbose:
@@ -293,12 +294,12 @@ def model_loss_builder(cfg, verbose=False):
 
 def main():
 	"""
-	Initializes and trains a BNN network. Path to config file are read from 
+	Initializes and trains a BNN network. Path to config file are read from
 	command line arguments.
 	"""
 	# Initialize argument parser to pull neccesary paths
 	parser = argparse.ArgumentParser()
-	parser.add_argument('config',help='json config file containing BNN type ' + 
+	parser.add_argument('config',help='json config file containing BNN type ' +
 		'and data/model paths')
 	args = parser.parse_args()
 
@@ -372,7 +373,7 @@ def main():
 	# We let keras deal with epochs instead of the tf dataset object.
 	tf_dataset_t = data_tools.build_tf_dataset(tf_record_path_t,final_params,
 		batch_size,n_epochs,baobab_config_path,norm_images=norm_images,
-		shift_pixels=shift_pixels,shift_params=shift_params, 
+		shift_pixels=shift_pixels,shift_params=shift_params,
 		normed_pixel_scale=normed_pixel_scale)
 	# Validation dataset will, by default, have no augmentation but will have
 	# the images normalized if requested.
@@ -390,7 +391,7 @@ def main():
 
 	# TODO add validation data.
 	model.fit(tf_dataset_t,callbacks=[tensorboard, modelcheckpoint],
-		epochs=n_epochs, steps_per_epoch = steps_per_epoch, 
+		epochs=n_epochs, steps_per_epoch = steps_per_epoch,
 		validation_data=tf_dataset_v)
 
 if __name__ == '__main__':

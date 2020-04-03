@@ -29,6 +29,7 @@ import numpy as np
 import os, emcee, corner
 from matplotlib import pyplot as plt
 import lenstronomy.Util.util as util
+from matplotlib.lines import Line2D
 
 
 class ForwardModel(bnn_inference.InferenceClass):
@@ -416,5 +417,17 @@ class ForwardModel(bnn_inference.InferenceClass):
 				truths=self.true_values,levels=[0.68,0.95],
 				dpi=1600, color=color_map[1],fig=fig,fill_contours=True,
 				range=plot_limits,truth_color=truth_color)
+
+		# Add a nice legend to our contours
+		handles = [Line2D([0], [0], color=color_map[0], lw=10),
+			Line2D([0], [0], color=color_map[1], lw=10)]
+		bnn_type = self.cfg['training_params']['bnn_type']
+		if bnn_type == 'gmm':
+			bnn_type = 'GMM'
+		else:
+			bnn_type = bnn_type.capitalize()
+		fig.legend(handles,['Forward Modeling',bnn_type+' BNN'],loc=(0.55,0.75),
+			fontsize=20)
+
 		plt.show(block=block)
 
