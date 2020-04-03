@@ -8,17 +8,17 @@ parser.add_argument('config_path', type=str,
 	help='The path to the ovejero config used to train the model.')
 parser.add_argument('target_baobab_omega_path', type=str,
 	help='The boabab config containing the target distribution')
-parser.add_argument('test_dataset_path', type=str, 
+parser.add_argument('test_dataset_path', type=str,
 	help='The path to the test data')
-parser.add_argument('test_dataset_tf_record_path', type=str, 
+parser.add_argument('test_dataset_tf_record_path', type=str,
 	help='The path to the test data tfrecord')
-parser.add_argument('sample_save_dir', type=str, 
+parser.add_argument('sample_save_dir', type=str,
 	help='The directory to save samples')
-parser.add_argument('chains_save_path', type=str, 
+parser.add_argument('chains_save_path', type=str,
 	help='The path to save the chains')
-parser.add_argument('num_lens_samples', type=int, 
+parser.add_argument('num_lens_samples', type=int,
 	help='The number of lens samples to use')
-parser.add_argument('num_emcee_samples', type=int, 
+parser.add_argument('num_emcee_samples', type=int,
 	help='The number of emcee samples to take')
 
 args = parser.parse_args()
@@ -48,16 +48,16 @@ def recursive_str_checker(cfg_dict):
             recursive_str_checker(cfg_dict[key])
 recursive_str_checker(cfg)
 
-# The InferenceClass will do all the heavy lifting of preparing the model from 
+# The InferenceClass will do all the heavy lifting of preparing the model from
 # the configuration file,
-# initializing the validation dataset, and providing outputs correctly 
+# initializing the validation dataset, and providing outputs correctly
 # marginalized over the BNN uncertainties.
 hier_infer = hierarchical_inference.HierarchicalClass(cfg,
 	interim_baobab_omega_path,target_baobab_omega_path,test_dataset_path,
 	test_dataset_tf_record_path)
 
 # Now we just have to ask the InferenceClass to spin up some samples from our BNN.
-# The more samples, the more accurate our plots and metrics will be. The right 
+# The more samples, the more accurate our plots and metrics will be. The right
 # value to use unfortunately requires a bit of trial and error.
 hier_infer.gen_samples(args.num_lens_samples,args.sample_save_dir)
 

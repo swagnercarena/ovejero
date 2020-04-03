@@ -357,7 +357,8 @@ class ForwardModel(bnn_inference.InferenceClass):
 		return chains,new_param_names
 
 	def plot_posterior_contours(self,burnin,num_samples,block=True,
-		sample_save_dir=None):
+		sample_save_dir=None,color_map=['#FFAA00','#41b6c4'],
+		plot_limits=None):
 		"""
 		Plot the corner plot of chains resulting from the emcee for the
 		lens mass parameters.
@@ -371,6 +372,10 @@ class ForwardModel(bnn_inference.InferenceClass):
 			sample_save_dir (str): A path to a folder to save/load the samples.
 				If None samples will not be saved. Do not include .npy, this will
 				be appended (since several files will be generated).
+			color_map ([str,...]): A list of strings specifying the colors to
+				use in the contour plots.
+			plot_limits ([(float,float),..]): A list of float tuples that define
+				the maximum and minimum plot range for each posterior parameter.
 		"""
 		# Get the chains from the samples
 		chains = self.sampler.get_chain()[burnin:].reshape(-1,
@@ -396,15 +401,18 @@ class ForwardModel(bnn_inference.InferenceClass):
 		fig = corner.corner(chains,
 			labels=new_param_names,
 			bins=20,show_titles=True, plot_datapoints=False,
-			label_kwargs=dict(fontsize=10),
-			truths=self.true_values,
-			levels=[0.68,0.95],color='#FFAA00',fill_contours=True)
+			label_kwargs=dict(fontsize=10),truths=self.true_values,
+			levels=[0.68,0.95],color=color_map[0],fill_contours=True,
+			range=plot_limits)
+
+		# Now overlay the samples from the BNN
 		self.gen_samples(num_samples,sample_save_dir=sample_save_dir,
 			single_image=self.true_image/np.std(self.true_image))
 		corner.corner(self.predict_samps[:,0,:],bins=20,
 				labels=self.final_params_print_names,show_titles=True,
 				plot_datapoints=False,label_kwargs=dict(fontsize=13),
 				truths=self.true_values,levels=[0.68,0.95],
-				dpi=1600, color='#41b6c4',fig=fig,fill_contours=True)
+				dpi=1600, color=color_map[1],fig=fig,fill_contours=True,
+				range=plot_limits)
 		plt.show(block=block)
 
