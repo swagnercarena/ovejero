@@ -84,7 +84,7 @@ class InferenceClass:
 		self.predict_samps = None
 		self.samples_init = False
 
-	def fix_flip_pairs(self,predict_samps,y_test):
+	def fix_flip_pairs(self,predict_samps,y_test,batch_size):
 		"""
 		Update predict_samps to account for pairs of points (i.e.
 		ellipticities) that give equivalent physical lenses if both values
@@ -98,6 +98,7 @@ class InferenceClass:
 			y_test (np.array): A numpy array with dimensions (batch_size,
 				num_params) that contains the true values of each example
 				in the batch.
+			batch_size (int): The batch size.
 
 		Notes
 		-----
@@ -116,7 +117,7 @@ class InferenceClass:
 			min_flip_indices = np.argmin(np.sum(np.abs(predict_flips-y_test),
 				axis=-1),axis=0)
 			predict_samps[samp_i] = predict_flips[min_flip_indices,
-				np.arange(self.batch_size)]
+				np.arange(batch_size)]
 
 	def undo_param_norm(self,predict_samps,y_test,al_samp):
 		"""
@@ -305,7 +306,7 @@ class InferenceClass:
 					raise NotImplementedError('gen_pred_cov does not yet support'+
 						' %s models'%(self.bnn_type))
 
-			self.fix_flip_pairs(predict_samps,self.y_test)
+			self.fix_flip_pairs(predict_samps,self.y_test,batch_size)
 			self.undo_param_norm(predict_samps,self.y_test,al_samp)
 
 			self.predict_samps = predict_samps
