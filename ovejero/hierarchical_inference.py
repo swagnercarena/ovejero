@@ -9,7 +9,7 @@ distributions.
 
 Examples
 --------
-The demo Test_Hierarchical_Inference.ipynb gives a number of examples on how to 
+The demo Test_Hierarchical_Inference.ipynb gives a number of examples on how to
 use this module.
 """
 import numpy as np
@@ -27,15 +27,16 @@ from matplotlib.lines import Line2D
 # one of the cpus calls the log likelihood function, slowing things down.
 lens_samps = None
 
+
 def build_evaluation_dictionary(baobab_cfg,lens_params,
 	extract_hyperpriors=False):
 	"""
-	Map between the baobab config and a dictionary that contains the 
+	Map between the baobab config and a dictionary that contains the
 	evaluation function and hyperparameter indices for each parameters.
 
 	Parameters
 	----------
-		baobab_cfg (dict): The baobab configuration file containing the 
+		baobab_cfg (dict): The baobab configuration file containing the
 			distributions we want to consider for each parameter.
 		lens_params ([str,...]): The parameters to pull the distributions from.
 		extract_hyperpriors (bool): If set to true, the function will attempt to
@@ -48,12 +49,12 @@ def build_evaluation_dictionary(baobab_cfg,lens_params,
 
 	Notes
 	-----
-		This will be automatically forward compatible with new distributions in 
+		This will be automatically forward compatible with new distributions in
 		baobab. Only uniform hyperpriors are supported for now.
 	"""
 
 	# Initialize eval_dict with empty lists for hyperparameters and hyperpriors.
-	eval_dict = dict(hyp_len = 0, hyps = [], hyp_prior = [], hyp_names=[])
+	eval_dict = dict(hyp_len=0, hyps=[], hyp_prior=[], hyp_names=[])
 	# For each lens parameter add the required hyperparameters and evaluation
 	# function.
 	for lens_param in lens_params:
@@ -102,6 +103,7 @@ def build_evaluation_dictionary(baobab_cfg,lens_params,
 
 	return eval_dict
 
+
 def log_p_xi_omega(samples, hyp, eval_dict,lens_params):
 	"""
 	Calculate log p(xi|omega) - the probability of the lens parameters in
@@ -111,7 +113,7 @@ def log_p_xi_omega(samples, hyp, eval_dict,lens_params):
 	----------
 		samples (np.array): A numpy array with dimensions (n_params,n_samps,
 			batch_size)
-		hyp (np.array): A numpy array with dimensions (n_hyperparameters). 
+		hyp (np.array): A numpy array with dimensions (n_hyperparameters).
 			These are the hyperparameters that will be used for evaluation.
 		eval_dict (dict): A dictionary from build_evaluation_dictionary to
 			query for the evaluation functions.
@@ -123,7 +125,7 @@ def log_p_xi_omega(samples, hyp, eval_dict,lens_params):
 		np.array: A numpy array of the shape (n_samps,batch_size) containing
 			the log p(xi|omega) for each sample.
 	"""
-	
+
 	# We iterate through each lens parameter and carry out the evaluation
 
 	# TODO: Make this faster. .1 seconds is a bit slow.
@@ -137,6 +139,7 @@ def log_p_xi_omega(samples, hyp, eval_dict,lens_params):
 
 	return logpdf
 
+
 class ProbabilityClass:
 	"""
 	A companion class to HierarchicalClass that does all of the probability
@@ -148,7 +151,7 @@ class ProbabilityClass:
 				containing the target distribution evaluation functions.
 		interim_eval_dict (dict): A dictionary from build_evaluation_dictionary
 				containing the interim distribution evaluation functions.
-		lens_params ([str,....]): A list of strings containing the lens params 
+		lens_params ([str,....]): A list of strings containing the lens params
 			that should be written out as features
 	"""
 	def __init__(self,target_eval_dict,interim_eval_dict,lens_params):
@@ -169,7 +172,7 @@ class ProbabilityClass:
 
 		Parameters
 		----------
-			hyp (np.array): A numpy array with dimensions (n_hyperparameters). 
+			hyp (np.array): A numpy array with dimensions (n_hyperparameters).
 				These are the hyperparameters that will be used for evaluation.
 
 		Returns
@@ -199,14 +202,13 @@ class ProbabilityClass:
 		# Set initialziation variable to True.
 		self.samples_init = True
 
-
 	def log_post_omega(self, hyp):
 		"""
 		Given generated data, calculate the log posterior of omega.
 
 		Parameters
 		----------
-			hyp (np.array): A numpy array with dimensions (n_hyperparameters). 
+			hyp (np.array): A numpy array with dimensions (n_hyperparameters).
 				These are the values of omega's parameters.
 
 		Returns
@@ -217,7 +219,7 @@ class ProbabilityClass:
 		-----
 			Constant factors with respect to omega are ignored.
 		"""
-		if self.samples_init == False:
+		if self.samples_init is False:
 			raise RuntimeError('Must generate samples before fitting')
 		global lens_samps
 		# Add the prior on omega
@@ -238,6 +240,7 @@ class ProbabilityClass:
 
 		return lprior + np.sum(like_ratio)
 
+
 class HierarchicalClass:
 	"""
 	A class that contains all of the functions needed to conduct a hierarchical
@@ -245,15 +248,15 @@ class HierarchicalClass:
 	Parameters
 	----------
 		cfg (dict): The dictionary attained from reading the json config file.
-		interim_baobab_omega_path (str): The string specifying the path to the 
-			baobab config for the interim omega. 
-		target_baobab_omega_path (str): The string specifying the path to the 
+		interim_baobab_omega_path (str): The string specifying the path to the
+			baobab config for the interim omega.
+		target_baobab_omega_path (str): The string specifying the path to the
 			baobab config for the target omega. The exact value of the
-			distribution parameters in omega will be used as intitialization 
+			distribution parameters in omega will be used as intitialization
 			points for the mc chains.
-		test_dataset_path (str): The path to the dataset on which hiearchical 
+		test_dataset_path (str): The path to the dataset on which hiearchical
 			inference will be conducted
-		test_dataset_tf_record_path (str): The path where the TFRecord will be 
+		test_dataset_tf_record_path (str): The path where the TFRecord will be
 			saved. If it already exists it will be loaded.
 	"""
 	def __init__(self,cfg,interim_baobab_omega_path,target_baobab_omega_path,
@@ -271,14 +274,14 @@ class HierarchicalClass:
 			target_baobab_omega_path)
 		self.num_params = len(self.lens_params)
 		self.norm_images = cfg['training_params']['norm_images']
-		n_npy_files =  len(glob.glob(os.path.join(test_dataset_path,'X*.npy')))
+		n_npy_files = len(glob.glob(os.path.join(test_dataset_path,'X*.npy')))
 		self.cfg['training_params']['batch_size'] = n_npy_files
-		# Build the evaluation dictionaries from the 
+		# Build the evaluation dictionaries from the
 		self.interim_eval_dict = build_evaluation_dictionary(
-			self.interim_baobab_omega, self.lens_params, 
+			self.interim_baobab_omega, self.lens_params,
 			extract_hyperpriors=False)
 		self.target_eval_dict = build_evaluation_dictionary(
-			self.target_baobab_omega, self.lens_params, 
+			self.target_baobab_omega, self.lens_params,
 			extract_hyperpriors=True)
 		# Make our inference class we'll use to generate samples.
 		self.infer_class = bnn_inference.InferenceClass(self.cfg)
@@ -311,7 +314,7 @@ class HierarchicalClass:
 
 		Parameters
 		----------
-			hyp (np.array): A numpy array with dimensions (n_hyperparameters). 
+			hyp (np.array): A numpy array with dimensions (n_hyperparameters).
 				These are the hyperparameters that will be used for evaluation.
 
 		Returns
@@ -328,7 +331,7 @@ class HierarchicalClass:
 		Parameters
 		----------
 			num_samples (int): The number of samples to draw per lens.
-			sample_save_dir (str): A path to a folder to save/load the samples. 
+			sample_save_dir (str): A path to a folder to save/load the samples.
 				If None samples will not be saved. Do not include .npy, this will
 				be appended (since several files will be generated).
 		"""
@@ -418,7 +421,7 @@ class HierarchicalClass:
 
 		Parameters
 		----------
-			hyp (np.array): A numpy array with dimensions (n_hyperparameters). 
+			hyp (np.array): A numpy array with dimensions (n_hyperparameters).
 				These are the values of omega's parameters.
 
 		Returns
@@ -435,12 +438,12 @@ class HierarchicalClass:
 		"""
 		Initialize the sampler to be used by run_samples.
 
-		
+
 		Parameters
 		----------
 			n_walkers (int): The number of walkers used by the sampler.
 				Must be at least twice the number of hyperparameters.
-			save_path (str): A pickle path specifying where to save the 
+			save_path (str): A pickle path specifying where to save the
 				sampler chains. If a sampler chain is already present in the
 				path it will be loaded.
 			pool (Pool): An instance of multiprocessing.Pool which will be
@@ -453,7 +456,7 @@ class HierarchicalClass:
 			self.cur_state = None
 		else:
 			print('No chains found at %s'%(save_path))
-			self.cur_state = (np.random.rand(n_walkers, ndim)*0.05 + 
+			self.cur_state = (np.random.rand(n_walkers, ndim)*0.05 +
 				self.target_eval_dict['hyps'])
 			# Inflate lower and upper bounds since this can otherwise
 			# cause none of the initial samples to be non -np.inf.
@@ -466,7 +469,7 @@ class HierarchicalClass:
 			# Ensure that no walkers start at a point with log probability
 			# - np.inf
 			all_finite = False
-			while all_finite==False:
+			while all_finite is False:
 				all_finite = True
 				f_counter = 0.0
 				for w_i in range(n_walkers):
@@ -484,7 +487,7 @@ class HierarchicalClass:
 
 		# Very important I pass in prob_class.log_post_omega here to allow
 		# pickling.
-		self.sampler = emcee.EnsembleSampler(n_walkers, ndim, 
+		self.sampler = emcee.EnsembleSampler(n_walkers, ndim,
 			self.prob_class.log_post_omega, backend=self.backend,pool=pool)
 
 		self.sampler_init = True
@@ -497,15 +500,14 @@ class HierarchicalClass:
 		----------
 			n_samps (int): The number of samples to take
 		"""
-		if self.prob_class.samples_init == False:
+		if self.prob_class.samples_init is False:
 			raise RuntimeError('Must generate samples before inference')
-		if self.sampler_init == False:
+		if self.sampler_init is False:
 			raise RuntimeError('Must initialize sampler before running sampler')
 
 		self.sampler.run_mcmc(self.cur_state,n_samps,progress=progress)
 
 		self.cur_state = None
-
 
 	def plot_chains(self,burnin=None,hyperparam_plot_names=None,
 		block=True):
@@ -527,15 +529,13 @@ class HierarchicalClass:
 		chains = self.sampler.get_chain()
 		if burnin is not None:
 			chains = chains[burnin:]
-		ci = 0
-		for chain in chains.T:
+		for ci, chain in enumerate(chains.T):
 			plt.plot(chain.T,'.')
 			plt.title(hyperparam_plot_names[ci])
 			plt.ylabel(hyperparam_plot_names[ci])
 			plt.xlabel('sample')
 			plt.axhline(self.target_eval_dict['hyps'][ci],c='k')
 			plt.show(block=block)
-			ci += 1
 
 	def plot_corner(self,burnin,hyperparam_plot_names=None,block=True):
 		"""
@@ -611,8 +611,8 @@ class HierarchicalClass:
 			n_chains_plot = 50
 			for chain in chains[np.random.randint(len(chains),size=n_chains_plot)]:
 				chain_eval = np.exp(self.target_eval_dict[lens_param]['eval_fn'](
-				eval_pdf_at,*chain[hyp_s:hyp_e]))
-				plt.plot(eval_pdf_at,chain_eval,color=color_map[1], lw=2, 
+					eval_pdf_at,*chain[hyp_s:hyp_e]))
+				plt.plot(eval_pdf_at,chain_eval,color=color_map[1], lw=2,
 					alpha=5/n_chains_plot)
 
 			# Plot the true distribution these parameters were being drawn
@@ -649,12 +649,12 @@ class HierarchicalClass:
 
 		Parameters
 		----------
-			n_p_omega_samps (int): The number of samples from p(Omega|{d}) to 
+			n_p_omega_samps (int): The number of samples from p(Omega|{d}) to
 				use in the reweighting.
 		"""
 		# Define the global variables we'll use.
 		global lens_samps
-		# First we'll get samples from the chain we'll use to reweight our 
+		# First we'll get samples from the chain we'll use to reweight our
 		# contour.
 		samples = self.sampler.get_chain()[burnin:].reshape(-1,
 			self.target_eval_dict['hyp_len'])
@@ -673,28 +673,28 @@ class HierarchicalClass:
 		return weights
 
 	def plot_reweighted_lens_posterior(self,burnin,image_index,plot_limits=None,
-		n_p_omega_samps = 100, color_map = ["#FFAA00","#41b6c4"],
+		n_p_omega_samps=100, color_map=["#FFAA00","#41b6c4"],
 		block=True):
 		"""
-		Plot the original and reweighted posterior contours for a specific image 
+		Plot the original and reweighted posterior contours for a specific image
 		along with the image itself.
-		
+
 		Parameters
 		----------
 			burnin (int): How many of the initial samples to drop as burnin
-			image_index (int): The integer index of the image in the validation 
+			image_index (int): The integer index of the image in the validation
 				set to plot the posterior of.
 			plot_limits ([(float,float),..]): A list of float tuples that define
 				the maximum and minimum plot range for each posterior parameter.
-			n_p_omega_samps (int): The number of samples from p(Omega|{d}) to 
+			n_p_omega_samps (int): The number of samples from p(Omega|{d}) to
 				use in the reweighting.
 			color_map ([str,...]): The colors to use in the contour plotting.
 			block (bool): If true, block excecution after plt.show() command
 		"""
 		# Plot the contours without the reweighting first.
-		fig = corner.corner(self.infer_class.predict_samps[:,image_index,:],bins=20,
-				labels=self.infer_class.final_params_print_names,show_titles=True, 
-				plot_datapoints=False,label_kwargs=dict(fontsize=13),
+		fig = corner.corner(self.infer_class.predict_samps[:,image_index,:],
+				bins=20, labels=self.infer_class.final_params_print_names,
+				show_titles=True,plot_datapoints=False,label_kwargs=dict(fontsize=13),
 				truths=self.infer_class.y_test[image_index],levels=[0.68,0.95],
 				dpi=1600, color=color_map[0],fill_contours=True,
 				range=plot_limits)
@@ -702,9 +702,9 @@ class HierarchicalClass:
 		weights = self.calculate_sample_weights(n_p_omega_samps,burnin)
 		weights /= np.sum(weights,axis=0)
 		weights = weights[:,image_index]
-		
+
 		corner.corner(self.infer_class.predict_samps[:,image_index,:],bins=20,
-				labels=self.infer_class.final_params_print_names,show_titles=True, 
+				labels=self.infer_class.final_params_print_names,show_titles=True,
 				plot_datapoints=False,label_kwargs=dict(fontsize=13),
 				truths=self.infer_class.y_test[image_index],levels=[0.68,0.95],
 				dpi=1600, color=color_map[1],fill_contours=True,
@@ -713,7 +713,7 @@ class HierarchicalClass:
 	def plot_reweighted_calibration(self,burnin,n_perc_points,
 		n_p_omega_samps=100,color_map=['#1b9e77','#d95f02','#7570b3'],
 		legend=['Perfect Calibration','Bare Network','Reweighted Network']):
-		"""	
+		"""
 		Plot the calibration plot reweighted using the samples of Omega
 
 		Parameters
@@ -721,7 +721,7 @@ class HierarchicalClass:
 			burnin (int): How many of the initial samples to drop as burnin
 			n_perc_point (int): The number of percentages to probe in the
 				plotting.
-			n_p_omega_samps (int): The number of samples from p(Omega|{d}) to 
+			n_p_omega_samps (int): The number of samples from p(Omega|{d}) to
 				use in the reweighting.
 			color_map ([str,...]): The colors to use in the calibration
 				plots. Must include 3 colors.

@@ -51,7 +51,7 @@ cfg.numerics = dict(
 
 cfg.image = dict(
              num_pix=64, # cutout pixel size
-             inverse=False, # if True, coord sys is ra to the left, if False, to the right 
+             inverse=False, # if True, coord sys is ra to the left, if False, to the right
              )
 
 cfg.bnn_omega = dict(

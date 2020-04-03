@@ -2,8 +2,8 @@
 """
 Build the TensorFlow model and loss functions
 
-This module contains the functions needed to build the BNN model used in ovejero
-as well as the loss functions for the different posteriors.
+This module contains the functions needed to build the BNN model used in
+ovejero as well as the loss functions for the different posteriors.
 
 See the script model_trainer.py for examples of how to use these functions.
 """
@@ -15,6 +15,7 @@ import tensorflow.keras.backend as K
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Flatten, Conv2D, MaxPooling2D, Input, Dense
 from tensorflow.keras.layers import Layer, InputSpec
+
 
 class AlwaysDropout(Layer):
 	"""
@@ -34,7 +35,7 @@ class AlwaysDropout(Layer):
 		super(AlwaysDropout, self).__init__(**kwargs)
 		# Check for a bad dropout input
 		if dropout_rate >= 1.0 or dropout_rate < 0.0:
-			raise ValueError('dropout rate of %f not between 0 and 1'%(
+			raise ValueError('dropout rate of %f not between 0 and 1' % (
 				dropout_rate))
 		# Save the dropout rate for later.
 		self.dropout_rate = dropout_rate
@@ -47,7 +48,7 @@ class AlwaysDropout(Layer):
 		Parameters
 		----------
 		inputs (tf.Keras.Layer): The inputs to the Dense layer.
-		training (bool): A required input for call. Setting training to 
+		training (bool): A required input for call. Setting training to
 			true or false does nothing because always dropout behaves the
 			same way in both cases.
 
@@ -81,14 +82,14 @@ class AlwaysDropout(Layer):
 		return input_shape
 
 
-def cd_regularizer(p, kernel, kernel_regularizer, dropout_regularizer, 
+def cd_regularizer(p, kernel, kernel_regularizer, dropout_regularizer,
 	input_dim):
 	"""
 	Calculate the regularization term for concrete dropout.
 
 	Parameters
 	----------
-		p (tf.Tensor): A 1D Tensor containing the p value for dropout (between 
+		p (tf.Tensor): A 1D Tensor containing the p value for dropout (between
 			0 and 1).
 		kernel (tf.Tensor): A 2D Tensor defining the weights of the Dense
 			layer
@@ -115,6 +116,7 @@ def cd_regularizer(p, kernel, kernel_regularizer, dropout_regularizer,
 	regularizer += kernel_regularizer * K.sum(K.square(kernel)) / (1.0 - p)
 	return regularizer
 
+
 class ConcreteDropout(Layer):
 	"""
 	This class defines a concrete dropout layer that is built around a
@@ -122,12 +124,12 @@ class ConcreteDropout(Layer):
 	optimized along with the model's weights themselves. Heavy inspiration
 	from code for arxiv.1705.07832.
 	"""
-	def __init__(self, output_dim, activation=None, 
+	def __init__(self, output_dim, activation=None,
 		kernel_initializer='glorot_uniform', bias_initializer='zeros',
 		kernel_regularizer=1e-6, dropout_regularizer=1e-5, init_min=0.1,
 		init_max=0.1, temp=0.1, random_seed=None, **kwargs):
 		"""
-		Initialize the Concrete dropout Dense layer. This will initialize the 
+		Initialize the Concrete dropout Dense layer. This will initialize the
 		dense layer along with the overhead needed for concrete dropout.
 
 		Parameters
@@ -147,7 +149,7 @@ class ConcreteDropout(Layer):
 			init_max (float): The maximum initial value of the dropout rate
 			temp (float): The temperature that defines how close the concrete
 				distribution will be to true dropout.
-			random_seed (int): A seed to use in the random function calls. If 
+			random_seed (int): A seed to use in the random function calls. If
 				None no explicit seed will be used.
 
 		Returns
@@ -193,15 +195,15 @@ class ConcreteDropout(Layer):
 		"""
 		assert len(input_shape) >= 2
 		input_dim = input_shape[-1]
-		
+
 		self.kernel = self.add_weight(shape=(input_dim, self.output_dim),
 			initializer=self.kernel_initializer, name='kernel')
 		self.bias = self.add_weight(shape=(self.output_dim,),
-			initializer=self.bias_initializer,name='bias')
-		# Although we define p in logit space, we then apply the sigmoid 
+			initializer=self.bias_initializer, name='bias')
+		# Although we define p in logit space, we then apply the sigmoid
 		# operation to get the desired value between 0 and 1.
-		self.p_logit = self.add_weight(name='p_logit',shape=(1,),
-			initializer=initializers.RandomUniform(self.init_min, 
+		self.p_logit = self.add_weight(name='p_logit', shape=(1,),
+			initializer=initializers.RandomUniform(self.init_min,
 				self.init_max), trainable=True)
 
 		# Because of issues with Keras, these functions need to be defined
@@ -212,15 +214,15 @@ class ConcreteDropout(Layer):
 
 			Parameters
 			----------
-				p_logit (tf.Tensor): A 1D Tensor containing the p_logit value 
+				p_logit (tf.Tensor): A 1D Tensor containing the p_logit value
 					for dropout.
 
 			Returns
 			-------
-				(tf.Tensor): The tensorflow graph to calculate the 
+				(tf.Tensor): The tensorflow graph to calculate the
 					p_logit regularization term.
 			"""
-			# Although we define p in logit space, we then apply the sigmoid 
+			# Although we define p in logit space, we then apply the sigmoid
 			# operation to get the desired value between 0 and 1.
 			p = K.sum(K.sigmoid(p_logit))
 			regularizer = p * K.log(p)
@@ -239,14 +241,13 @@ class ConcreteDropout(Layer):
 
 			Returns
 			-------
-				(tf.Tensor): The tensorflow graph to calculate the 
+				(tf.Tensor): The tensorflow graph to calculate the
 					kernel regularization term.
 			"""
 			regularizer = self.kernel_regularizer * K.sum(
 				K.square(kernel)) / (1.0 - K.sum(K.sigmoid(self.p_logit)))
 			return regularizer
 
-		
 		# This is supposed to change in later versions.
 		self._handle_weight_regularization('p_logit_regularizer',self.p_logit,
 			p_logit_regularizer)
@@ -265,7 +266,7 @@ class ConcreteDropout(Layer):
 		Parameters
 		----------
 		inputs (tf.Keras.Layer): The inputs to the Dense layer.
-		training (bool): A required input for call. Setting training to 
+		training (bool): A required input for call. Setting training to
 			true or false does nothing because concrete dropout behaves the
 			same way in both cases.
 
@@ -281,11 +282,11 @@ class ConcreteDropout(Layer):
 		unif_noise = K.random_uniform(shape=K.shape(inputs),
 			seed=self.random_seed)
 		drop_prob = (K.log(K.sigmoid(self.p_logit)+eps) - K.log(1.0-
-			K.sigmoid(self.p_logit)+eps) + K.log(unif_noise + eps) - 
+			K.sigmoid(self.p_logit) + eps) + K.log(unif_noise + eps) -
 			K.log(1.0 - unif_noise + eps))
-		drop_prob = K.sigmoid(drop_prob/self.temp)
+		drop_prob = K.sigmoid(drop_prob / self.temp)
 		inputs *= (1.0 - drop_prob)
-		inputs /= (1.0 - K.sigmoid(self.p_logit)) 
+		inputs /= (1.0 - K.sigmoid(self.p_logit))
 
 		# Now just carry out the basic operations of a Dense layer.
 		output = K.dot(inputs, self.kernel)
@@ -293,7 +294,6 @@ class ConcreteDropout(Layer):
 		if self.activation is not None:
 			output = self.activation(output)
 		return output
-
 
 	def compute_output_shape(self, input_shape):
 		"""
@@ -329,6 +329,7 @@ class ConcreteDropout(Layer):
 		base_config = super(ConcreteDropout, self).get_config()
 		return dict(list(base_config.items()) + list(config.items()))
 
+
 class SpatialConcreteDropout(Conv2D):
 	"""
 	This class defines a spatial concrete dropout layer that is built around a
@@ -337,11 +338,11 @@ class SpatialConcreteDropout(Conv2D):
 	from code for arxiv.1705.07832.
 	"""
 	def __init__(self, filters, kernel_size, strides=(1,1), padding='valid',
-		activation=None, kernel_regularizer=1e-6, dropout_regularizer=1e-5, 
+		activation=None, kernel_regularizer=1e-6, dropout_regularizer=1e-5,
 		init_min=0.1, init_max=0.1, temp=0.1, random_seed=None, **kwargs):
 		"""
 		Initialize the Spatial Concrete dropout Dense layer. This will initialize
-		the Conv2d layer along with the overhead needed for spatial concrete 
+		the Conv2d layer along with the overhead needed for spatial concrete
 		dropout.
 
 		Parameters
@@ -363,12 +364,12 @@ class SpatialConcreteDropout(Conv2D):
 			init_max (float): The maximum initial value of the dropout rate
 			temp (float): The temperature that defines how close the concrete
 				distribution will be to true dropout.
-			random_seed (int): A seed to use in the random function calls. If 
+			random_seed (int): A seed to use in the random function calls. If
 				None no explicit seed will be used.
 
 		Returns
 		-------
-			(keras.Layer): The initialized SpatialConcreteDropout layer. Must 
+			(keras.Layer): The initialized SpatialConcreteDropout layer. Must
 				still be built.
 
 		Notes
@@ -379,7 +380,7 @@ class SpatialConcreteDropout(Conv2D):
 			The initial dropout rate will be drawn from a uniform distribution
 				with the bounds passed into init.
 		"""
-		super(SpatialConcreteDropout, self).__init__(filters, kernel_size, 
+		super(SpatialConcreteDropout, self).__init__(filters, kernel_size,
 			strides=strides, padding=padding, activation=activation, **kwargs)
 		# Need to change name to avoid issues with Conv2D
 		self.cd_kernel_regularizer = kernel_regularizer
@@ -388,7 +389,6 @@ class SpatialConcreteDropout(Conv2D):
 		self.init_max = np.log(init_max) - np.log(1.0 - init_max)
 		self.temp = temp
 		self.random_seed = random_seed
-
 
 	def build(self, input_shape=None):
 		"""
@@ -400,12 +400,12 @@ class SpatialConcreteDropout(Conv2D):
 		"""
 		super(SpatialConcreteDropout, self).build(input_shape)
 		input_dim = input_shape[3]
-		
+
 		# kernel already set by inherited build function.
-		# Although we define p in logit space, we then apply the sigmoid 
+		# Although we define p in logit space, we then apply the sigmoid
 		# operation to get the desired value between 0 and 1.
 		self.p_logit = self.add_weight(name='p_logit',shape=(1,),
-			initializer=initializers.RandomUniform(self.init_min, 
+			initializer=initializers.RandomUniform(self.init_min,
 				self.init_max), trainable=True)
 
 		# Because of issues with Keras, these functions need to be defined
@@ -416,15 +416,15 @@ class SpatialConcreteDropout(Conv2D):
 
 			Parameters
 			----------
-				p_logit (tf.Tensor): A 1D Tensor containing the p_logit value 
+				p_logit (tf.Tensor): A 1D Tensor containing the p_logit value
 					for dropout.
 
 			Returns
 			-------
-				(tf.Tensor): The tensorflow graph to calculate the 
+				(tf.Tensor): The tensorflow graph to calculate the
 					p_logit regularization term.
 			"""
-			# Although we define p in logit space, we then apply the sigmoid 
+			# Although we define p in logit space, we then apply the sigmoid
 			# operation to get the desired value between 0 and 1.
 			p = K.sum(K.sigmoid(p_logit))
 			regularizer = p * K.log(p)
@@ -443,14 +443,13 @@ class SpatialConcreteDropout(Conv2D):
 
 			Returns
 			-------
-				(tf.Tensor): The tensorflow graph to calculate the 
+				(tf.Tensor): The tensorflow graph to calculate the
 					kernel regularization term.
 			"""
 			regularizer = self.cd_kernel_regularizer * K.sum(
 				K.square(kernel)) / (1.0 - K.sum(K.sigmoid(self.p_logit)))
 			return regularizer
 
-		
 		# This is supposed to change in later versions.
 		self._handle_weight_regularization('p_logit_regularizer',self.p_logit,
 			p_logit_regularizer)
@@ -467,7 +466,7 @@ class SpatialConcreteDropout(Conv2D):
 		Parameters
 		----------
 			inputs (tf.Keras.Layer): The inputs to the Dense layer.
-			training (bool): A required input for call. Setting training to 
+			training (bool): A required input for call. Setting training to
 				true or false does nothing because concrete dropout behaves the
 				same way in both cases.
 
@@ -484,16 +483,15 @@ class SpatialConcreteDropout(Conv2D):
 		noise_shape = (input_shape[0], 1, 1, input_shape[3])
 		unif_noise = K.random_uniform(shape=noise_shape,
 			seed=self.random_seed)
-		drop_prob = (K.log(K.sigmoid(self.p_logit)+eps) - 
+		drop_prob = (K.log(K.sigmoid(self.p_logit)+eps) -
 			K.log(1.0-K.sigmoid(self.p_logit)+eps) + K.log(unif_noise + eps)
 			- K.log(1.0 - unif_noise + eps))
 		drop_prob = K.sigmoid(drop_prob/self.temp)
 		inputs *= (1.0 - drop_prob)
-		inputs /= (1.0 - K.sigmoid(self.p_logit)) 
+		inputs /= (1.0 - K.sigmoid(self.p_logit))
 
 		# Now just carry out the basic operations of a Dense layer.
 		return super(SpatialConcreteDropout, self).call(inputs)
-
 
 	def compute_output_shape(self, input_shape):
 		"""
@@ -511,6 +509,7 @@ class SpatialConcreteDropout(Conv2D):
 		return super(SpatialConcreteDropout, self).compute_output_shape(
 			input_shape)
 
+
 def dropout_alexnet(img_size, num_params, kernel_regularizer=1e-6,
 	dropout_rate=0.1,random_seed=None):
 	"""
@@ -518,13 +517,13 @@ def dropout_alexnet(img_size, num_params, kernel_regularizer=1e-6,
 
 	Parameters
 	----------
-		img_size ((int,int,int)): A tupe with shape (pix,pix,freq) that describes 
+		img_size ((int,int,int)): A tupe with shape (pix,pix,freq) that describes
 			the size of the input images
 		num_params (int): The number of lensing parameters to predict
-		kernel_regularizer (float): The strength of the l2 norm (associated to 
+		kernel_regularizer (float): The strength of the l2 norm (associated to
 			the strength of the prior on the weights)
 		dropout_rate (float): The dropout rate to use for the layers.
-		random_seed (int): A seed to use in the random function calls. If None 
+		random_seed (int): A seed to use in the random function calls. If None
 			no explicit seed will be used.
 
 	Returns
@@ -538,29 +537,29 @@ def dropout_alexnet(img_size, num_params, kernel_regularizer=1e-6,
 	# Layer 1
 	# model.add(AlwaysDropout(dropout_rate))
 	x = AlwaysDropout(dropout_rate)(inputs)
-	x = Conv2D(filters=64, kernel_size=(5,5), strides=(2,2), 
+	x = Conv2D(filters=64, kernel_size=(5,5), strides=(2,2),
 		padding='valid', activation='relu', input_shape=img_size)(x)
 	x = MaxPooling2D(pool_size=(3,3), strides=(2,2), padding='same')(x)
 
 	# Layer 2
 	x = AlwaysDropout(dropout_rate)(x)
-	x = Conv2D(filters=192, kernel_size=(5,5), strides=(1,1), 
+	x = Conv2D(filters=192, kernel_size=(5,5), strides=(1,1),
 		padding='same', activation='relu')(x)
 	x = MaxPooling2D(pool_size=(3,3), strides=(2,2), padding='same')(x)
 
 	# Layer 3
 	x = AlwaysDropout(dropout_rate)(x)
-	x = Conv2D(filters=384, kernel_size=(3,3), strides=(1,1), 
+	x = Conv2D(filters=384, kernel_size=(3,3), strides=(1,1),
 		padding='same', activation='relu')(x)
 
 	# Layer 4
 	x = AlwaysDropout(dropout_rate)(x)
-	x = Conv2D(filters=384, kernel_size=(3,3), strides=(1,1), 
+	x = Conv2D(filters=384, kernel_size=(3,3), strides=(1,1),
 		padding='same', activation='relu')(x)
 
 	# Layer 5
 	x = AlwaysDropout(dropout_rate)(x)
-	x = Conv2D(filters=256, kernel_size=(3,3), strides=(1,1), 
+	x = Conv2D(filters=256, kernel_size=(3,3), strides=(1,1),
 		padding='same', activation='relu')(x)
 	x = MaxPooling2D(pool_size=(3,3), strides=(2,2), padding='same')(x)
 
@@ -584,6 +583,7 @@ def dropout_alexnet(img_size, num_params, kernel_regularizer=1e-6,
 
 	return model
 
+
 def concrete_alexnet(img_size, num_params, kernel_regularizer=1e-6,
 	dropout_regularizer=1e-5, init_min=0.1, init_max=0.1,
 	temp=0.1, random_seed=None):
@@ -592,12 +592,12 @@ def concrete_alexnet(img_size, num_params, kernel_regularizer=1e-6,
 
 	Parameters
 	----------
-		img_size ((int,int,int)): A tupe with shape (pix,pix,freq) that describes 
+		img_size ((int,int,int)): A tupe with shape (pix,pix,freq) that describes
 			the size of the input images
 		num_params (int): The number of lensing parameters to predict
-		kernel_regularizer (float): The strength of the l2 norm (associated to 
+		kernel_regularizer (float): The strength of the l2 norm (associated to
 			the strength of the prior on the weights)
-		dropout_regularizer (float): The stronger it is, the more concrete 
+		dropout_regularizer (float): The stronger it is, the more concrete
 			dropout will tend towards larger dropout rates.
 		init_min (float): The minimum value that the dropout weight p will
 			be initialized to.
@@ -605,7 +605,7 @@ def concrete_alexnet(img_size, num_params, kernel_regularizer=1e-6,
 			be initialized to.
 		temp (float): The temperature that defines how close the concrete
 			distribution will be to true dropout.
-		random_seed (int): A seed to use in the random function calls. If None 
+		random_seed (int): A seed to use in the random function calls. If None
 			no explicit seed will be used.
 
 	Returns
@@ -624,45 +624,45 @@ def concrete_alexnet(img_size, num_params, kernel_regularizer=1e-6,
 
 	# Layer 1
 	# model.add(AlwaysDropout(dropout_rate))
-	x = SpatialConcreteDropout(filters=64, kernel_size=(5,5), strides=(2,2), 
+	x = SpatialConcreteDropout(filters=64, kernel_size=(5,5), strides=(2,2),
 		padding='valid', activation='relu', input_shape=img_size,
-		kernel_regularizer = kernel_regularizer,
-		dropout_regularizer= dropout_regularizer,
-		init_min=init_min, init_max=init_max, temp=temp, 
+		kernel_regularizer=kernel_regularizer,
+		dropout_regularizer=dropout_regularizer,
+		init_min=init_min, init_max=init_max, temp=temp,
 		random_seed=random_seed)(inputs)
 	x = MaxPooling2D(pool_size=(3,3), strides=(2,2), padding='same')(x)
 
 	# Layer 2
-	x = SpatialConcreteDropout(filters=192, kernel_size=(5,5), strides=(1,1), 
-		padding='same', activation='relu', 
-		kernel_regularizer = kernel_regularizer,
-		dropout_regularizer= dropout_regularizer,
-		init_min=init_min, init_max=init_max, temp=temp, 
+	x = SpatialConcreteDropout(filters=192, kernel_size=(5,5), strides=(1,1),
+		padding='same', activation='relu',
+		kernel_regularizer=kernel_regularizer,
+		dropout_regularizer=dropout_regularizer,
+		init_min=init_min, init_max=init_max, temp=temp,
 		random_seed=random_seed)(x)
 	x = MaxPooling2D(pool_size=(3,3), strides=(2,2), padding='same')(x)
 
 	# Layer 3
-	x = SpatialConcreteDropout(filters=384, kernel_size=(3,3), strides=(1,1), 
+	x = SpatialConcreteDropout(filters=384, kernel_size=(3,3), strides=(1,1),
 		padding='same', activation='relu',
-		kernel_regularizer = kernel_regularizer,
-		dropout_regularizer= dropout_regularizer,
-		init_min=init_min, init_max=init_max, temp=temp, 
+		kernel_regularizer=kernel_regularizer,
+		dropout_regularizer=dropout_regularizer,
+		init_min=init_min, init_max=init_max, temp=temp,
 		random_seed=random_seed)(x)
 
 	# Layer 4
-	x = SpatialConcreteDropout(filters=384, kernel_size=(3,3), strides=(1,1), 
+	x = SpatialConcreteDropout(filters=384, kernel_size=(3,3), strides=(1,1),
 		padding='same', activation='relu',
-		kernel_regularizer = kernel_regularizer,
-		dropout_regularizer= dropout_regularizer,
-		init_min=init_min, init_max=init_max, temp=temp, 
+		kernel_regularizer=kernel_regularizer,
+		dropout_regularizer=dropout_regularizer,
+		init_min=init_min, init_max=init_max, temp=temp,
 		random_seed=random_seed)(x)
 
 	# Layer 5
-	x = SpatialConcreteDropout(filters=256, kernel_size=(3,3), strides=(1,1), 
+	x = SpatialConcreteDropout(filters=256, kernel_size=(3,3), strides=(1,1),
 		padding='same', activation='relu',
-		kernel_regularizer = kernel_regularizer,
-		dropout_regularizer= dropout_regularizer,
-		init_min=init_min, init_max=init_max, temp=temp, 
+		kernel_regularizer=kernel_regularizer,
+		dropout_regularizer=dropout_regularizer,
+		init_min=init_min, init_max=init_max, temp=temp,
 		random_seed=random_seed)(x)
 	x = MaxPooling2D(pool_size=(3,3), strides=(2,2), padding='same')(x)
 
@@ -692,25 +692,26 @@ def concrete_alexnet(img_size, num_params, kernel_regularizer=1e-6,
 
 	return model
 
+
 class LensingLossFunctions:
 	"""
 	A class used to generate the loss functions for the three types of bayesian
-	nn models we have implemented: diagonal covariance, full covariance, 
+	nn models we have implemented: diagonal covariance, full covariance,
 	and mixture of full covariances. Currently only two gaussians are allowed
 	in the mixture.
 	"""
 	def __init__(self,flip_pairs,num_params):
 		"""
 		Initialize the class with the pairs of parameters that must be flipped.
-		These are parameters like shear and ellipticity that have been defined 
-		such that negating both parameters gives the same 
+		These are parameters like shear and ellipticity that have been defined
+		such that negating both parameters gives the same
 		physical definition of the system.
 
 		Parameters
 		----------
-			flip_pairs ([[int,int,...],...]): A list of pairs of numbers to 
-				conduct the flip operation on. If empty no flip pairs will be 
-				used. Note if you also want to consider two sets of parameters 
+			flip_pairs ([[int,int,...],...]): A list of pairs of numbers to
+				conduct the flip operation on. If empty no flip pairs will be
+				used. Note if you also want to consider two sets of parameters
 				being flipped at the same time, that must be added to this list.
 			num_params (int): The number of parameters to predict.
 		"""
@@ -742,8 +743,8 @@ class LensingLossFunctions:
 		Parameters
 		----------
 			y_true (tf.Tensor): The true values of the parameters
-			output (tf.Tensor): The predicted values of the lensing parameters. 
-				This assumes the first num_params are 
+			output (tf.Tensor): The predicted values of the lensing parameters.
+				This assumes the first num_params are
 
 		Returns
 		-------
@@ -775,8 +776,8 @@ class LensingLossFunctions:
 		----------
 			y_true (tf.Tensor): The true values of the parameters
 			y_pred (tf.Tensor): The predicted value of the parameters
-			std_pred (tf.Tensor): The predicted diagonal entries of the 
-				covariance. Note that std_pred is assumed to be the log of the 
+			std_pred (tf.Tensor): The predicted diagonal entries of the
+				covariance. Note that std_pred is assumed to be the log of the
 				covariance matrix values.
 
 		Returns
@@ -798,8 +799,8 @@ class LensingLossFunctions:
 		Parameters
 		----------
 			y_true (tf.Tensor): The true values of the lensing parameters
-			output (tf.Tensor): The predicted values of the lensing parameters. 
-				This should include 2*self.num_params parameters to account for 
+			output (tf.Tensor): The predicted values of the lensing parameters.
+				This should include 2*self.num_params parameters to account for
 				the diagonal entries of our covariance matrix. Covariance matrix
 				values are assumed to be in log space.
 
@@ -824,26 +825,26 @@ class LensingLossFunctions:
 		"""
 		Take the matrix elements for the log cholesky decomposition and
 		convert them to the precision matrix. Also return the value of
-		the diagonal elements before exponentiation, since we get that for 
+		the diagonal elements before exponentiation, since we get that for
 		free.
-		
+
 		Parameters
 		----------
-			L_mat_elements (tf.Tensor): A tensor of length 
-				num_params*(num_params+1)/2 that define the lower traingular 
+			L_mat_elements (tf.Tensor): A tensor of length
+				num_params*(num_params+1)/2 that define the lower traingular
 				matrix elements of the log cholesky decomposition
 
 		Returns
 		-------
-			((tf.Tensor,tf.Tensor)): Both the precision matrix and the diagonal 
-				elements (before exponentiation) of the log cholesky L matrix. 
-				Note that this second value is important for the posterior 
+			((tf.Tensor,tf.Tensor)): Both the precision matrix and the diagonal
+				elements (before exponentiation) of the log cholesky L matrix.
+				Note that this second value is important for the posterior
 				calculation.
 		"""
 		# First split the tensor into the elements that will populate each row
 		cov_elements_split = tf.split(L_mat_elements,
 			num_or_size_splits=self.split_list,axis=-1)
-		# Before we stack these elements, we have to pad them with zeros 
+		# Before we stack these elements, we have to pad them with zeros
 		# (corresponding to the 0s of the lower traingular matrix).
 		cov_elements_stack = []
 		pad_offset = 1
@@ -874,7 +875,7 @@ class LensingLossFunctions:
 			y_true (tf.Tensor): The true values of the parameters
 			y_pred (tf.Tensor): The predicted value of the parameters
 			prec_mat: The precision matrix
-			L_diag (tf.Tensor): The diagonal (non exponentiated) values of the 
+			L_diag (tf.Tensor): The diagonal (non exponentiated) values of the
 				log cholesky decomposition of the precision matrix
 
 		Returns
@@ -897,7 +898,7 @@ class LensingLossFunctions:
 		Parameters
 		----------
 			y_true (tf.Tensor): The true values of the lensing parameters
-			output (tf.Tensor): The predicted values of the lensing parameters. 
+			output (tf.Tensor): The predicted values of the lensing parameters.
 				This should include self.num_params parameters for the prediction
 				and self.num_params*(self.num_params+1)/2 parameters for the
 				lower triangular log cholesky decomposition
@@ -933,11 +934,11 @@ class LensingLossFunctions:
 		Parameters
 		----------
 			y_true (tf.Tensor): The true values of the parameters
-			y_preds ([tf.Tensor,...]): A list of the predicted value of the 
+			y_preds ([tf.Tensor,...]): A list of the predicted value of the
 				parameters
 			prec_mats ([tf.Tensor,...]): A list of the precision matrices
-			L_diags ([tf.Tensor,...]): A list of the diagonal (non exponentiated) 
-				values of the log cholesky decomposition of the precision 
+			L_diags ([tf.Tensor,...]): A list of the diagonal (non exponentiated)
+				values of the log cholesky decomposition of the precision
 				matrices
 
 		Returns
@@ -968,12 +969,12 @@ class LensingLossFunctions:
 		Parameters
 		----------
 			y_true (tf.Tensor): The true values of the lensing parameters
-			output (tf.Tensor): The predicted values of the lensing parameters. 
-				This should include 2 gm which consists of self.num_params 
-				parameters for the prediction and 
-				self.num_params*(self.num_params+1)/2 parameters for the 
-				lower triangular log cholesky decomposition of each gm. 
-				It should also include one final parameter for the ratio 
+			output (tf.Tensor): The predicted values of the lensing parameters.
+				This should include 2 gm which consists of self.num_params
+				parameters for the prediction and
+				self.num_params*(self.num_params+1)/2 parameters for the
+				lower triangular log cholesky decomposition of each gm.
+				It should also include one final parameter for the ratio
 				between the two gms.
 
 		Returns
@@ -983,7 +984,7 @@ class LensingLossFunctions:
 		# Start by seperating out the predictions for each gaussian model.
 		L_elements_len = int(self.num_params*(self.num_params+1)/2)
 		y_pred1, L_mat_elements1, y_pred2, L_mat_elements2, pi_logit = tf.split(
-			output,num_or_size_splits = [self.num_params,L_elements_len,
+			output,num_or_size_splits=[self.num_params,L_elements_len,
 			self.num_params,L_elements_len,1],axis=-1)
 
 		# Set the probability between 0 and 1.
@@ -1010,6 +1011,7 @@ class LensingLossFunctions:
 		loss_stack = tf.stack(loss_list,axis=-1)
 		return tf.reduce_min(loss_stack,axis=-1)
 
+
 def p_value(model):
 	"""
 	Returns the average value of the dropout in each concrete layer.
@@ -1033,5 +1035,3 @@ def p_value(model):
 		return tf.reduce_mean(loss)
 
 	return p_fake_loss
-
-

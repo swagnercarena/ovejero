@@ -8,6 +8,7 @@ import tensorflow as tf
 import pandas as pd
 import matplotlib.pyplot as plt
 
+
 class HierarchicalnferenceTest(unittest.TestCase):
 
 	def __init__(self, *args, **kwargs):
@@ -20,7 +21,7 @@ class HierarchicalnferenceTest(unittest.TestCase):
 		# and without priors.
 		root_path = os.path.dirname(os.path.abspath(__file__))+'/test_data/'
 		cfg = configs.BaobabConfig.from_file(root_path + 'test_baobab_cfg.py')
-		cfg_pr = configs.BaobabConfig.from_file(root_path + 
+		cfg_pr = configs.BaobabConfig.from_file(root_path +
 			'test_baobab_cfg_prior.py')
 		lens_params = ['external_shear_gamma_ext','external_shear_psi_ext',
 			'lens_mass_center_x','lens_mass_center_y',
@@ -57,15 +58,15 @@ class HierarchicalnferenceTest(unittest.TestCase):
 			self.assertListEqual(list(eval_dict[lens_param]['hyp_ind']),
 				list(range(total,total+n_p)))
 			if n_p == 2:
-				self.assertTrue((eval_dict[lens_param]['eval_fn'] is 
+				self.assertTrue((eval_dict[lens_param]['eval_fn'] is
 					distributions.eval_normal_logpdf_approx) or (
-					eval_dict[lens_param]['eval_fn'] is 
+					eval_dict[lens_param]['eval_fn'] is
 					distributions.eval_lognormal_logpdf_approx))
 			if n_p == 4:
-				self.assertTrue(eval_dict[lens_param]['eval_fn'] is 
+				self.assertTrue(eval_dict[lens_param]['eval_fn'] is
 					distributions.eval_beta_logpdf_approx)
 			if n_p == 5:
-				self.assertTrue(eval_dict[lens_param]['eval_fn'] is 
+				self.assertTrue(eval_dict[lens_param]['eval_fn'] is
 					distributions.eval_generalized_normal_logpdf_approx)
 			total += n_p
 
@@ -94,15 +95,15 @@ class HierarchicalnferenceTest(unittest.TestCase):
 			self.assertListEqual(list(eval_dict[lens_param]['hyp_ind']),
 				list(range(total,total+n_p)))
 			if n_p == 2:
-				self.assertTrue((eval_dict[lens_param]['eval_fn'] is 
+				self.assertTrue((eval_dict[lens_param]['eval_fn'] is
 					distributions.eval_normal_logpdf_approx) or (
-					eval_dict[lens_param]['eval_fn'] is 
+					eval_dict[lens_param]['eval_fn'] is
 					distributions.eval_lognormal_logpdf_approx))
 			if n_p == 4:
-				self.assertTrue(eval_dict[lens_param]['eval_fn'] is 
+				self.assertTrue(eval_dict[lens_param]['eval_fn'] is
 					distributions.eval_beta_logpdf_approx)
 			if n_p == 5:
-				self.assertTrue(eval_dict[lens_param]['eval_fn'] is 
+				self.assertTrue(eval_dict[lens_param]['eval_fn'] is
 					distributions.eval_generalized_normal_logpdf_approx)
 			total += n_p
 
@@ -166,13 +167,12 @@ class HierarchicalClassTest(unittest.TestCase):
 		self.assertEqual(self.hclass.log_p_omega(hyp),0)
 
 	def test_log_p_xi_omega(self):
-		# Test that the log_p_xi_omega function returns the correct value 
+		# Test that the log_p_xi_omega function returns the correct value
 		# for some sample data points.
 		hyp = np.array([-2.73,1.05,0.0,0.5*np.pi,10.0,-0.5*np.pi,0.5*np.pi,0.0,
 			0.102,0.0,0.102,4.0,4.0,-0.55,0.55,4.0,4.0,-0.55,0.55,0.7,0.1,0.0,
 			0.1])
 		samples = np.ones((8,2,2))*0.3
-
 
 		def hand_calc_log_pdf(samples,hyp):
 			# Add each one of the probabilities
@@ -180,7 +180,7 @@ class HierarchicalClassTest(unittest.TestCase):
 				s=hyp[1])
 
 			dist = stats.gennorm(beta=hyp[4],loc=hyp[2],scale=hyp[3])
-			scipy_pdf += dist.logpdf(samples[1])-np.log(dist.cdf(hyp[6]) - 
+			scipy_pdf += dist.logpdf(samples[1])-np.log(dist.cdf(hyp[6]) -
 				dist.cdf(hyp[5]))
 
 			scipy_pdf += stats.norm.logpdf(samples[2],loc=hyp[7],
@@ -259,7 +259,7 @@ class HierarchicalClassTest(unittest.TestCase):
 		fake_norms = pd.DataFrame(data=fake_norms)
 		fake_norms.to_csv(self.normalization_constants_path,index=False)
 		train_or_test = 'test'
-		model_trainer.prepare_tf_record(self.cfg, self.root_path, 
+		model_trainer.prepare_tf_record(self.cfg, self.root_path,
 				self.tf_record_path,self.final_params,train_or_test)
 
 		# Replace the real model with our fake model and generate samples
@@ -289,7 +289,7 @@ class HierarchicalClassTest(unittest.TestCase):
 		np.testing.assert_almost_equal(self.hclass.prob_class.pt_omegai,
 			hierarchical_inference.log_p_xi_omega(
 				hierarchical_inference.lens_samps,
-				self.hclass.interim_eval_dict['hyps'], 
+				self.hclass.interim_eval_dict['hyps'],
 				self.hclass.interim_eval_dict,self.hclass.lens_params))
 
 		# Now check that if we offer a save path it gets used.
@@ -316,7 +316,7 @@ class HierarchicalClassTest(unittest.TestCase):
 		os.rmdir(save_path)
 
 	def test_log_post_omega(self):
-		# Test that the log_p_xi_omega function returns the correct value 
+		# Test that the log_p_xi_omega function returns the correct value
 		# for some sample data points.
 		hyp = np.array([-2.73,1.05,0.0,0.5*np.pi,10.0,-0.5*np.pi,0.5*np.pi,0.0,
 			0.102,0.0,0.102,4.0,4.0,-0.55,0.55,4.0,4.0,-0.55,0.55,0.7,0.1,0.0,
@@ -330,7 +330,7 @@ class HierarchicalClassTest(unittest.TestCase):
 				s=hyp[1])
 
 			dist = stats.gennorm(beta=hyp[4],loc=hyp[2],scale=hyp[3])
-			scipy_pdf += dist.logpdf(samples[1])-np.log(dist.cdf(hyp[6]) - 
+			scipy_pdf += dist.logpdf(samples[1])-np.log(dist.cdf(hyp[6]) -
 				dist.cdf(hyp[5]))
 
 			scipy_pdf += stats.norm.logpdf(samples[2],loc=hyp[7],
@@ -399,7 +399,7 @@ class HierarchicalClassTest(unittest.TestCase):
 			hierarchical_inference.lens_samps,
 			self.hclass.interim_eval_dict['hyps'], self.hclass.interim_eval_dict,
 			self.hclass.lens_params)
-		
+
 		self.hclass.initialize_sampler(n_walkers,test_chains_path)
 
 		self.assertTrue(os.path.isfile(test_chains_path))
@@ -429,7 +429,7 @@ class HierarchicalClassTest(unittest.TestCase):
 			hierarchical_inference.lens_samps,
 			self.hclass.interim_eval_dict['hyps'], self.hclass.interim_eval_dict,
 			self.hclass.lens_params)
-		
+
 		self.hclass.initialize_sampler(n_walkers,test_chains_path)
 		self.hclass.run_sampler(n_samps)
 
@@ -456,7 +456,7 @@ class HierarchicalClassTest(unittest.TestCase):
 			hierarchical_inference.lens_samps,
 			self.hclass.interim_eval_dict['hyps'], self.hclass.interim_eval_dict,
 			self.hclass.lens_params)
-		
+
 		self.hclass.initialize_sampler(n_walkers,test_chains_path)
 		self.hclass.run_sampler(n_samps)
 

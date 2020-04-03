@@ -19,13 +19,14 @@ from matplotlib.colors import LogNorm
 import corner
 import tensorflow as tf
 import tensorflow_probability as tfp
-import os, math
+import os
 import numba
+
 
 class InferenceClass:
 	"""
 	A class that contains all of the functions needed to use the bnn_alexnet
-	models for inference. This class will output correctly marginalized 
+	models for inference. This class will output correctly marginalized
 	predictions as well as make important performance plots.
 	"""
 	def __init__(self,cfg):
@@ -85,7 +86,7 @@ class InferenceClass:
 
 	def fix_flip_pairs(self,predict_samps,y_test):
 		"""
-		Update predict_samps to account for pairs of points (i.e. 
+		Update predict_samps to account for pairs of points (i.e.
 		ellipticities) that give equivalent physical lenses if both values
 		are flipped.
 
@@ -130,7 +131,7 @@ class InferenceClass:
 				num_params) that contains the true values of each example
 				in the batch.
 			al_samp (np.array): A numpy array with dimensions (num_samples,
-				batch_size,num_params,num_params) that contains the aleatoric 
+				batch_size,num_params,num_params) that contains the aleatoric
 				uncertainty of each sample in the batch.
 
 		Notes
@@ -142,7 +143,7 @@ class InferenceClass:
 		normalization_constants_path = os.path.join(
 			self.cfg['training_params']['root_path'],
 			self.cfg['dataset_params']['normalization_constants_path'])
-		norm_const_dict = pd.read_csv(normalization_constants_path, 
+		norm_const_dict = pd.read_csv(normalization_constants_path,
 			index_col=None)
 
 		# Go through each parameter and undo the normalization.
@@ -163,7 +164,7 @@ class InferenceClass:
 			al_samp[:,:,lpi,:] *= param_std
 			al_samp[:,:,:,lpi] *= param_std
 
-	def gen_samples(self,num_samples,sample_save_dir=None):
+	def gen_samples(self,num_samples,sample_save_dir=None,single_image=None):
 		"""
 		Generate the y prediction and the associated covariance matrix
 		by marginalizing over both network and output uncertainty.
@@ -172,18 +173,26 @@ class InferenceClass:
 		----------
 			num_samples (int): The number of samples used to marginalize over
 				the network's uncertainty.
-			sample_save_dir (str): A path to a folder to save/load the samples. 
+			sample_save_dir (str): A path to a folder to save/load the samples.
 				If None samples will not be saved. Do not include .npy, this will
 				be appended (since several files will be generated).
+			single_image (np.array): A numpy array for a single image to generate
+				samples for.
 		"""
 
 		if sample_save_dir is None or not os.path.isdir(sample_save_dir):
 			if sample_save_dir is not None:
 				print('No samples found. Saving samples to %s'%(sample_save_dir))
 			# Extract image and output batch from tf dataset
-			for image_batch, yt_batch in self.tf_dataset_v.take(1):
-				self.images = image_batch
-				self.y_test = yt_batch.numpy()
+			if single_image is None:
+				for image_batch, yt_batch in self.tf_dataset_v.take(1):
+					self.images = image_batch
+					self.y_test = yt_batch.numpy()
+			else:
+				self.images = tf.convert_to_tensor(np.expand_dims(
+					np.expand_dims(single_image,axis=0),axis=-1))
+				# We cannot read y_test, so we will just set it to zeros.
+				self.y_test = np.zeros((1,self.num_params))
 
 			# This is where we will save the samples for each prediction. We will
 			# use this to numerically extract the covariance.
@@ -196,16 +205,16 @@ class InferenceClass:
 				self.num_params))
 			# Generate our samples
 			for samp in tqdm(range(num_samples)):
-				output = self.model.predict(self.images) 
+				output = self.model.predict(self.images)
 				# How we extract uncertanties will depend on the type of network in
 				# question.
 				if self.bnn_type == 'diag':
-					# In the diagonal case we only need to add Gaussian random 
+					# In the diagonal case we only need to add Gaussian random
 					# noise scaled by the variane.
 					y_pred, std_pred = tf.split(output,num_or_size_splits=2,
 						axis=-1)
 					std_pred = tf.exp(std_pred)
-					# Draw a random sample of noise and add that noise to our 
+					# Draw a random sample of noise and add that noise to our
 					# predicted value.
 					noise = tf.random.normal((self.batch_size,
 						self.num_params))*std_pred
@@ -217,8 +226,8 @@ class InferenceClass:
 					al_samp[samp] = a_samps_tf.numpy()
 
 				elif self.bnn_type == 'full':
-					# In the full covariance case we need to explicitly 
-					# construct our covariance matrix. This mostly follow the 
+					# In the full covariance case we need to explicitly
+					# construct our covariance matrix. This mostly follow the
 					# code in bnn_alexnet full_covariance_loss function.
 					# Divide our output into the prediction and the precision
 					# matrix elements.
@@ -251,7 +260,7 @@ class InferenceClass:
 					# draw which of the two posteriors to draw from.
 					L_elements_len = int(self.num_params*(self.num_params+1)/2)
 					y_pred1,L_mat_elements1,y_pred2,L_mat_elements2,pi_logit = (
-						tf.split(output,num_or_size_splits = [self.num_params,
+						tf.split(output,num_or_size_splits=[self.num_params,
 							L_elements_len,self.num_params,L_elements_len,1],
 							axis=-1))
 
@@ -329,22 +338,22 @@ class InferenceClass:
 
 		self.samples_init = True
 
-	def gen_coverage_plots(self,num_lenses = None,
-		color_map = ["#377eb8", "#4daf4a","#e41a1c","#984ea3"],block=True):
+	def gen_coverage_plots(self,num_lenses=None,
+		color_map=["#377eb8", "#4daf4a","#e41a1c","#984ea3"],block=True):
 		"""
 		Generate plots for the coverage of each of the parameters.
 
 		Parameters
 		----------
-			num_lenses (int): The number of lenses to include in the coverage 
+			num_lenses (int): The number of lenses to include in the coverage
 				plots. If None, use them all.
 			color_map ([str,...]): A list of at least 4 colors that will be used
 				for plotting the different coverage probabilities.
 			block (bool): If true, block excecution after plt.show() command.
 		"""
-		if self.samples_init == False:
+		if self.samples_init is False:
 			raise RuntimeError('Must generate samples before plotting')
-		
+
 		plt.figure(figsize=(16,18))
 		error = self.y_pred - self.y_test
 		y_std = self.y_std
@@ -355,7 +364,7 @@ class InferenceClass:
 			y_std = y_std[:num_lenses]
 			y_test = y_test[:num_lenses]
 			y_pred = y_pred[:num_lenses]
-		cov_masks = [np.abs(error)<=y_std, np.abs(error)<2*y_std, 
+		cov_masks = [np.abs(error)<=y_std, np.abs(error)<2*y_std,
 			np.abs(error)<3*y_std, np.abs(error)>=3*y_std]
 		cov_masks_names = ['1 sigma =', '2 sigma =', '3 sigma =', '>3 sigma =']
 		for i in range(len(self.final_params)):
@@ -365,12 +374,12 @@ class InferenceClass:
 				yt_plot = y_test[cov_mask,i]
 				yp_plot = y_pred[cov_mask,i]
 				ys_plot = y_std[cov_mask,i]
-				plt.errorbar(yt_plot,yp_plot,yerr=ys_plot, fmt='.', 
+				plt.errorbar(yt_plot,yp_plot,yerr=ys_plot, fmt='.',
 					c=color_map[cm_i],
 					label=cov_masks_names[cm_i]+'%.2f'%(
 						np.sum(cov_mask)/len(error)))
 			# plot confidence interval
-			straight = np.linspace(np.min(y_pred[:,i]), 
+			straight = np.linspace(np.min(y_pred[:,i]),
 				np.max(y_pred[:,i]),10)
 			plt.plot(straight, straight, label='',color='k')
 			plt.title(self.final_params_print_names[i])
@@ -384,7 +393,7 @@ class InferenceClass:
 		Print out performance statistics of the model. So far this includes rmse,
 		median error, and median std on each parameter.
 		"""
-		if self.samples_init == False:
+		if self.samples_init is False:
 			raise RuntimeError('Must generate samples before statistics are '+
 				'reported')
 		# Median error on each parameter
@@ -399,18 +408,18 @@ class InferenceClass:
 	def plot_posterior_contours(self,image_index,contour_color='#FFAA00',
 		block=True):
 		"""
-		Plot the posterior contours for a specific image along with the image 
+		Plot the posterior contours for a specific image along with the image
 		itself.
-		
+
 		Parameters
 		----------
-			image_index (int): The integer index of the image in the validation 
+			image_index (int): The integer index of the image in the validation
 				set to plot the posterior of.
 			contour_color (str): A string specifying the color to use for the
 				contours
 			block (bool): If true, block excecution after plt.show() command.
 		"""
-		if self.samples_init == False:
+		if self.samples_init is False:
 			raise RuntimeError('Must generate samples before plotting')
 
 		# First plot the image and print its parameter values
@@ -422,7 +431,7 @@ class InferenceClass:
 
 		# Now show the posterior contour for the image
 		corner.corner(self.predict_samps[:,image_index,:],bins=20,
-				labels=self.final_params_print_names,show_titles=True, 
+				labels=self.final_params_print_names,show_titles=True,
 				plot_datapoints=False,label_kwargs=dict(fontsize=13),
 				truths=self.y_test[image_index],levels=[0.68,0.95],
 				dpi=1600, color=contour_color,fill_contours=True)
@@ -440,7 +449,7 @@ class InferenceClass:
 				the diagonal entries are 0. This helps disentangle large
 				parameter covariances from large parameter values.
 		"""
-		if self.samples_init == False:
+		if self.samples_init is False:
 			raise RuntimeError('Must generate samples before plotting')
 
 		# Plot the two uncertanties side by side with the same scale.
@@ -473,7 +482,7 @@ class InferenceClass:
 		fig.colorbar(im, cax=cbar_ax)
 		plt.show(block=block)
 
-		#Now we want to plot the ratio to get an idea for how dominant
+		# Now we want to plot the ratio to get an idea for how dominant
 		# one is over the other.
 		fig = plt.figure(figsize=(6,6))
 		plt.imshow(al_median/y_cov_median,vmax=1,vmin=0)
@@ -552,22 +561,22 @@ class InferenceClass:
 
 		Returns
 		-------
-			(matplotlib.pyplot.figure): The figure object that contains the 
+			(matplotlib.pyplot.figure): The figure object that contains the
 				plot
 
 		Notes
 		-----
 			If the posterior is correctly predicted, it follows that x% of the
-			images should have x% of their draws with ||draws||_2 > ||truth||_2. 
+			images should have x% of their draws with ||draws||_2 > ||truth||_2.
 			See the Test_Model_Performance notebook for a discussion of this.
 		"""
-		if self.samples_init == False:
+		if self.samples_init is False:
 			raise RuntimeError('Must generate samples before plotting')
 		# Go through each of our examples and see what percentage of draws have
 		# ||draws||_2 < ||truth||_2 (essentially doing integration by radius).
 		self.calc_p_dlt(weights)
-		
-		# Plot what percentage of images have at most x% of draws with 
+
+		# Plot what percentage of images have at most x% of draws with
 		# p(draws)>p(true).
 		percentages = np.linspace(0.0,1.0,n_perc_points)
 		p_images = np.zeros_like(percentages)
@@ -605,49 +614,4 @@ class InferenceClass:
 			plt.show(block=block)
 
 		return figure
-
-	def get_min_dist_array(self):
-		"""
-		Return the minimum distance between each lens and a datapoint in the
-		sample.
-		"""
-		return np.min(np.abs(self.predict_samps-self.y_test),axis=0)
-
-	def plot_min_dist(self,comp_min_dist_array,colors=None,block=True,
-		legend=None,n_cols=3,bins=100,range_list=None):
-		"""
-		Plot the minimum distance between the true point and a point in our 
-		sample for each point in our sample.
-
-		Returns
-		-------
-			(matplotlib.pyplot.figure): The figure object that contains the 
-				plot
-		"""
-		# Get the minimum distance in each coordinate between the true point
-		# and the predicted samples
-		fig = plt.subplots(figsize=(18,15),dpi=300)
-		# Doing a lot of work here just to get the plots to show up on a nice
-		# grid
-		for pi, print_name in enumerate(self.final_params_print_names):
-			ax = plt.subplot2grid((math.ceil(
-				len(self.final_params_print_names)/n_cols),
-				n_cols), (pi//n_cols,pi%n_cols))
-			if range_list is not None:
-				range_in = range_list[pi]
-			else:
-				range_in = None
-			ax.hist(comp_min_dist_array[:,:,pi].T,bins=bins,color=colors,
-				histtype='step',linewidth=3,alpha=0.7,cumulative=-1,
-				label=legend,range=range_in)
-			ax.set_yscale('log')
-			ax.set_title(r'Minimum $\Delta$%s for Validation Lenses'%(
-				print_name))
-			ax.set_ylabel('Number of Lenses')
-			ax.set_xlabel(r'$\Delta$%s'%(print_name))
-			ax.ticklabel_format(style='sci',scilimits=(1,20),axis='x')
-			ax.xaxis.major.formatter._useMathText = True
-			ax.legend()
-
-
 
