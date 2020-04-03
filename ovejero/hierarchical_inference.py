@@ -537,7 +537,8 @@ class HierarchicalClass:
 			plt.axhline(self.target_eval_dict['hyps'][ci],c='k')
 			plt.show(block=block)
 
-	def plot_corner(self,burnin,hyperparam_plot_names=None,block=True):
+	def plot_corner(self,burnin,hyperparam_plot_names=None,block=True,
+		truth_color='#000000'):
 		"""
 		Plot the corner plot of chains resulting from the emcee
 
@@ -547,6 +548,8 @@ class HierarchicalClass:
 			hyperparam_plot_names ([str,...]): A list containing the names
 				of the hyperparameters to be used during plotting
 			block (bool): If true, block excecution after plt.show() command
+			truth_color (str): The color to use for plotting the truths in the
+				corner plot.
 		"""
 		if hyperparam_plot_names is None:
 			hyperparam_plot_names = self.target_eval_dict['hyp_names']
@@ -566,7 +569,7 @@ class HierarchicalClass:
 				label_kwargs=dict(fontsize=10),
 				truths=self.target_eval_dict['hyps'][hyp_s:hyp_e],
 				levels=[0.68,0.95],color='#FFAA00',fill_contours=True,
-				truth_color='#000000')
+				truth_color=truth_color)
 			plt.show(block=block)
 
 	def plot_distributions(self,burnin,hyperparam_plot_names=None,block=True):
@@ -675,7 +678,7 @@ class HierarchicalClass:
 
 	def plot_reweighted_lens_posterior(self,burnin,image_index,plot_limits=None,
 		n_p_omega_samps=100, color_map=["#FFAA00","#41b6c4"],
-		block=True):
+		block=True,truth_color='#000000'):
 		"""
 		Plot the original and reweighted posterior contours for a specific image
 		along with the image itself.
@@ -691,6 +694,8 @@ class HierarchicalClass:
 				use in the reweighting.
 			color_map ([str,...]): The colors to use in the contour plotting.
 			block (bool): If true, block excecution after plt.show() command
+			truth_color (str): The color to use for plotting the truths in the
+				corner plot.
 		"""
 		# Plot the contours without the reweighting first.
 		fig = corner.corner(self.infer_class.predict_samps[:,image_index,:],
@@ -699,7 +704,7 @@ class HierarchicalClass:
 				label_kwargs=dict(fontsize=13),
 				truths=self.infer_class.y_test[image_index],levels=[0.68,0.95],
 				dpi=1600, color=color_map[0],fill_contours=True,
-				range=plot_limits,truth_color='#000000')
+				range=plot_limits,truth_color=truth_color)
 
 		weights = self.calculate_sample_weights(n_p_omega_samps,burnin)
 		weights /= np.sum(weights,axis=0)
@@ -711,7 +716,7 @@ class HierarchicalClass:
 				truths=self.infer_class.y_test[image_index],levels=[0.68,0.95],
 				dpi=1600, color=color_map[1],fill_contours=True,
 				weights=weights, fig=fig,range=plot_limits,
-				truth_color='#000000')
+				truth_color=truth_color)
 
 	def plot_reweighted_calibration(self,burnin,n_perc_points,
 		n_p_omega_samps=100,color_map=['#1b9e77','#d95f02','#7570b3'],

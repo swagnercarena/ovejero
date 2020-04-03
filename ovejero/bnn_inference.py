@@ -412,7 +412,7 @@ class InferenceClass:
 				med_std[param_i])
 
 	def plot_posterior_contours(self,image_index,contour_color='#FFAA00',
-		block=True):
+		block=True,truth_color='#000000'):
 		"""
 		Plot the posterior contours for a specific image along with the image
 		itself.
@@ -424,6 +424,8 @@ class InferenceClass:
 			contour_color (str): A string specifying the color to use for the
 				contours
 			block (bool): If true, block excecution after plt.show() command.
+			truth_color (str): The color to use for plotting the truths in the
+				corner plot.
 		"""
 		if self.samples_init is False:
 			raise RuntimeError('Must generate samples before plotting')

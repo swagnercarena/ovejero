@@ -358,7 +358,7 @@ class ForwardModel(bnn_inference.InferenceClass):
 
 	def plot_posterior_contours(self,burnin,num_samples,block=True,
 		sample_save_dir=None,color_map=['#FFAA00','#41b6c4'],
-		plot_limits=None):
+		plot_limits=None,truth_color='#000000'):
 		"""
 		Plot the corner plot of chains resulting from the emcee for the
 		lens mass parameters.
@@ -376,6 +376,8 @@ class ForwardModel(bnn_inference.InferenceClass):
 				use in the contour plots.
 			plot_limits ([(float,float),..]): A list of float tuples that define
 				the maximum and minimum plot range for each posterior parameter.
+			truth_color (str): The color to use for plotting the truths in the
+				corner plot.
 		"""
 		# Get the chains from the samples
 		chains = self.sampler.get_chain()[burnin:].reshape(-1,
@@ -403,7 +405,7 @@ class ForwardModel(bnn_inference.InferenceClass):
 			bins=20,show_titles=True, plot_datapoints=False,
 			label_kwargs=dict(fontsize=10),truths=self.true_values,
 			levels=[0.68,0.95],color=color_map[0],fill_contours=True,
-			range=plot_limits,truth_color='#000000')
+			range=plot_limits,truth_color=truth_color)
 
 		# Now overlay the samples from the BNN
 		self.gen_samples(num_samples,sample_save_dir=sample_save_dir,
@@ -413,6 +415,6 @@ class ForwardModel(bnn_inference.InferenceClass):
 				plot_datapoints=False,label_kwargs=dict(fontsize=13),
 				truths=self.true_values,levels=[0.68,0.95],
 				dpi=1600, color=color_map[1],fig=fig,fill_contours=True,
-				range=plot_limits,truth_color='#000000')
+				range=plot_limits,truth_color=truth_color)
 		plt.show(block=block)
 
