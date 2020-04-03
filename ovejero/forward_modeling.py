@@ -390,7 +390,8 @@ class ForwardModel(bnn_inference.InferenceClass):
 			label_kwargs=dict(fontsize=10),
 			truths=self.true_values,
 			levels=[0.68,0.95],color='#FFAA00',fill_contours=True)
-		self.gen_samples(num_samples,single_image=self.true_image)
+		self.gen_samples(num_samples,single_image=self.true_image/
+			np.std(self.true_image))
 		corner.corner(self.predict_samps[:,0,:],bins=20,
 				labels=self.final_params_print_names,show_titles=True,
 				plot_datapoints=False,label_kwargs=dict(fontsize=13),
