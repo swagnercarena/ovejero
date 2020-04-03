@@ -140,6 +140,11 @@ class ForwardModel(bnn_inference.InferenceClass):
 				self.emcee_params_list.append(samp_key)
 				self.emcee_initial_values.append(self.image_dict[samp_key])
 		self.emcee_initial_values = np.array(self.emcee_initial_values)
+		# It's important to sort this since there is not a defined order to the
+		# dict.
+		self.emcee_initial_values = self.emcee_initial_values[np.argsort(
+			self.emcee_params_list)]
+		self.emcee_params_list.sort()
 
 		# Note that image has been selected.
 		self.image_selected = True
@@ -351,7 +356,8 @@ class ForwardModel(bnn_inference.InferenceClass):
 
 		return chains,new_param_names
 
-	def plot_posterior_contours(self,burnin,num_samples,block=True):
+	def plot_posterior_contours(self,burnin,num_samples,block=True,
+		sample_save_dir=None):
 		"""
 		Plot the corner plot of chains resulting from the emcee for the
 		lens mass parameters.
@@ -362,6 +368,9 @@ class ForwardModel(bnn_inference.InferenceClass):
 			num_samples (int): The number of bnn samples to use for the
 				contour
 			block (bool): If true, block excecution after plt.show() command
+			sample_save_dir (str): A path to a folder to save/load the samples.
+				If None samples will not be saved. Do not include .npy, this will
+				be appended (since several files will be generated).
 		"""
 		# Get the chains from the samples
 		chains = self.sampler.get_chain()[burnin:].reshape(-1,
@@ -390,8 +399,8 @@ class ForwardModel(bnn_inference.InferenceClass):
 			label_kwargs=dict(fontsize=10),
 			truths=self.true_values,
 			levels=[0.68,0.95],color='#FFAA00',fill_contours=True)
-		self.gen_samples(num_samples,single_image=self.true_image/
-			np.std(self.true_image))
+		self.gen_samples(num_samples,sample_save_dir=sample_save_dir,
+			single_image=self.true_image/np.std(self.true_image))
 		corner.corner(self.predict_samps[:,0,:],bins=20,
 				labels=self.final_params_print_names,show_titles=True,
 				plot_datapoints=False,label_kwargs=dict(fontsize=13),
