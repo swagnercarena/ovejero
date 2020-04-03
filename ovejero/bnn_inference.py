@@ -188,20 +188,22 @@ class InferenceClass:
 				for image_batch, yt_batch in self.tf_dataset_v.take(1):
 					self.images = image_batch
 					self.y_test = yt_batch.numpy()
+				batch_size = self.batch_size
 			else:
 				self.images = tf.convert_to_tensor(np.expand_dims(
 					np.expand_dims(single_image,axis=0),axis=-1))
 				# We cannot read y_test, so we will just set it to zeros.
 				self.y_test = np.zeros((1,self.num_params))
+				batch_size = 1
 
 			# This is where we will save the samples for each prediction. We will
 			# use this to numerically extract the covariance.
-			predict_samps = np.zeros((num_samples,self.batch_size,
+			predict_samps = np.zeros((num_samples,batch_size,
 				self.num_params))
 			# We also want to store a sampling of the aleatoric noise being
 			# predicted to get a handle on how it compares to the epistemic
 			# uncertainty.
-			al_samp = np.zeros((num_samples,self.batch_size,self.num_params,
+			al_samp = np.zeros((num_samples,batch_size,self.num_params,
 				self.num_params))
 			# Generate our samples
 			for samp in tqdm(range(num_samples)):
@@ -216,7 +218,7 @@ class InferenceClass:
 					std_pred = tf.exp(std_pred)
 					# Draw a random sample of noise and add that noise to our
 					# predicted value.
-					noise = tf.random.normal((self.batch_size,
+					noise = tf.random.normal((batch_size,
 						self.num_params))*std_pred
 					p_samps_tf = y_pred+noise
 					a_samps_tf = tf.linalg.diag(std_pred)
@@ -274,19 +276,19 @@ class InferenceClass:
 					# We have to flatten the covariance matrices for the condition
 					# step later on.
 					L_mat1 = tf.reshape(tf.linalg.inv(tf.transpose(L_mat1,
-						perm=[0,2,1])),(self.batch_size,-1))
+						perm=[0,2,1])),(batch_size,-1))
 					_, _, L_mat2 = self.loss_class.construct_precision_matrix(
 						L_mat_elements2)
 					L_mat2 = tf.reshape(tf.linalg.inv(tf.transpose(L_mat2,
-						perm=[0,2,1])),(self.batch_size,-1))
+						perm=[0,2,1])),(batch_size,-1))
 
 					# Use random draws from a uniform distribution to select between the
 					# two outputs
-					switch = tf.random.uniform((self.batch_size,1))
+					switch = tf.random.uniform((batch_size,1))
 					y_pred = tf.where(switch<pi,y_pred1,y_pred2)
 					# See full for cause of this weird back and forth
 					L_mat = tf.reshape(tf.where(switch<pi,L_mat1,L_mat2),
-						(self.batch_size,self.num_params,self.num_params))
+						(batch_size,self.num_params,self.num_params))
 					cov_mats = tf.matmul(L_mat,tf.transpose(L_mat,perm=[0,2,1]))
 					L_mat = tf.linalg.cholesky(cov_mats)
 
@@ -332,8 +334,8 @@ class InferenceClass:
 		self.al_cov = np.mean(self.al_samp,axis=0)
 		self.y_pred = np.mean(self.predict_samps,axis=0)
 		self.y_std = np.std(self.predict_samps,axis=0)
-		self.y_cov = np.zeros((self.batch_size,self.num_params,self.num_params))
-		for bi in range(self.batch_size):
+		self.y_cov = np.zeros((batch_size,self.num_params,self.num_params))
+		for bi in range(batch_size):
 			self.y_cov[bi] = np.cov(self.predict_samps[:,bi,:],rowvar=False)
 
 		self.samples_init = True
