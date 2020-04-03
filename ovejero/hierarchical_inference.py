@@ -565,7 +565,8 @@ class HierarchicalClass:
 				bins=20,show_titles=True, plot_datapoints=False,
 				label_kwargs=dict(fontsize=10),
 				truths=self.target_eval_dict['hyps'][hyp_s:hyp_e],
-				levels=[0.68,0.95],color='#FFAA00',fill_contours=True)
+				levels=[0.68,0.95],color='#FFAA00',fill_contours=True,
+				truth_color='#000000')
 			plt.show(block=block)
 
 	def plot_distributions(self,burnin,hyperparam_plot_names=None,block=True):
@@ -694,10 +695,11 @@ class HierarchicalClass:
 		# Plot the contours without the reweighting first.
 		fig = corner.corner(self.infer_class.predict_samps[:,image_index,:],
 				bins=20, labels=self.infer_class.final_params_print_names,
-				show_titles=True,plot_datapoints=False,label_kwargs=dict(fontsize=13),
+				show_titles=True,plot_datapoints=False,
+				label_kwargs=dict(fontsize=13),
 				truths=self.infer_class.y_test[image_index],levels=[0.68,0.95],
 				dpi=1600, color=color_map[0],fill_contours=True,
-				range=plot_limits)
+				range=plot_limits,truth_color='#000000')
 
 		weights = self.calculate_sample_weights(n_p_omega_samps,burnin)
 		weights /= np.sum(weights,axis=0)
@@ -708,7 +710,8 @@ class HierarchicalClass:
 				plot_datapoints=False,label_kwargs=dict(fontsize=13),
 				truths=self.infer_class.y_test[image_index],levels=[0.68,0.95],
 				dpi=1600, color=color_map[1],fill_contours=True,
-				weights=weights, fig=fig,range=plot_limits)
+				weights=weights, fig=fig,range=plot_limits,
+				truth_color='#000000')
 
 	def plot_reweighted_calibration(self,burnin,n_perc_points,
 		n_p_omega_samps=100,color_map=['#1b9e77','#d95f02','#7570b3'],

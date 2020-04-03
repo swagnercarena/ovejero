@@ -440,7 +440,8 @@ class InferenceClass:
 				labels=self.final_params_print_names,show_titles=True,
 				plot_datapoints=False,label_kwargs=dict(fontsize=13),
 				truths=self.y_test[image_index],levels=[0.68,0.95],
-				dpi=1600, color=contour_color,fill_contours=True)
+				dpi=1600, color=contour_color,fill_contours=True,
+				truth_color='#000000')
 		plt.show(block=block)
 
 	def comp_al_ep_unc(self,block=True,norm_diagonal=True):

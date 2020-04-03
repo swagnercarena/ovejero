@@ -403,7 +403,7 @@ class ForwardModel(bnn_inference.InferenceClass):
 			bins=20,show_titles=True, plot_datapoints=False,
 			label_kwargs=dict(fontsize=10),truths=self.true_values,
 			levels=[0.68,0.95],color=color_map[0],fill_contours=True,
-			range=plot_limits)
+			range=plot_limits,truth_color='#000000')
 
 		# Now overlay the samples from the BNN
 		self.gen_samples(num_samples,sample_save_dir=sample_save_dir,
@@ -413,6 +413,6 @@ class ForwardModel(bnn_inference.InferenceClass):
 				plot_datapoints=False,label_kwargs=dict(fontsize=13),
 				truths=self.true_values,levels=[0.68,0.95],
 				dpi=1600, color=color_map[1],fig=fig,fill_contours=True,
-				range=plot_limits)
+				range=plot_limits,truth_color='#000000')
 		plt.show(block=block)
 
