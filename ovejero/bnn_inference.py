@@ -212,8 +212,8 @@ class InferenceClass:
 			# Generate our samples
 			for samp in tqdm(range(num_samples)):
 				output = self.model.predict(self.images)
-				# How we extract uncertanties will depend on the type of network in
-				# question.
+				# How we extract uncertanties will depend on the type of network
+				# in question.
 				if self.bnn_type == 'diag':
 					# In the diagonal case we only need to add Gaussian random
 					# noise scaled by the variane.
@@ -442,7 +442,7 @@ class InferenceClass:
 				labels=self.final_params_print_names,show_titles=True,
 				plot_datapoints=False,label_kwargs=dict(fontsize=13),
 				truths=self.y_test[image_index],levels=[0.68,0.95],
-				dpi=1600, color=contour_color,fill_contours=True,
+				dpi=800, color=contour_color,fill_contours=True,
 				truth_color='#000000')
 		plt.show(block=block)
 
@@ -546,7 +546,7 @@ class InferenceClass:
 
 	def plot_calibration(self,color_map=["#377eb8", "#4daf4a"],n_perc_points=20,
 		figure=None,legend=None,show_plot=True,block=True,weights=None,
-		title=None):
+		title=None,ls='-',loc=9):
 		"""
 		Plot the percentage of draws from the predicted distributions with
 		||draws||_2 > ||truth||_2 for our different batch examples.
@@ -566,7 +566,10 @@ class InferenceClass:
 				n_lenses) that is will be used to reweight the posterior.
 			title (str): The title to use for the plot. If None will use a
 				default title.
-
+			ls (str): The line style to use in the calibration line for the
+				BNN.
+			loc (int or tuple): The location for the legend in the calibration
+				plot.
 
 		Returns
 		-------
@@ -604,21 +607,24 @@ class InferenceClass:
 		# Estimate the standard deviation from the jacknife
 		p_dlt_std = np.sqrt((len(self.p_dlt)-1)*np.mean(np.square(p_images_jn-
 			np.mean(p_images_jn,axis=0)),axis=0))
-		plt.plot(percentages,p_images,c=color_map[1])
+		plt.plot(percentages,p_images,c=color_map[1],ls=ls)
 		# Plot the 1 sigma contours from the jacknife estimate to get an idea of
 		# our sample variance.
 		plt.fill_between(percentages,p_images+p_dlt_std,p_images-p_dlt_std,
 			color=color_map[1],alpha=0.3)
-		plt.xlabel('Percentage')
-		plt.ylabel('Percent of Images that have x% of draws with d(draws)>d(truth)')
+		plt.xlabel('Percentage of Probability Volume')
+		plt.ylabel('Percent of Lenses With True Value in the Volume')
+		plt.text(-0.03,1,'Underconfident')
+		plt.text(0.85,0,'Overconfident')
 		if title is None:
 			plt.title('Calibration of Network Posterior')
 		else:
 			plt.title(title)
 		if legend is None:
-			plt.legend(['Perfect Calibration','Network Calibration'])
+			plt.legend(['Perfect Calibration','Network Calibration'],
+				loc=loc)
 		else:
-			plt.legend(legend)
+			plt.legend(legend,loc=loc)
 		if show_plot:
 			plt.show(block=block)
 

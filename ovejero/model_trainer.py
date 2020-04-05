@@ -56,6 +56,7 @@ def config_checker(cfg):
 
 	recursive_key_checker(cfg,cfg_ref)
 
+
 def load_config(config_path):
 	"""
 	Load a configuration file from the path and check that it meets the
@@ -128,7 +129,8 @@ def prepare_tf_record(cfg,root_path,tf_record_path,final_params,train_or_test):
 		# The parameter names of the angles
 		gampsi_params_ang = cfg_gampsi['gampsi_params_ang']
 	else:
-		gampsi_parameter_prefixes=None; gampsi_params_rat=None;
+		gampsi_parameter_prefixes=None
+		gampsi_params_rat=None
 		gampsi_params_ang=None
 
 	# First write desired parameters in log space.
@@ -169,6 +171,7 @@ def prepare_tf_record(cfg,root_path,tf_record_path,final_params,train_or_test):
 	data_tools.generate_tf_record(root_path,lens_params,new_param_path,
 		tf_record_path)
 
+
 def get_normed_pixel_scale(cfg,pixel_scale):
 	"""
 	Return a dictionary with the pixel scale normalized according to the
@@ -200,6 +203,7 @@ def get_normed_pixel_scale(cfg,pixel_scale):
 		normed_pixel_scale[shift_param] = pixel_scale/norm_const_dict[
 			shift_param][1]
 	return normed_pixel_scale
+
 
 def model_loss_builder(cfg, verbose=False):
 	"""
@@ -246,7 +250,6 @@ def model_loss_builder(cfg, verbose=False):
 	# Finally set the random seed we will use for training
 	random_seed = cfg['training_params']['random_seed']
 
-
 	# Initialize the log function according to bnn_type
 	loss_class = bnn_alexnet.LensingLossFunctions(flip_pairs,num_params)
 	if bnn_type == 'diag':
@@ -291,6 +294,7 @@ def model_loss_builder(cfg, verbose=False):
 			print('No weights found. Saving new weights to %s'%(model_weights))
 
 	return model, loss
+
 
 def main():
 	"""
@@ -347,7 +351,7 @@ def main():
 	tf.random.set_seed(random_seed)
 
 	# Number of steps per epoch is number of examples over the batch size
-	npy_file_list =  glob.glob(os.path.join(root_path_t,'X*.npy'))
+	npy_file_list = glob.glob(os.path.join(root_path_t,'X*.npy'))
 	steps_per_epoch = len(npy_file_list)//batch_size
 
 	print('Checking for training data.')
@@ -391,9 +395,10 @@ def main():
 
 	# TODO add validation data.
 	model.fit(tf_dataset_t,callbacks=[tensorboard, modelcheckpoint],
-		epochs=n_epochs, steps_per_epoch = steps_per_epoch,
+		epochs=n_epochs, steps_per_epoch=steps_per_epoch,
 		validation_data=tf_dataset_v)
 
+
 if __name__ == '__main__':
-    main()
+	main()
 

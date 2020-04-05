@@ -415,7 +415,7 @@ class ForwardModel(bnn_inference.InferenceClass):
 				labels=self.final_params_print_names,show_titles=True,
 				plot_datapoints=False,label_kwargs=dict(fontsize=13),
 				truths=self.true_values,levels=[0.68,0.95],
-				dpi=1600, color=color_map[1],fig=fig,fill_contours=True,
+				dpi=400, color=color_map[1],fig=fig,fill_contours=True,
 				range=plot_limits,truth_color=truth_color)
 
 		# Add a nice legend to our contours

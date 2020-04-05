@@ -538,7 +538,7 @@ class HierarchicalClass:
 			plt.show(block=block)
 
 	def plot_corner(self,burnin,hyperparam_plot_names=None,block=True,
-		truth_color='#000000'):
+		color='#FFAA00',truth_color='#000000'):
 		"""
 		Plot the corner plot of chains resulting from the emcee
 
@@ -548,6 +548,7 @@ class HierarchicalClass:
 			hyperparam_plot_names ([str,...]): A list containing the names
 				of the hyperparameters to be used during plotting
 			block (bool): If true, block excecution after plt.show() command
+			color (str): The color to use for plotting the contour.
 			truth_color (str): The color to use for plotting the truths in the
 				corner plot.
 		"""
@@ -568,28 +569,69 @@ class HierarchicalClass:
 				bins=20,show_titles=True, plot_datapoints=False,
 				label_kwargs=dict(fontsize=10),
 				truths=self.target_eval_dict['hyps'][hyp_s:hyp_e],
-				levels=[0.68,0.95],color='#FFAA00',fill_contours=True,
+				levels=[0.68,0.95],color=color,fill_contours=True,
 				truth_color=truth_color)
 			plt.show(block=block)
 
-	def plot_distributions(self,burnin,hyperparam_plot_names=None,block=True):
+	def plot_single_corner(self,burnin,plot_param,hyperparam_plot_names=None,
+		block=True,color='#FFAA00',truth_color='#000000',figure=None):
+		"""
+		Plot the corner plot of chains resulting from the emcee for a specific
+		parameter
+
+		Parameters
+		----------
+			burnin (int): How many of the initial samples to drop as burnin
+			plot_param (str): The lens parameter to plot the hyperprior
+				posteriors for.
+			hyperparam_plot_names ([str,...]): A list containing the names
+				of the hyperparameters to be used during plotting
+			block (bool): If true, block excecution after plt.show() command
+			color (str): The color to use for plotting the contour.
+			truth_color (str): The color to use for plotting the truths in the
+				corner plot.
+			figure (matplotlib.pyplot.figure): A figure that was previously
+				returned by plot_single_corner to overplot onto.
+		"""
+		if hyperparam_plot_names is None:
+			hyperparam_plot_names = self.target_eval_dict['hyp_names']
+
+		# Get the chains from the samples
+		chains = self.sampler.get_chain()[burnin:].reshape(-1,
+			len(hyperparam_plot_names))
+
+		# Iterate through groups of hyperparameters and make the plots
+		hyp_ind = self.target_eval_dict[plot_param]['hyp_ind']
+		hyp_s = np.min(hyp_ind)
+		hyp_e = np.max(hyp_ind)+1
+		figure = corner.corner(chains[:,hyp_s:hyp_e],
+			labels=hyperparam_plot_names[hyp_s:hyp_e],
+			dpi=800,bins=20,show_titles=True, plot_datapoints=False,
+			label_kwargs=dict(fontsize=13),
+			truths=self.target_eval_dict['hyps'][hyp_s:hyp_e],
+			levels=[0.68,0.95],color=color,fill_contours=True,
+			truth_color=truth_color,fig=figure)
+		return figure
+
+	def plot_distributions(self,burnin,param_plot_names=None,block=True,
+		color_map=["#a1dab4","#41b6c4","#2c7fb8","#253494"]):
 		"""
 		Plot the posteriors from our MCMC sampling of Omega.
 
 		Parameters
 		----------
 			burnin (int): How many of the initial samples to drop as burnin
-			hyperparam_plot_names ([str,...]): A list containing the names
-				of the hyperparameters to be used during plotting
+			param_plot_names ([str,...]): A list containing the names
+				of the parameters to be used during plotting
 			block (bool): If true, block excecution after plt.show() command
+			color_map ([str,...]): The colors for the samples, the posterior
+				distribution samples, the true distribution, and the interim
+				distribution respectively.
 		"""
-		if hyperparam_plot_names is None:
-			hyperparam_plot_names = self.target_eval_dict['hyp_names']
+		hyperparam_plot_names = self.target_eval_dict['hyp_names']
 		chains = self.sampler.get_chain()[burnin:].reshape(-1,
 			len(hyperparam_plot_names))
 		global lens_samps
-
-		color_map = ["#a1dab4","#41b6c4","#2c7fb8","#253494"]
 
 		for li in range(len(self.lens_params)):
 			# Grab the lens parameters, the samples, and indices of the
@@ -608,6 +650,7 @@ class HierarchicalClass:
 			eval_pdf_at = np.linspace(plt_min,plt_max,1000)
 
 			# Plot the samples for the parameter
+			plt.figure(dpi=800)
 			plt.hist(samples,bins=100,density=True,align='mid',
 				color=color_map[0],range=(plt_min,plt_max))
 
@@ -623,7 +666,8 @@ class HierarchicalClass:
 			# from.
 			truth_eval = np.exp(self.target_eval_dict[lens_param]['eval_fn'](
 				eval_pdf_at,*self.target_eval_dict['hyps'][hyp_s:hyp_e]))
-			plt.plot(eval_pdf_at,truth_eval,color=color_map[2], lw=2.5)
+			plt.plot(eval_pdf_at,truth_eval,color=color_map[2], lw=2.5,
+				ls='--')
 
 			# Plot the interim distribution these parameters were being drawn
 			# from.
@@ -632,7 +676,8 @@ class HierarchicalClass:
 			hyp_e = np.max(hyp_ind)+1
 			truth_eval = np.exp(self.interim_eval_dict[lens_param]['eval_fn'](
 				eval_pdf_at,*self.interim_eval_dict['hyps'][hyp_s:hyp_e]))
-			plt.plot(eval_pdf_at,truth_eval,color=color_map[3], lw=2.5)
+			plt.plot(eval_pdf_at,truth_eval,color=color_map[3], lw=2.5,
+				ls=':')
 
 			# Construct the legend.
 			custom_lines = [Line2D([0], [0], color=color_map[0], lw=4),
@@ -642,7 +687,12 @@ class HierarchicalClass:
 			plt.legend(custom_lines, ['BNN Samples', 'Posterior Samples',
 				'True Distribution','Interim Distribution'])
 
-			plt.xlabel(lens_param)
+			if param_plot_names is None:
+				plt.xlabel(lens_param)
+				plt.ylabel('p(%s)'%(lens_param))
+			else:
+				plt.xlabel(param_plot_names[li])
+				plt.ylabel('p(%s)'%(param_plot_names[li]))
 			plt.xlim([plt_min,plt_max])
 			plt.show(block=block)
 
