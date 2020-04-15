@@ -16,6 +16,7 @@ from tqdm import tqdm
 import pandas as pd
 import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
+from matplotlib import cm
 import corner
 import tensorflow as tf
 import tensorflow_probability as tfp
@@ -431,7 +432,7 @@ class InferenceClass:
 			raise RuntimeError('Must generate samples before plotting')
 
 		# First plot the image and print its parameter values
-		plt.imshow(self.images[image_index][:,:,0])
+		plt.imshow(self.images[image_index][:,:,0],cmap=cm.magma)
 		plt.colorbar()
 		plt.show(block=block)
 		for pi in range(self.num_params):

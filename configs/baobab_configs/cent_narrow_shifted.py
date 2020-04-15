@@ -34,8 +34,8 @@ cfg.bandpass = dict(
 
 cfg.observation = dict(
                   exposure_time=5400.0, # exposure time per image (in seconds)
-                  sky_brightness=20.1, # sky brightness (in magnitude per square arcseconds)
-                  num_exposures=10, # number of exposures that are combined
+                  sky_brightness=21.35, # sky brightness (in magnitude per square arcseconds)
+                  num_exposures=1, # number of exposures that are combined
                   background_noise=None, # overrides exposure_time, sky_brightness, read_noise, num_exposures
                   )
 
@@ -51,7 +51,7 @@ cfg.numerics = dict(
 
 cfg.image = dict(
              num_pix=64, # cutout pixel size
-             inverse=False, # if True, coord sys is ra to the left, if False, to the right 
+             inverse=False, # if True, coord sys is ra to the left, if False, to the right
              )
 
 cfg.bnn_omega = dict(
@@ -60,31 +60,31 @@ cfg.bnn_omega = dict(
                                  # Normal(mu, sigma^2)
                                  center_x = dict(
                                           dist='normal', # one of ['normal', 'beta']
-                                          mu=0.05,
+                                          mu=0.102,
                                           sigma=0.05), # two pixels
                                  center_y = dict(
                                           dist='normal',
-                                          mu=-0.05,
+                                          mu=-0.102,
                                           sigma=0.05), # two pixels
                                  # Lognormal(mu, sigma^2)
                                  gamma = dict(
                                               dist='lognormal',
-                                              mu=0.8,
+                                              mu=0.720,
                                               sigma=0.02),
                                  theta_E = dict(
                                                 dist='lognormal',
-                                                mu=0.05,
+                                                mu=0.01,
                                                 sigma=0.01),
                                  # Beta(a, b)
                                  e1 = dict(
                                            dist='normal',
-                                           mu=0.1,
+                                           mu=0.2,
                                            sigma=0.03,
                                            lower=-1, # This is ~ q>0.3
                                            upper=1),
                                  e2 = dict(
                                            dist='normal',
-                                           mu=-0.1,
+                                           mu=-0.2,
                                            sigma=0.03,
                                            lower=-1, # This is ~ q>0.3
                                            upper=1),
@@ -94,7 +94,7 @@ cfg.bnn_omega = dict(
                                        profile='SHEAR_GAMMA_PSI',
                                        gamma_ext = dict(
                                                          dist='lognormal',
-                                                         mu=-2.43, # See overleaf doc
+                                                         mu=-3.23, # See overleaf doc
                                                          sigma=0.1),
                                        psi_ext = dict(
                                                      dist='generalized_normal',

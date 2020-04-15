@@ -614,7 +614,7 @@ class HierarchicalClass:
 		return figure
 
 	def plot_distributions(self,burnin,param_plot_names=None,block=True,
-		color_map=["#a1dab4","#41b6c4","#2c7fb8","#253494"]):
+		color_map=["#a1dab4","#41b6c4","#2c7fb8","#253494"],bnn_name='BNN'):
 		"""
 		Plot the posteriors from our MCMC sampling of Omega.
 
@@ -627,6 +627,7 @@ class HierarchicalClass:
 			color_map ([str,...]): The colors for the samples, the posterior
 				distribution samples, the true distribution, and the interim
 				distribution respectively.
+			bnn_name (str): The BNN name to use for the plot titles.
 		"""
 		hyperparam_plot_names = self.target_eval_dict['hyp_names']
 		chains = self.sampler.get_chain()[burnin:].reshape(-1,
@@ -690,9 +691,12 @@ class HierarchicalClass:
 			if param_plot_names is None:
 				plt.xlabel(lens_param)
 				plt.ylabel('p(%s)'%(lens_param))
+				plt.title('%s Distribtuions for p(%s)'%(bnn_name,lens_param))
 			else:
 				plt.xlabel(param_plot_names[li])
 				plt.ylabel('p(%s)'%(param_plot_names[li]))
+				plt.title('%s Distribtuions for p(%s)'%(bnn_name,
+					param_plot_names[li]))
 			plt.xlim([plt_min,plt_max])
 			plt.show(block=block)
 

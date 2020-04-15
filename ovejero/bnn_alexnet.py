@@ -987,8 +987,9 @@ class LensingLossFunctions:
 			output,num_or_size_splits=[self.num_params,L_elements_len,
 			self.num_params,L_elements_len,1],axis=-1)
 
-		# Set the probability between 0 and 1.
-		pi = K.sigmoid(pi_logit)
+		# Set the probability between 0.5 and 1.0. In this parameterization the
+		# first Gaussian is always favored.
+		pi = 0.5+K.sigmoid(pi_logit)/2.0
 
 		# Now build the precision matrix for our two models and extract the
 		# diagonal components used for the loss calculation

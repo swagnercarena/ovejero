@@ -24,6 +24,7 @@ from lenstronomy.LensModel.lens_model import LensModel
 from lenstronomy.LensModel.Solver.lens_equation_solver import LensEquationSolver
 from lenstronomy.LightModel.light_model import LightModel
 from lenstronomy.SimulationAPI.data_api import DataAPI
+from matplotlib import cm
 import pandas as pd
 import numpy as np
 import os, emcee, corner
@@ -103,8 +104,11 @@ class ForwardModel(bnn_inference.InferenceClass):
 			self.cfg['validation_params']['root_path'],'metadata.csv'))
 
 		# Get the image filename
-		img_filename = ('X_'+'0'*(6-int(np.log10(image_index)))+
-			str(image_index)+'.npy')
+		if image_index>0:
+			img_filename = ('X_'+'0'*(6-int(np.log10(image_index)))+
+				str(image_index)+'.npy')
+		else:
+			img_filename = 'X_'+'0'*6+str(image_index)+'.npy'
 
 		# Load the true image.
 		self.true_image = np.load(os.path.join(
@@ -113,14 +117,16 @@ class ForwardModel(bnn_inference.InferenceClass):
 
 		# Show the image without noise
 		print('True image without noise.')
-		plt.imshow(self.true_image)
+		plt.imshow(self.true_image,cmap=cm.magma)
+		plt.colorbar()
 		plt.show()
 
 		# Add noise and show the new image_index
 		self.true_image_noise = self.noise_function.add_noise(
 			self.true_image).numpy()
 		print('True image with noise.')
-		plt.imshow(self.true_image_noise)
+		plt.imshow(self.true_image_noise,cmap=cm.magma)
+		plt.colorbar()
 		plt.show()
 
 		# Find, save, and print the parameters for this image.
@@ -406,7 +412,7 @@ class ForwardModel(bnn_inference.InferenceClass):
 			bins=20,show_titles=True, plot_datapoints=False,
 			label_kwargs=dict(fontsize=10),truths=self.true_values,
 			levels=[0.68,0.95],color=color_map[0],fill_contours=True,
-			range=plot_limits,truth_color=truth_color)
+			range=plot_limits,truth_color=truth_color,dpi=400)
 
 		# Now overlay the samples from the BNN
 		self.gen_samples(num_samples,sample_save_dir=sample_save_dir,

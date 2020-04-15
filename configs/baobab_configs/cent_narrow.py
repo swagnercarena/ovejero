@@ -34,8 +34,8 @@ cfg.bandpass = dict(
 
 cfg.observation = dict(
                   exposure_time=5400.0, # exposure time per image (in seconds)
-                  sky_brightness=20.1, # sky brightness (in magnitude per square arcseconds)
-                  num_exposures=10, # number of exposures that are combined
+                  sky_brightness=21.35, # sky brightness (in magnitude per square arcseconds)
+                  num_exposures=1, # number of exposures that are combined
                   background_noise=None, # overrides exposure_time, sky_brightness, read_noise, num_exposures
                   )
 
@@ -51,7 +51,7 @@ cfg.numerics = dict(
 
 cfg.image = dict(
              num_pix=64, # cutout pixel size
-             inverse=False, # if True, coord sys is ra to the left, if False, to the right 
+             inverse=False, # if True, coord sys is ra to the left, if False, to the right
              )
 
 cfg.bnn_omega = dict(
