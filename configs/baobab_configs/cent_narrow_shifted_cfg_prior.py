@@ -60,7 +60,7 @@ cfg.bnn_omega = dict(
                                  # Normal(mu, sigma^2)
                                  center_x = dict(
                                           dist='normal', # one of ['normal', 'beta']
-                                          mu=0.05,
+                                          mu=0.102,
                                           sigma=0.05, # two pixels
                                           hyper_prior=dict(
                                                      mu = [-np.inf,np.inf],
@@ -68,7 +68,7 @@ cfg.bnn_omega = dict(
                                           ),
                                  center_y = dict(
                                           dist='normal',
-                                          mu=-0.05,
+                                          mu=-0.102,
                                           sigma=0.05, # two pixels
                                           hyper_prior=dict(
                                                      mu = [-np.inf,np.inf],
@@ -77,7 +77,7 @@ cfg.bnn_omega = dict(
                                  # Lognormal(mu, sigma^2)
                                  gamma = dict(
                                               dist='lognormal',
-                                              mu=0.8,
+                                              mu=0.720,
                                               sigma=0.02,
                                               hyper_prior=dict(
                                                      mu = [-np.inf,np.inf],
@@ -85,7 +85,7 @@ cfg.bnn_omega = dict(
                                               ),
                                  theta_E = dict(
                                                 dist='lognormal',
-                                                mu=0.05,
+                                                mu=0.01,
                                                 sigma=0.01,
                                                 hyper_prior=dict(
                                                      mu = [-np.inf,np.inf],
@@ -94,7 +94,7 @@ cfg.bnn_omega = dict(
                                  # Beta(a, b)
                                  e1 = dict(
                                            dist='normal',
-                                           mu=0.1,
+                                           mu=0.2,
                                            sigma=0.03,
                                            hyper_prior=dict(
                                                      mu = [-np.inf,np.inf],
@@ -102,7 +102,7 @@ cfg.bnn_omega = dict(
                                            ),
                                  e2 = dict(
                                            dist='normal',
-                                           mu=-0.1,
+                                           mu=-0.2,
                                            sigma=0.03,
                                            hyper_prior=dict(
                                                      mu = [-np.inf,np.inf],
@@ -114,7 +114,7 @@ cfg.bnn_omega = dict(
                                        profile='SHEAR_GAMMA_PSI',
                                        gamma_ext = dict(
                                                          dist='lognormal',
-                                                         mu=-2.43, # See overleaf doc
+                                                         mu=-3.23, # See overleaf doc
                                                          sigma=0.1,
                                                          hyper_prior=dict(
                                                                     mu = [-np.inf,np.inf],
