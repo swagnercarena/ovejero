@@ -463,7 +463,7 @@ class InferenceClass:
 			raise RuntimeError('Must generate samples before plotting')
 
 		# Plot the two uncertanties side by side with the same scale.
-		fig, axes = plt.subplots(nrows=1, ncols=2,figsize=(12,12))
+		fig, axes = plt.subplots(nrows=1, ncols=2,figsize=(12,12),dpi=200)
 		al_median = np.median(np.abs(self.al_cov),axis=0)
 		y_cov_median = np.median(np.abs(self.y_cov),axis=0)
 		# Normalize by the diagonal term for plotting.
@@ -472,7 +472,7 @@ class InferenceClass:
 			al_median = (y_cov_diag*(al_median*y_cov_diag).T).T
 			y_cov_median = (y_cov_diag*(y_cov_median*y_cov_diag).T).T
 		# Get the maximum and minimum values
-		vmax = max(np.max(al_median),np.max(y_cov_median))
+		vmax = np.max(y_cov_median)
 		vmin = min(np.min(al_median),np.min(y_cov_median))
 		if vmin == 0:
 			vmin = np.min(y_cov_median)
@@ -511,7 +511,8 @@ class InferenceClass:
 			weights (np.array): An array with dimension (n_lens_samples,
 				n_lenses) that is will be used to reweight the posterior.
 			cov_emp (np.array): An array to use as the covariance in the distance
-				calculation. If None will be estimated from the data.
+				calculation. If None will be estimated from the data. This option
+				is mainly for testing.
 
 		Notes
 		-----

@@ -22,7 +22,7 @@
         "flip_pairs": [],
         "random_seed": 1138,
         "img_dim": 64,
-        "kernel_regularizer": 1e-03,
+        "kernel_regularizer": 1e-07,
         "tensorboard_log_dir": "/home/swagnercarena/ovejero/logs/nn1_lr.log",
         "model_weights": "/home/swagnercarena/ovejero/models/nn1_lr.h5",
         "decay": 3e-06,
