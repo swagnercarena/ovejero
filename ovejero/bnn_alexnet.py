@@ -533,7 +533,7 @@ def dropout_alexnet(img_size, num_params, kernel_regularizer=1e-6,
 
 	# Initialize model
 	inputs = Input(shape=img_size)
-	regularizer = tf.keras.regularizers.l2(kernel_regularizer)
+	regularizer = tf.keras.regularizers.l2(kernel_regularizer*dropout_rate)
 
 	# Layer 1
 	# model.add(AlwaysDropout(dropout_rate))
