@@ -1,12 +1,13 @@
 # TODO Sebastian: write a test that checks that all of the losses and outputs
 # are responsive to p_logit
 import unittest, os
-# Eliminate TF warning in tests
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 import numpy as np
 import tensorflow as tf
 from ovejero import bnn_alexnet
 from scipy.stats import multivariate_normal
+# Eliminate TF warning in tests
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
+
 
 class BNNTests(unittest.TestCase):
 
@@ -67,13 +68,14 @@ class BNNTests(unittest.TestCase):
 		input_shape = (None,200)
 
 		cd_layer = bnn_alexnet.ConcreteDropout(output_dim,activation=activation,
-			kernel_regularizer=kernel_regularizer, 
+			kernel_regularizer=kernel_regularizer,
 			dropout_regularizer=dropout_regularizer, init_min=init_min,
 			init_max=init_max)
 		cd_layer.build(input_shape=input_shape)
 
 		# Check that all of the weights have the right shapes
-		kernel = cd_layer.weights[0]; bias = cd_layer.weights[1]
+		kernel = cd_layer.weights[0]
+		bias = cd_layer.weights[1]
 		p_logit = cd_layer.weights[2]
 		self.assertListEqual(list(kernel.shape),[200,100])
 		self.assertListEqual(list(bias.shape),[100])
@@ -83,7 +85,7 @@ class BNNTests(unittest.TestCase):
 		self.assertEqual(np.sum(bias.numpy()),0)
 		self.assertEqual(p_logit.numpy(),np.log(0.1)-np.log(1-0.1))
 
-		# Check that the losses for the layer is what we would expect for 
+		# Check that the losses for the layer is what we would expect for
 		# concrete dropout.
 		p_logit_reg = cd_layer.losses[0].numpy()
 		kernel_reg = cd_layer.losses[1].numpy()
@@ -114,15 +116,16 @@ class BNNTests(unittest.TestCase):
 		init_max = 0.1
 		input_shape = (None,20,20,64)
 
-		cd_layer = bnn_alexnet.SpatialConcreteDropout(filters, kernel_size, 
+		cd_layer = bnn_alexnet.SpatialConcreteDropout(filters, kernel_size,
 			activation=activation,
-			kernel_regularizer=kernel_regularizer, 
+			kernel_regularizer=kernel_regularizer,
 			dropout_regularizer=dropout_regularizer, init_min=init_min,
 			init_max=init_max)
 		cd_layer.build(input_shape=input_shape)
 
 		# Check that all of the weights have the right shapes
-		kernel = cd_layer.weights[0]; bias = cd_layer.weights[1]
+		kernel = cd_layer.weights[0]
+		bias = cd_layer.weights[1]
 		p_logit = cd_layer.weights[2]
 		self.assertListEqual(list(kernel.shape),[5,5,64,64])
 		self.assertListEqual(list(bias.shape),[64])
@@ -132,7 +135,7 @@ class BNNTests(unittest.TestCase):
 		self.assertEqual(np.sum(bias.numpy()),0)
 		self.assertEqual(p_logit.numpy(),np.log(0.1)-np.log(1-0.1))
 
-		# Check that the losses for the layer is what we would expect for 
+		# Check that the losses for the layer is what we would expect for
 		# concrete dropout.
 		p_logit_reg = cd_layer.losses[0].numpy()
 		kernel_reg = cd_layer.losses[1].numpy()
@@ -162,7 +165,7 @@ class BNNTests(unittest.TestCase):
 
 		image_size = (100,100,1)
 		num_params = 8
-		model = bnn_alexnet.concrete_alexnet(image_size, num_params, 
+		model = bnn_alexnet.concrete_alexnet(image_size, num_params,
 			kernel_regularizer=1e-6,dropout_regularizer=1e-5)
 		input_shapes = [[],(100,100,1),(48,48,64),
 			(24,24,64),(24,24,192),(12,12,192),(12,12,384),(12,12,384),
@@ -193,7 +196,7 @@ class BNNTests(unittest.TestCase):
 
 		image_size = (100,100,1)
 		num_params = 8
-		model = bnn_alexnet.dropout_alexnet(image_size, num_params, 
+		model = bnn_alexnet.dropout_alexnet(image_size, num_params,
 			kernel_regularizer=1e-6,dropout_rate=0.1)
 		input_shapes = [[],(100,100,1),(100,100,1),(48,48,64),
 			(24,24,64),(24,24,64),(24,24,192),(12,12,192),(12,12,192),
@@ -212,8 +215,13 @@ class BNNTests(unittest.TestCase):
 			# a ReLU activation function.
 			if 'conv2d' in layer.name:
 				self.assertEqual(layer.activation,tf.keras.activations.relu)
+				self.assertEqual(layer.kernel_regularizer.l2,np.array(1e-6,
+					dtype=np.float32))
 			if 'dense' in layer.name and l_i < len(model.layers)-1:
 				self.assertEqual(layer.activation,tf.keras.activations.relu)
+				self.assertEqual(layer.kernel_regularizer.l2,np.array(1e-6,
+					dtype=np.float32))
+
 
 class LensingLossFunctionsTests(unittest.TestCase):
 
@@ -224,7 +232,7 @@ class LensingLossFunctionsTests(unittest.TestCase):
 		np.random.seed(2)
 
 	def test_mse_loss(self):
-		# Test that for a variety of number of parameters and bnn types, the 
+		# Test that for a variety of number of parameters and bnn types, the
 		# algorithm always returns the MSE loss.
 		flip_pairs = []
 		for num_params in range(1,20):
@@ -344,7 +352,7 @@ class LensingLossFunctionsTests(unittest.TestCase):
 		diag_loss = loss_class.diagonal_covariance_loss(yttf,yptf)
 
 		self.assertGreater(np.abs(diag_loss.numpy()-scipy_nlp),1)
-		
+
 		# Make sure it is still consistent with the true nlp
 		scipy_nlp = -multivariate_normal.logpdf(y_true.flatten(),
 			y_pred4.flatten(),
@@ -422,7 +430,7 @@ class LensingLossFunctionsTests(unittest.TestCase):
 			l_mat_elements_tf = tf.constant(
 				np.expand_dims(np.random.randn(int(num_params*(num_params+1)/2)),
 					axis=0),dtype=tf.float32)
-			
+
 			p_mat_tf, L_diag, _ = loss_class.construct_precision_matrix(
 				l_mat_elements_tf)
 
@@ -501,7 +509,7 @@ class LensingLossFunctionsTests(unittest.TestCase):
 		diag_loss = loss_class.full_covariance_loss(yttf,yptf)
 
 		self.assertGreater(np.abs(diag_loss.numpy()-scipy_nlp),1)
-		
+
 		# Make sure it is still consistent with the true nlp
 		scipy_nlp = -multivariate_normal.logpdf(y_true.flatten(),
 			y_pred4.flatten(),cov_mat) -np.log(2 * np.pi)*num_params/2
@@ -539,7 +547,7 @@ class LensingLossFunctionsTests(unittest.TestCase):
 			l_mat_elements_tf2 = tf.constant(
 				np.expand_dims(np.random.randn(int(num_params*(num_params+1)/2)),
 					axis=0),dtype=tf.float32)
-			
+
 			p_mat_tf1, L_diag1, _ = loss_class.construct_precision_matrix(
 				l_mat_elements_tf1)
 			p_mat_tf2, L_diag2, _ = loss_class.construct_precision_matrix(
@@ -635,7 +643,7 @@ class LensingLossFunctionsTests(unittest.TestCase):
 		diag_loss = loss_class.gm_full_covariance_loss(yttf,yptf)
 
 		self.assertGreater(np.abs(diag_loss.numpy()-scipy_nlp),0.1)
-		
+
 
 		# Finally, confirm that batching works
 		single_batch1 = np.concatenate([y_pred2,L_elements,y_pred,L_elements,
@@ -656,12 +664,12 @@ class LensingLossFunctionsTests(unittest.TestCase):
 		# Initialize a model an test the the function returns the desired value.
 		image_size = (100,100,1)
 		num_params = 8
-		model = bnn_alexnet.concrete_alexnet(image_size, num_params, 
+		model = bnn_alexnet.concrete_alexnet(image_size, num_params,
 			kernel_regularizer=1e-6,dropout_regularizer=1e-5)
 		p_fake_loss = bnn_alexnet.p_value(model)
 		self.assertAlmostEqual(p_fake_loss(None,None).numpy(),0.1)
 
-		model = bnn_alexnet.concrete_alexnet(image_size, num_params, 
+		model = bnn_alexnet.concrete_alexnet(image_size, num_params,
 			kernel_regularizer=1e-6,dropout_regularizer=1e-5,
 			init_min=0.3,init_max=0.3)
 		p_fake_loss = bnn_alexnet.p_value(model)
