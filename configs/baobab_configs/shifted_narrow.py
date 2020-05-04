@@ -69,11 +69,11 @@ cfg.bnn_omega = dict(
                                  # Lognormal(mu, sigma^2)
                                  gamma = dict(
                                               dist='lognormal',
-                                              mu=0.720,
-                                              sigma=0.02),
+                                              mu=0.800,
+                                              sigma=0.01),
                                  theta_E = dict(
                                                 dist='lognormal',
-                                                mu=0.01,
+                                                mu=-0.100,
                                                 sigma=0.01),
                                  # Beta(a, b)
                                  e1 = dict(
@@ -94,7 +94,7 @@ cfg.bnn_omega = dict(
                                        profile='SHEAR_GAMMA_PSI',
                                        gamma_ext = dict(
                                                          dist='lognormal',
-                                                         mu=-3.23, # See overleaf doc
+                                                         mu=-1.300, # See overleaf doc
                                                          sigma=0.1),
                                        psi_ext = dict(
                                                      dist='generalized_normal',
