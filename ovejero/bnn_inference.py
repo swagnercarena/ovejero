@@ -272,7 +272,7 @@ class InferenceClass:
 							axis=-1))
 
 					# Set the probability between 0 and 1.
-					pi = tf.sigmoid(pi_logit)
+					pi = 0.5+tf.sigmoid(pi_logit)/2.0
 
 					# Now build the precision matrix for our two models and extract the
 					# diagonal components used for the loss calculation

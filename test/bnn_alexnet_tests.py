@@ -341,10 +341,10 @@ class LensingLossFunctionsTests(unittest.TestCase):
 
 			self.assertAlmostEqual(diag_loss.numpy(),scipy_nlp)
 
-
 		# Confirm that when the wrong pair is flipped, it does not
 		# return the same answer.
-		y_pred4 = np.ones((1,num_params)); y_pred4[:,[5,2]] = -1
+		y_pred4 = np.ones((1,num_params))
+		y_pred4[:,[5,2]] = -1
 		y_pred4[:,0] = 10
 		yptf = tf.constant(np.concatenate([y_pred4,std_pred],axis=-1),
 				dtype=tf.float32)
@@ -579,9 +579,12 @@ class LensingLossFunctionsTests(unittest.TestCase):
 		# is taken
 		y_true = np.ones((1,num_params))
 		y_pred = np.ones((1,num_params))
-		y_pred1 = np.ones((1,num_params)); y_pred1[:,[1,2]] = -1
-		y_pred2 = np.ones((1,num_params)); y_pred2[:,[3,4]] = -1
-		y_pred3 = np.ones((1,num_params)); y_pred3[:,[1,2,3,4]] = -1
+		y_pred1 = np.ones((1,num_params))
+		y_pred1[:,[1,2]] = -1
+		y_pred2 = np.ones((1,num_params))
+		y_pred2[:,[3,4]] = -1
+		y_pred3 = np.ones((1,num_params))
+		y_pred3[:,[1,2,3,4]] = -1
 		y_preds = [y_pred,y_pred1,y_pred2,y_pred3]
 		L_elements_len = int(num_params*(num_params+1)/2)
 		# Have to keep this matrix simple so that we still get a reasonable

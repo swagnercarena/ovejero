@@ -998,7 +998,7 @@ class LensingLossFunctions:
 
 		# Set the probability between 0.5 and 1.0. In this parameterization the
 		# first Gaussian is always favored.
-		pi = 0.5+K.sigmoid(pi_logit)/2.0
+		pi = 0.5+tf.sigmoid(pi_logit)/2.0
 
 		# Now build the precision matrix for our two models and extract the
 		# diagonal components used for the loss calculation
