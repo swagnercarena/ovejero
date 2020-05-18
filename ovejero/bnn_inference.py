@@ -443,7 +443,7 @@ class InferenceClass:
 				labels=self.final_params_print_names,show_titles=True,
 				plot_datapoints=False,label_kwargs=dict(fontsize=13),
 				truths=self.y_test[image_index],levels=[0.68,0.95],
-				dpi=800, color=contour_color,fill_contours=True,
+				dpi=200, color=contour_color,fill_contours=True,
 				truth_color='#000000')
 		plt.show(block=block)
 
@@ -595,7 +595,7 @@ class InferenceClass:
 		percentages = np.linspace(0.0,1.0,n_perc_points)
 		p_images = np.zeros_like(percentages)
 		if figure is None:
-			figure = plt.figure(figsize=(8,8),dpi=800)
+			figure = plt.figure(figsize=(8,8),dpi=200)
 			plt.plot(percentages,percentages,c=color_map[0],ls='--')
 
 		# We'll estimate the uncertainty in our plat using a jacknife method.

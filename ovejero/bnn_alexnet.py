@@ -961,11 +961,12 @@ class LensingLossFunctions:
 		# Stack together the loss to be able to do the logsumexp trick
 		loss_list = []
 		for p_i in range(len(y_preds)):
-			# Since we're multiplying the probabilities, we don't want the
-			# negative here.
+			# Since we're summing the probabilities using a logsumexp,
+			# we don't want the negative here. Also note that we add an
+			# epsilon to our log operation to avoid nan gradients.
 			loss_list.append(-self.log_gauss_full(y_true,y_preds[p_i],
-				prec_mats[p_i],L_diags[p_i])+tf.squeeze(tf.math.log(pis[p_i]),
-				axis=-1))
+				prec_mats[p_i],L_diags[p_i])+tf.squeeze(tf.math.log(
+					pis[p_i]+K.epsilon()),axis=-1))
 
 		# Use tf implementation of logsumexp
 		return -tf.reduce_logsumexp(tf.stack(loss_list,axis=-1),axis=-1)
