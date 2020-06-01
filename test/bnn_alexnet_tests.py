@@ -196,8 +196,11 @@ class BNNTests(unittest.TestCase):
 
 		image_size = (100,100,1)
 		num_params = 8
+		# Kernel regularizer and dropout rate
+		kr = 1e-6
+		dr = 0.1
 		model = bnn_alexnet.dropout_alexnet(image_size, num_params,
-			kernel_regularizer=1e-6,dropout_rate=0.1)
+			kernel_regularizer=kr,dropout_rate=dr)
 		input_shapes = [[],(100,100,1),(100,100,1),(48,48,64),
 			(24,24,64),(24,24,64),(24,24,192),(12,12,192),(12,12,192),
 			(12,12,384),(12,12,384),(12,12,384),(12,12,384),(12,12,256),
@@ -215,11 +218,45 @@ class BNNTests(unittest.TestCase):
 			# a ReLU activation function.
 			if 'conv2d' in layer.name:
 				self.assertEqual(layer.activation,tf.keras.activations.relu)
-				self.assertEqual(layer.kernel_regularizer.l2,np.array(1e-6,
+				self.assertEqual(layer.kernel_regularizer.l2,np.array(kr*(1-dr),
 					dtype=np.float32))
 			if 'dense' in layer.name and l_i < len(model.layers)-1:
 				self.assertEqual(layer.activation,tf.keras.activations.relu)
-				self.assertEqual(layer.kernel_regularizer.l2,np.array(1e-6,
+				self.assertEqual(layer.kernel_regularizer.l2,np.array(kr*(1-dr),
+					dtype=np.float32))
+
+		# Repeat the test for dropout of 0
+		layer_names = ['input','conv2d','max_pooling2d','conv2d',
+			'max_pooling2d','conv2d','conv2d','conv2d','max_pooling2d','flatten',
+			'dense','dense','dense']
+
+		image_size = (100,100,1)
+		num_params = 8
+		dr = 0.0
+		model = bnn_alexnet.dropout_alexnet(image_size, num_params,
+			kernel_regularizer=kr,dropout_rate=dr)
+		input_shapes = [[],(100,100,1),(48,48,64),
+			(24,24,64),(24,24,192),(12,12,192),
+			(12,12,384),(12,12,384),(12,12,256),
+			(6,6,256),(9216,),(4096,),(4096,)]
+		output_shapes = [[]]+input_shapes[2:] + [(num_params,)]
+
+		# All I can really check is that the layers are of the right type and
+		# have the right shapes
+		for l_i, layer in enumerate(model.layers):
+			self.assertTrue(layer_names[l_i] in layer.name)
+			self.assertEqual(layer.dtype,tf.float32)
+			self.assertEqual(layer.input_shape[1:],input_shapes[l_i])
+			self.assertEqual(layer.output_shape[1:],output_shapes[l_i])
+			# Check that all the concrete dropout layer except the last have
+			# a ReLU activation function.
+			if 'conv2d' in layer.name:
+				self.assertEqual(layer.activation,tf.keras.activations.relu)
+				self.assertEqual(layer.kernel_regularizer.l2,np.array(kr*(1-dr),
+					dtype=np.float32))
+			if 'dense' in layer.name and l_i < len(model.layers)-1:
+				self.assertEqual(layer.activation,tf.keras.activations.relu)
+				self.assertEqual(layer.kernel_regularizer.l2,np.array(kr*(1-dr),
 					dtype=np.float32))
 
 
