@@ -533,37 +533,44 @@ def dropout_alexnet(img_size, num_params, kernel_regularizer=1e-6,
 
 	# Initialize model
 	inputs = Input(shape=img_size)
-	regularizer = tf.keras.regularizers.l2(kernel_regularizer*dropout_rate)
+	regularizer = tf.keras.regularizers.l2(kernel_regularizer*(1-dropout_rate))
 
 	# Layer 1
 	# model.add(AlwaysDropout(dropout_rate))
-	x = AlwaysDropout(dropout_rate)(inputs)
+	if dropout_rate > 0:
+		x = AlwaysDropout(dropout_rate)(inputs)
+	else:
+		x = inputs
 	x = Conv2D(filters=64, kernel_size=(5,5), strides=(2,2),
 		padding='valid', activation='relu', input_shape=img_size,
 		kernel_regularizer=regularizer)(x)
 	x = MaxPooling2D(pool_size=(3,3), strides=(2,2), padding='same')(x)
 
 	# Layer 2
-	x = AlwaysDropout(dropout_rate)(x)
+	if dropout_rate > 0:
+		x = AlwaysDropout(dropout_rate)(x)
 	x = Conv2D(filters=192, kernel_size=(5,5), strides=(1,1),
 		padding='same', activation='relu',
 		kernel_regularizer=regularizer)(x)
 	x = MaxPooling2D(pool_size=(3,3), strides=(2,2), padding='same')(x)
 
 	# Layer 3
-	x = AlwaysDropout(dropout_rate)(x)
+	if dropout_rate > 0:
+		x = AlwaysDropout(dropout_rate)(x)
 	x = Conv2D(filters=384, kernel_size=(3,3), strides=(1,1),
 		padding='same', activation='relu',
 		kernel_regularizer=regularizer)(x)
 
 	# Layer 4
-	x = AlwaysDropout(dropout_rate)(x)
+	if dropout_rate > 0:
+		x = AlwaysDropout(dropout_rate)(x)
 	x = Conv2D(filters=384, kernel_size=(3,3), strides=(1,1),
 		padding='same', activation='relu',
 		kernel_regularizer=regularizer)(x)
 
 	# Layer 5
-	x = AlwaysDropout(dropout_rate)(x)
+	if dropout_rate > 0:
+		x = AlwaysDropout(dropout_rate)(x)
 	x = Conv2D(filters=256, kernel_size=(3,3), strides=(1,1),
 		padding='same', activation='relu',
 		kernel_regularizer=regularizer)(x)
@@ -573,17 +580,20 @@ def dropout_alexnet(img_size, num_params, kernel_regularizer=1e-6,
 	x = Flatten()(x)
 
 	# Layer 6
-	x = AlwaysDropout(dropout_rate)(x)
+	if dropout_rate > 0:
+		x = AlwaysDropout(dropout_rate)(x)
 	x = Dense(4096, activation='relu',
 		kernel_regularizer=regularizer)(x)
 
 	# Layer 7
-	x = AlwaysDropout(dropout_rate)(x)
+	if dropout_rate > 0:
+		x = AlwaysDropout(dropout_rate)(x)
 	x = Dense(4096, activation='relu',
 		kernel_regularizer=regularizer)(x)
 
 	# Output
-	x = AlwaysDropout(dropout_rate)(x)
+	if dropout_rate > 0:
+		x = AlwaysDropout(dropout_rate)(x)
 	outputs = Dense(num_params,
 		kernel_regularizer=regularizer)(x)
 
