@@ -107,8 +107,9 @@ class ForwardModel(bnn_inference.InferenceClass):
 		# We will use the baobab code to generate our images and then calculate
 		# the likelihood manually.
 		# First we get the psf model
-		self.baobab_cfg = configs.BaobabConfig.from_file(self.baobab_config_path)
-		psf_models = instantiate_PSF_models(self.baobab_cfg.psf,
+		self.baobab_cfg = configs.BaobabConfig.from_file(
+			self.baobab_config_path)
+		self.psf_models = instantiate_PSF_models(self.baobab_cfg.psf,
 			self.baobab_cfg.instrument.pixel_scale)
 
 		# Now we get the noise function we'll use to add noise to our images
@@ -123,7 +124,8 @@ class ForwardModel(bnn_inference.InferenceClass):
 			lens_model_list=[
 				self.baobab_cfg.bnn_omega.lens_mass.profile,
 				self.baobab_cfg.bnn_omega.external_shear.profile],
-			source_light_model_list=[self.baobab_cfg.bnn_omega.src_light.profile]
+			source_light_model_list=[
+				self.baobab_cfg.bnn_omega.src_light.profile]
 		)
 
 		# initialize all the kwargs and models we'll need to generate the images.
@@ -133,20 +135,11 @@ class ForwardModel(bnn_inference.InferenceClass):
 			light_model_list=kwargs_model['source_light_model_list'])
 		self.lens_eq_solver = LensEquationSolver(self.lens_mass_model)
 
-		self.psf_model = get_PSF_model(psf_models, 1, 0)
-		kwargs_detector = util.merge_dicts(self.baobab_cfg.instrument,
-			self.baobab_cfg.bandpass, self.baobab_cfg.observation)
-		kwargs_detector.update(seeing=self.baobab_cfg.psf.fwhm,
-			psf_type=self.baobab_cfg.psf.type,
-			kernel_point_source=self.psf_model,
-			background_noise=0.0)
-		self.data_api = DataAPI(self.baobab_cfg.image.num_pix, **kwargs_detector)
-
 		# Set flags to make sure things are initialzied.
 		self.image_selected = False
 		self.sampler_init = False
 
-	def select_image(self,image_index):
+	def select_image(self,image_index,block=True):
 		"""
 		Select the image to conduct forward modeling on.
 
@@ -159,11 +152,20 @@ class ForwardModel(bnn_inference.InferenceClass):
 			self.cfg['validation_params']['root_path'],'metadata.csv'))
 
 		# Get the image filename
-		if image_index>0:
-			img_filename = ('X_'+'0'*(6-int(np.log10(image_index)))+
-				str(image_index)+'.npy')
-		else:
-			img_filename = 'X_'+'0'*6+str(image_index)+'.npy'
+		img_filename = 'X_{0:07d}.npy'.format(image_index)
+
+		# Once the image has been selected, we can select the corresponding
+		# PSF used by Baobab. Note in baobab the rotating psf selection is
+		# made using the image index.
+		self.psf_model = get_PSF_model(self.psf_models, len(self.psf_models),
+			image_index)
+		kwargs_detector = util.merge_dicts(self.baobab_cfg.instrument,
+			self.baobab_cfg.bandpass, self.baobab_cfg.observation)
+		kwargs_detector.update(seeing=self.baobab_cfg.psf.fwhm,
+			psf_type=self.baobab_cfg.psf.type,
+			kernel_point_source=self.psf_model,
+			background_noise=0.0)
+		self.data_api = DataAPI(self.baobab_cfg.image.num_pix, **kwargs_detector)
 
 		# Load the true image.
 		self.true_image = np.load(os.path.join(
@@ -174,7 +176,7 @@ class ForwardModel(bnn_inference.InferenceClass):
 		print('True image without noise.')
 		plt.imshow(self.true_image,cmap=cm.magma)
 		plt.colorbar()
-		plt.show()
+		plt.show(block=block)
 
 		# Add noise and show the new image_index
 		self.true_image_noise = self.noise_function.add_noise(
@@ -182,7 +184,7 @@ class ForwardModel(bnn_inference.InferenceClass):
 		print('True image with noise.')
 		plt.imshow(self.true_image_noise,cmap=cm.magma)
 		plt.colorbar()
-		plt.show()
+		plt.show(block=block)
 
 		# Find, save, and print the parameters for this image.
 		image_data = metadata[metadata['img_filename'] == img_filename]
@@ -461,7 +463,7 @@ class ForwardModel(bnn_inference.InferenceClass):
 
 		# Now get the BNN samples
 		self.gen_samples(num_samples,sample_save_dir=sample_save_dir,
-			single_image=self.true_image/np.std(self.true_image))
+			single_image=self.true_image_noise/np.std(self.true_image_noise))
 
 		# Calculate the MMD metric between the two sets of samples. Use the
 		# the forward sampling chains to set the covariance matrix.
@@ -526,7 +528,7 @@ class ForwardModel(bnn_inference.InferenceClass):
 
 		# Now overlay the samples from the BNN
 		self.gen_samples(num_samples,sample_save_dir=sample_save_dir,
-			single_image=self.true_image/np.std(self.true_image))
+			single_image=self.true_image_noise/np.std(self.true_image_noise))
 		corner.corner(self.predict_samps[:,0,:],bins=20,
 				labels=self.final_params_print_names,show_titles=True,
 				plot_datapoints=False,label_kwargs=dict(fontsize=13),
@@ -536,7 +538,7 @@ class ForwardModel(bnn_inference.InferenceClass):
 
 		left, bottom, width, height = [0.5725,0.8, 0.15, 0.18]
 		ax2 = fig.add_axes([left, bottom, width, height])
-		ax2.imshow(self.true_image,cmap=cm.magma,origin='lower')
+		ax2.imshow(self.true_image_noise,cmap=cm.magma,origin='lower')
 
 		# Add a nice legend to our contours
 		handles = [Line2D([0], [0], color=color_map[0], lw=10),
