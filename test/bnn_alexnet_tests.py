@@ -1,5 +1,3 @@
-# TODO Sebastian: write a test that checks that all of the losses and outputs
-# are responsive to p_logit
 import unittest, os
 import numpy as np
 import tensorflow as tf
