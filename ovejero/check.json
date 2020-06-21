@@ -48,5 +48,11 @@
     "inference_params": {
         "final_params_print_names": [
         ]
+    },
+    "forward_mod_params": {
+        "lens_model_list": [
+        ],
+        "source_model_list": [
+        ]
     }
 }

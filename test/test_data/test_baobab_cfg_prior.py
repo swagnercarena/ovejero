@@ -51,12 +51,12 @@ cfg.numerics = dict(
 
 cfg.image = dict(
              num_pix=64, # cutout pixel size
-             inverse=False, # if True, coord sys is ra to the left, if False, to the right 
+             inverse=False, # if True, coord sys is ra to the left, if False, to the right
              )
 
 cfg.bnn_omega = dict(
                  lens_mass = dict(
-                                 profile='SPEMD', # only available type now
+                                 profile='PEMD', # only available type now
                                  # Normal(mu, sigma^2)
                                  center_x = dict(
                                           dist='normal', # one of ['normal', 'beta']
