@@ -493,7 +493,7 @@ class ForwardModel(bnn_inference.InferenceClass):
 			reordered_true_values[fpi] = true_values_list[pi]
 
 		# Make a corner plot for the forward modeling samples
-		fig = corner.corner(chains,
+		fig = corner.corner(reordered_chains,
 			labels=self.final_params_print_names,bins=20,show_titles=True,
 			plot_datapoints=False,label_kwargs=dict(fontsize=10),dpi=dpi,
 			truths=reordered_true_values,levels=[0.68,0.95],color=color_map[0],
