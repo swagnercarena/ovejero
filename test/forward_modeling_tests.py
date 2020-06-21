@@ -234,7 +234,6 @@ class ForwardModelingTests(unittest.TestCase):
 	def test_plot_posterior_contours(self):
 		# Check that nothing crashes when we try to plot the posterior
 		# contours
-		# Check that the plot chains function does not crash.
 		fow_model = forward_modeling.ForwardModel(self.cfg)
 		image_index = 4
 		fow_model.select_image(image_index,block=False)
@@ -253,6 +252,33 @@ class ForwardModelingTests(unittest.TestCase):
 		fow_model.plot_posterior_contours(burnin,num_samples,dpi=dpi,
 			block=False)
 		plt.close()
+
+		os.remove(self.normalization_constants_path)
+		os.remove(self.tf_record_path)
+		os.remove(self.root_path + self.cfg['dataset_params']['new_param_path'])
+		os.remove(chains_save_path)
+
+	def test_calculate_p_MMD(self):
+		# Just a basic test that nothing crashes. Would be better to write
+		# a more nuanced test in the future.
+		fow_model = forward_modeling.ForwardModel(self.cfg)
+		image_index = 4
+		fow_model.select_image(image_index,block=False)
+		plt.close()
+		walker_ratio = 3
+		chains_save_path = self.root_path + 'test_chains.h5'
+		fow_model.initialize_sampler(walker_ratio,chains_save_path)
+		n_samps = 20
+		fow_model.run_sampler(n_samps)
+		burnin = 0
+		num_samples = 20
+
+		model_trainer.prepare_tf_record(self.cfg, self.root_path,
+			self.tf_record_path,self.lens_params,'train')
+		# It has to be less than 0 since we are not drawing from the same
+		# distributions.
+		self.assertLess(fow_model.calculate_p_MMD(burnin,num_samples,
+			calc_samps_max=20),0)
 
 		os.remove(self.normalization_constants_path)
 		os.remove(self.tf_record_path)

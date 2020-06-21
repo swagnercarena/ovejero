@@ -552,20 +552,25 @@ class ForwardModel(bnn_inference.InferenceClass):
 		"""
 		# Grab the samples from the forward modeling and correct them to agree
 		# with BNN output.
-		chains = self.sampler.get_chain()[burnin:].reshape(-1,
-			len(self.emcee_initial_values))
+		chains = self.chains[burnin:].reshape(-1,len(self.chain_params))
 
+		# Keep only the parameters that our BNN is predicting
 		pi_keep = []
-		param_names = []
-		for pi, param in enumerate(self.emcee_params_list):
+		chain_params_keep = []
+		for pi, param in enumerate(self.chain_params):
 			if param in self.lens_params:
 				pi_keep.append(pi)
-				param_names.append(param)
+				chain_params_keep.append(param)
 
 		# Keep only the chains related to the parameters we want to look at.
 		chains = chains.T[pi_keep].T
-		self.true_values = self.emcee_initial_values[pi_keep]
-		chains,_ = self._correct_chains(chains,param_names)
+		true_values_list = []
+		for param in chain_params_keep:
+			true_values_list.append(self.true_values[param])
+		true_values_list = np.array(true_values_list)
+
+		chain_params_keep = self._correct_chains(chains,chain_params_keep,
+			true_values_list)
 
 		# Now get the BNN samples
 		self.gen_samples(num_samples,sample_save_dir=sample_save_dir,
