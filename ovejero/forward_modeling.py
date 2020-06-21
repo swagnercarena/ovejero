@@ -484,14 +484,15 @@ class ForwardModel(bnn_inference.InferenceClass):
 		chain_params_keep = self._correct_chains(chains,chain_params_keep,
 			true_values_list)
 
-		# Modify the parameter names to agree with the print names.
+		# The final step is a simple reordering
+		reordered_chains = np.zeros_like(chains)
 		for pi, param in enumerate(chain_params_keep):
 			fpi = self.final_params.index(param)
-			chain_params_keep[pi] = self.final_params_print_names[fpi]
+			reordered_chains[:,fpi] = chains[:,pi]
 
-		# Iterate through groups of hyperparameters and make the plots
+		# Make a corner plot for the forward modeling samples
 		fig = corner.corner(chains,
-			labels=chain_params_keep,bins=20,show_titles=True,
+			labels=self.final_params_print_names,bins=20,show_titles=True,
 			plot_datapoints=False,label_kwargs=dict(fontsize=10),dpi=dpi,
 			truths=true_values_list,levels=[0.68,0.95],color=color_map[0],
 			fill_contours=True,range=plot_limits,truth_color=truth_color)
