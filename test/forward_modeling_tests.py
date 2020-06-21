@@ -1,11 +1,13 @@
 import unittest, os
-from ovejero import forward_modeling, model_trainer
+from ovejero import forward_modeling, model_trainer, data_tools
 import matplotlib.pyplot as plt
 import numpy as np
 from baobab import configs
 import pandas as pd
 import h5py
 
+# Eliminate TF warning in tests
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 class ForwardModelingTests(unittest.TestCase):
 
@@ -22,6 +24,14 @@ class ForwardModelingTests(unittest.TestCase):
 
 		# Also initialize the baobab config
 		self.baobab_cfg = configs.BaobabConfig.from_file(self.baobab_cfg_path)
+
+		# A few bnn_inference testing things that need to be used again here.
+		self.lens_params = ['external_shear_gamma_ext','external_shear_psi_ext',
+			'lens_mass_center_x','lens_mass_center_y',
+			'lens_mass_e1','lens_mass_e2',
+			'lens_mass_gamma','lens_mass_theta_E']
+		self.normalization_constants_path = self.root_path + 'norms.csv'
+		self.tf_record_path = self.root_path + 'tf_record_test'
 
 	def test_class_initialization(self):
 		# Just test that the basic variables of the class are initialized as
@@ -166,6 +176,7 @@ class ForwardModelingTests(unittest.TestCase):
 		plt.close()
 		fow_model.plot_chains(burnin=2,block=False)
 		plt.close()
+		os.remove(chains_save_path)
 
 	def test_correct_chains(self):
 		# Test that the internal _correct_chains function applies the
@@ -220,7 +231,30 @@ class ForwardModelingTests(unittest.TestCase):
 		np.testing.assert_almost_equal(g2,
 			new_true_values[new_params=='external_shear_g2'])
 
+	def test_plot_posterior_contours(self):
+		# Check that nothing crashes when we try to plot the posterior
+		# contours
+		# Check that the plot chains function does not crash.
+		fow_model = forward_modeling.ForwardModel(self.cfg)
+		image_index = 4
+		fow_model.select_image(image_index,block=False)
+		plt.close()
+		walker_ratio = 3
+		chains_save_path = self.root_path + 'test_chains.h5'
+		fow_model.initialize_sampler(walker_ratio,chains_save_path)
+		n_samps = 20
+		fow_model.run_sampler(n_samps)
+		burnin = 0
+		num_samples = 20
 
+		model_trainer.prepare_tf_record(self.cfg, self.root_path,
+			self.tf_record_path,self.lens_params,'train')
+		dpi = 20
+		fow_model.plot_posterior_contours(burnin,num_samples,dpi=dpi,
+			block=False)
+		plt.close()
 
-
-
+		os.remove(self.normalization_constants_path)
+		os.remove(self.tf_record_path)
+		os.remove(self.root_path + self.cfg['dataset_params']['new_param_path'])
+		os.remove(chains_save_path)

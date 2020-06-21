@@ -438,7 +438,8 @@ class ForwardModel(bnn_inference.InferenceClass):
 
 	def plot_posterior_contours(self,burnin,num_samples,block=True,
 		sample_save_dir=None,color_map=['#FFAA00','#41b6c4'],
-		plot_limits=None,truth_color='#000000',save_fig_path=None):
+		plot_limits=None,truth_color='#000000',save_fig_path=None,
+		dpi=400):
 		"""
 		Plot the corner plot of chains resulting from the emcee for the
 		lens mass parameters.
@@ -460,6 +461,7 @@ class ForwardModel(bnn_inference.InferenceClass):
 				corner plot.
 			save_fig_path (str): If specified, the figure will be saved to that
 				path.
+			dpi (int): The dpi to use when generating the image.
 		"""
 		# Get the chains from the samples
 		chains = self.chains[burnin:].reshape(-1,len(self.chain_params))
@@ -474,9 +476,13 @@ class ForwardModel(bnn_inference.InferenceClass):
 
 		# Keep only the chains related to the parameters we want to look at.
 		chains = chains.T[pi_keep].T
-		true_values = self.true_values[pi_keep]
-		chains,chain_params_keep,true_values = self._correct_chains(chains,
-			chain_params_keep,true_values)
+		true_values_list = []
+		for param in chain_params_keep:
+			true_values_list.append(self.true_values[param])
+		true_values_list = np.array(true_values_list)
+
+		chain_params_keep = self._correct_chains(chains,chain_params_keep,
+			true_values_list)
 
 		# Modify the parameter names to agree with the print names.
 		for pi, param in enumerate(chain_params_keep):
@@ -486,8 +492,8 @@ class ForwardModel(bnn_inference.InferenceClass):
 		# Iterate through groups of hyperparameters and make the plots
 		fig = corner.corner(chains,
 			labels=chain_params_keep,bins=20,show_titles=True,
-			plot_datapoints=False,label_kwargs=dict(fontsize=10),dpi=400,
-			truths=true_values,levels=[0.68,0.95],color=color_map[0],
+			plot_datapoints=False,label_kwargs=dict(fontsize=10),dpi=dpi,
+			truths=true_values_list,levels=[0.68,0.95],color=color_map[0],
 			fill_contours=True,range=plot_limits,truth_color=truth_color)
 
 		# Now overlay the samples from the BNN
@@ -496,8 +502,8 @@ class ForwardModel(bnn_inference.InferenceClass):
 		corner.corner(self.predict_samps[:,0,:],bins=20,
 				labels=self.final_params_print_names,show_titles=True,
 				plot_datapoints=False,label_kwargs=dict(fontsize=13),
-				truths=true_values,levels=[0.68,0.95],
-				dpi=400, color=color_map[1],fig=fig,fill_contours=True,
+				truths=true_values_list,levels=[0.68,0.95],
+				dpi=dpi, color=color_map[1],fig=fig,fill_contours=True,
 				range=plot_limits,truth_color=truth_color)
 
 		left, bottom, width, height = [0.5725,0.8, 0.15, 0.18]
