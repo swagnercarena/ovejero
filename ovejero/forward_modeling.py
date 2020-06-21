@@ -486,15 +486,17 @@ class ForwardModel(bnn_inference.InferenceClass):
 
 		# The final step is a simple reordering
 		reordered_chains = np.zeros_like(chains)
+		reordered_true_values = np.zeros_like(true_values_list)
 		for pi, param in enumerate(chain_params_keep):
 			fpi = self.final_params.index(param)
 			reordered_chains[:,fpi] = chains[:,pi]
+			reordered_true_values[fpi] = true_values_list[pi]
 
 		# Make a corner plot for the forward modeling samples
 		fig = corner.corner(chains,
 			labels=self.final_params_print_names,bins=20,show_titles=True,
 			plot_datapoints=False,label_kwargs=dict(fontsize=10),dpi=dpi,
-			truths=true_values_list,levels=[0.68,0.95],color=color_map[0],
+			truths=reordered_true_values,levels=[0.68,0.95],color=color_map[0],
 			fill_contours=True,range=plot_limits,truth_color=truth_color)
 
 		# Now overlay the samples from the BNN
@@ -503,7 +505,7 @@ class ForwardModel(bnn_inference.InferenceClass):
 		corner.corner(self.predict_samps[:,0,:],bins=20,
 				labels=self.final_params_print_names,show_titles=True,
 				plot_datapoints=False,label_kwargs=dict(fontsize=13),
-				truths=true_values_list,levels=[0.68,0.95],
+				truths=reordered_true_values,levels=[0.68,0.95],
 				dpi=dpi, color=color_map[1],fig=fig,fill_contours=True,
 				range=plot_limits,truth_color=truth_color)
 
