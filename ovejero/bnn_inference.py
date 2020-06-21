@@ -631,4 +631,3 @@ class InferenceClass:
 			plt.show(block=block)
 
 		return figure
-

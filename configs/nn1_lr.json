@@ -83,5 +83,14 @@
             "$\\gamma_\\mathrm{lens}$",
             "$\\log(\\theta_E)$"
         ]
+    },
+    "forward_mod_params": {
+        "lens_model_list": [
+            "PEMD",
+            "SHEAR_GAMMA_PSI"
+        ],
+        "source_model_list": [
+            "SERSIC_ELLIPSE"
+        ]
     }
 }

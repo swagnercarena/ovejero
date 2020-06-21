@@ -237,7 +237,7 @@ class HierarchicalClassTest(unittest.TestCase):
 				# testing.
 				return tf.constant(np.concatenate([np.random.multivariate_normal(
 					self.mean,self.covariance,self.batch_size),np.zeros((
-					self.batch_size,len(self.mean)))+self.al_std],axis=-1),
+						self.batch_size,len(self.mean)))+self.al_std],axis=-1),
 					tf.float32)
 
 		# Start with a simple covariance matrix example.
@@ -323,7 +323,6 @@ class HierarchicalClassTest(unittest.TestCase):
 			0.1])
 		samples = np.ones((8,2,2))*0.3
 
-
 		def hand_calc_log_pdf(samples,hyp):
 			# Add each one of the probabilities
 			scipy_pdf = stats.lognorm.logpdf(samples[0],scale=np.exp(hyp[0]),
@@ -405,7 +404,6 @@ class HierarchicalClassTest(unittest.TestCase):
 		self.assertTrue(os.path.isfile(test_chains_path))
 		self.assertTrue(self.hclass.cur_state is not None)
 		self.assertEqual(len(self.hclass.cur_state),n_walkers)
-
 
 		# Check that no walker was initialized to a point with
 		# -np.inf

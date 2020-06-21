@@ -18,19 +18,14 @@ images consist only a a lensed source (no lens light or point source).
 # TODO: Write tests for these functions after you're done racing.
 from ovejero import bnn_inference
 from baobab import configs
-from baobab.sim_utils import instantiate_PSF_models, get_PSF_model, \
-	generate_image
-from baobab.data_augmentation import noise_tf
-from lenstronomy.LensModel.lens_model import LensModel
-from lenstronomy.LensModel.Solver.lens_equation_solver \
-	import LensEquationSolver
-from lenstronomy.LightModel.light_model import LightModel
-from lenstronomy.SimulationAPI.data_api import DataAPI
+from baobab.sim_utils import instantiate_PSF_kwargs
+from baobab.data_augmentation import noise_tf, noise_lenstronomy
+from lenstronomy.Workflow.fitting_sequence import FittingSequence
 from matplotlib import cm
 import numba
 import pandas as pd
 import numpy as np
-import os, emcee, corner
+import os, corner
 from matplotlib import pyplot as plt
 import lenstronomy.Util.util as util
 from matplotlib.lines import Line2D
@@ -109,31 +104,100 @@ class ForwardModel(bnn_inference.InferenceClass):
 		# First we get the psf model
 		self.baobab_cfg = configs.BaobabConfig.from_file(
 			self.baobab_config_path)
-		self.psf_models = instantiate_PSF_models(self.baobab_cfg.psf,
-			self.baobab_cfg.instrument.pixel_scale)
 
-		# Now we get the noise function we'll use to add noise to our images
-		noise_kwargs = self.baobab_cfg.get_noise_kwargs()
-		self.noise_function = noise_tf.NoiseModelTF(**noise_kwargs)
+		# Add the lens and source models specified in the config. Currently
+		# no light model can be specified. Note that any self variable
+		# starting with the prefix ls_ is for use with lenstronomy.
+		self.ls_lens_model_list = []
+		fixed_lens = []
+		kwargs_lens_init = []
+		kwargs_lens_sigma = []
+		kwargs_lower_lens = []
+		kwargs_upper_lens = []
+
+		self.ls_source_model_list = []
+		fixed_source = []
+		kwargs_source_init = []
+		kwargs_source_sigma = []
+		kwargs_lower_source = []
+		kwargs_upper_source = []
+
+		# For now, each of the distribution options are hard coded toghether
+		# with reasonable choices for their parameters.
+
+		if 'PEMD' in cfg['forward_mod_params']['lens_model_list']:
+			self.ls_lens_model_list.append('PEMD')
+			fixed_lens.append({})
+			kwargs_lens_init.append({'theta_E': 0.7, 'e1': 0., 'e2': 0.,
+				'center_x': 0., 'center_y': 0., 'gamma': 2.0})
+			kwargs_lens_sigma.append({'theta_E': .2, 'e1': 0.05, 'e2': 0.05,
+				'center_x': 0.05, 'center_y': 0.05, 'gamma': 0.2})
+			kwargs_lower_lens.append({'theta_E': 0.01, 'e1': -0.5, 'e2': -0.5,
+				'center_x': -10, 'center_y': -10, 'gamma': 0.01})
+			kwargs_upper_lens.append({'theta_E': 10., 'e1': 0.5, 'e2': 0.5,
+				'center_x': 10, 'center_y': 10, 'gamma': 10})
+
+		if 'SHEAR_GAMMA_PSI' in cfg['forward_mod_params']['lens_model_list']:
+			self.ls_lens_model_list.append('SHEAR_GAMMA_PSI')
+			fixed_lens.append({'ra_0': 0, 'dec_0': 0})
+			kwargs_lens_init.append({'gamma_ext': 0.2, 'psi_ext': 0.0})
+			kwargs_lens_sigma.append({'gamma_ext': 0.1, 'psi_ext': 0.1})
+			kwargs_lower_lens.append({'gamma_ext': 0, 'psi_ext': -0.5*np.pi})
+			kwargs_upper_lens.append({'gamma_ext': 10, 'psi_ext': 0.5*np.pi})
+
+		if 'SERSIC_ELLIPSE' in cfg['forward_mod_params']['source_model_list']:
+			self.ls_source_model_list.append('SERSIC_ELLIPSE')
+			fixed_source.append({})
+			kwargs_source_init.append({'R_sersic': 0.2, 'n_sersic': 1,
+				'e1': 0, 'e2': 0, 'center_x': 0., 'center_y': 0})
+			kwargs_source_sigma.append({'n_sersic': 0.5, 'R_sersic': 0.1,
+				'e1': 0.05, 'e2': 0.05, 'center_x': 0.2, 'center_y': 0.2})
+			kwargs_lower_source.append({'e1': -0.5, 'e2': -0.5,
+				'R_sersic': 0.001, 'n_sersic': .5, 'center_x': -10,
+				'center_y': -10})
+			kwargs_upper_source.append({'e1': 0.5, 'e2': 0.5, 'R_sersic': 10,
+				'n_sersic': 5., 'center_x': 10, 'center_y': 10})
+
+		# Feed all of the above params into lists
+		self.ls_lens_params = [kwargs_lens_init, kwargs_lens_sigma,
+			fixed_lens, kwargs_lower_lens, kwargs_upper_lens]
+		self.ls_source_params = [kwargs_source_init, kwargs_source_sigma,
+			fixed_source, kwargs_lower_source, kwargs_upper_source]
+		self.ls_kwargs_params = {'lens_model': self.ls_lens_params,
+				'source_model': self.ls_source_params}
+
+		# Some of the likelihood parameters being used by Lenstronomy
+		self.ls_kwargs_likelihood = {'source_marg': False}
+		self.ls_kwargs_model = {'lens_model_list': self.ls_lens_model_list,
+			'source_light_model_list': self.ls_source_model_list}
+
+		# We will also need some of the noise kwargs. We will feed the
+		# lenstronomy version straight to lenstronomy and the tensorflow
+		# version to our pipeline for selecting the image.
+		self.noise_kwargs = self.baobab_cfg.get_noise_kwargs()
+		self.noise_function = noise_tf.NoiseModelTF(**self.noise_kwargs)
+
+		self.ls_kwargs_psf = instantiate_PSF_kwargs(self.baobab_cfg.psf,
+			self.baobab_cfg.instrument.pixel_scale)[0]
+
+		# The kwargs for the numerics. These should match what was used
+		# to generate the image.
+		self.ls_kwargs_numerics = {
+			'supersampling_factor': (
+				self.baobab_cfg.numerics.supersampling_factor),
+			'supersampling_convolution': False}
 
 		# Pull the needed information from the config file.
 		self.lens_params = self.cfg['dataset_params']['lens_params']
 
 		# Get the model parameter kwargs
-		kwargs_model = dict(
+		self.ls_kwargs_model = dict(
 			lens_model_list=[
 				self.baobab_cfg.bnn_omega.lens_mass.profile,
 				self.baobab_cfg.bnn_omega.external_shear.profile],
 			source_light_model_list=[
 				self.baobab_cfg.bnn_omega.src_light.profile]
 		)
-
-		# initialize all the kwargs and models we'll need to generate the images.
-		self.lens_mass_model = LensModel(
-			lens_model_list=kwargs_model['lens_model_list'])
-		self.src_light_model = LightModel(
-			light_model_list=kwargs_model['source_light_model_list'])
-		self.lens_eq_solver = LensEquationSolver(self.lens_mass_model)
 
 		# Set flags to make sure things are initialzied.
 		self.image_selected = False
@@ -154,19 +218,6 @@ class ForwardModel(bnn_inference.InferenceClass):
 		# Get the image filename
 		img_filename = 'X_{0:07d}.npy'.format(image_index)
 
-		# Once the image has been selected, we can select the corresponding
-		# PSF used by Baobab. Note in baobab the rotating psf selection is
-		# made using the image index.
-		self.psf_model = get_PSF_model(self.psf_models, len(self.psf_models),
-			image_index)
-		kwargs_detector = util.merge_dicts(self.baobab_cfg.instrument,
-			self.baobab_cfg.bandpass, self.baobab_cfg.observation)
-		kwargs_detector.update(seeing=self.baobab_cfg.psf.fwhm,
-			psf_type=self.baobab_cfg.psf.type,
-			kernel_point_source=self.psf_model,
-			background_noise=0.0)
-		self.data_api = DataAPI(self.baobab_cfg.image.num_pix, **kwargs_detector)
-
 		# Load the true image.
 		self.true_image = np.load(os.path.join(
 			self.cfg['validation_params']['root_path'],
@@ -186,140 +237,70 @@ class ForwardModel(bnn_inference.InferenceClass):
 		plt.colorbar()
 		plt.show(block=block)
 
+		# Extract the data kwargs (including noise kwargs) being used
+		# by lenstronomy.
+		_, _, ra_0, dec_0, _, _, Mpix2coord, _ = (
+			util.make_grid_with_coordtransform(
+				numPix=self.baobab_cfg.image.num_pix,
+				deltapix=self.baobab_cfg.instrument.pixel_scale, center_ra=0,
+				center_dec=0,
+				subgrid_res=1,
+				inverse=self.baobab_cfg.image.inverse))
+
+		# Update the lenstronomy kwargs with the image information
+		noise_dict = noise_lenstronomy.get_noise_sigma2_lenstronomy(
+			self.true_image_noise,**self.noise_kwargs)
+		self.ls_kwargs_data = {
+			'background_rms': np.sqrt(noise_dict['sky']+noise_dict['readout']),
+			'exposure_time': (
+				self.noise_kwargs['exposure_time']*
+				self.noise_kwargs['num_exposures']),
+			'ra_at_xy_0': ra_0,
+			'dec_at_xy_0': dec_0,
+			'transform_pix2angle': Mpix2coord,
+			'image_data': self.true_image_noise
+		}
+		self.ls_multi_band_list = [[self.ls_kwargs_data,
+			self.ls_kwargs_psf, self.ls_kwargs_numerics]]
+
 		# Find, save, and print the parameters for this image.
 		image_data = metadata[metadata['img_filename'] == img_filename]
-		self.image_dict = image_data.to_dict(orient='index')[image_index]
+		self.true_values = image_data.to_dict(orient='index')[image_index]
 		print('Image data')
-		print(self.image_dict)
-
-		# We want to save a list of the relevant parameters and the true values
-		# (which we will use to initialize our emcee code for speed).
-		self.emcee_params_list = []
-		self.emcee_initial_values = []
-		for samp_key in self.image_dict:
-			if ('lens_mass'in samp_key or 'src_light' in samp_key or
-				'external_shear' in samp_key) and (
-				samp_key != 'external_shear_dec_0' and
-				samp_key != 'external_shear_ra_0'):
-				self.emcee_params_list.append(samp_key)
-				self.emcee_initial_values.append(self.image_dict[samp_key])
-		self.emcee_initial_values = np.array(self.emcee_initial_values)
-		# It's important to sort this since there is not a defined order to the
-		# dict.
-		self.emcee_initial_values = self.emcee_initial_values[np.argsort(
-			self.emcee_params_list)]
-		self.emcee_params_list.sort()
+		print(self.true_values)
 
 		# Note that image has been selected.
 		self.image_selected = True
 
-	def transform_sample_to_dict(self,sample):
-		"""
-		Take as input a sample array and transform it into the dict used by
-		generate_image.
-
-		Parameters
-		----------
-		sample (np.array): The initial values of the samples. Should be in the
-			same order as self.parameter_list (set by select_image).
-		"""
-		# Just go through the samples one by one and put them in the right
-		# place in the dict structure.
-		sample_dict = {'lens_mass':dict(),'src_light':dict(),
-			'external_shear':dict()}
-		for si, param in enumerate(self.emcee_params_list):
-			if 'lens_mass' in param:
-				sample_dict['lens_mass'][param[10:]] = sample[si]
-			if 'src_light' in param:
-				sample_dict['src_light'][param[10:]] = sample[si]
-			if 'external_shear' in param:
-				sample_dict['external_shear'][param[15:]] = sample[si]
-
-		# Add the ra_0 and dec_0 parameters back in.
-		sample_dict['external_shear']['ra_0'] = sample_dict['lens_mass'][
-			'center_x']
-		sample_dict['external_shear']['dec_0'] = sample_dict['lens_mass'][
-			'center_y']
-
-		return sample_dict
-
-	def _log_likelihood(self,sample):
-		"""
-		Calculate the log likehood of a sample.
-
-		Parameters
-		----------
-		sample (np.array): The initial values of the samples. Should be in the
-			same order as self.parameter_list (set by select_image).
-		"""
-		# Transform the sample into the dict structure expected by generate_image.
-		sample_dict = self.transform_sample_to_dict(sample)
-		# Generate the image predicted by the parameters.
-		pred_img, _ = generate_image(sample_dict, self.psf_model, self.data_api,
-			self.lens_mass_model,
-			self.src_light_model, self.lens_eq_solver,
-			self.baobab_cfg.instrument.pixel_scale,
-			self.baobab_cfg.image.num_pix, self.baobab_cfg.components,
-			self.baobab_cfg.numerics,min_magnification=0.0,
-			lens_light_model=None, ps_model=None)
-		pred_img = pred_img.astype(np.float32)
-
-		# Get the noise for each pixel in this image according to our model.
-		noise_sigma2 = self.noise_function.get_noise_sigma2(pred_img).numpy()
-
-		# Calculate the log likelihood using this noise.
-		log_emcee_like = (pred_img - self.true_image_noise)**2 / noise_sigma2
-		log_emcee_like = -np.sum(log_emcee_like)/2
-
-		return log_emcee_like
-
-	def initialize_sampler(self,n_walkers,save_path,pool=None):
+	def initialize_sampler(self,walker_ratio,chains_save_path):
 		"""
 		Initialize the sampler to be used by run_samples.
 
 
 		Parameters
 		----------
-			n_walkers (int): The number of walkers used by the sampler.
-				Must be at least twice the number of hyperparameters.
-			save_path (str): A pickle path specifying where to save the
+			walker_ratio (int): The number of walkers per free parameter.
+				Must be at least 2.
+			save_path (str): An h5 path specifying where to save the
 				sampler chains. If a sampler chain is already present in the
 				path it will be loaded.
-			pool (Pool): An instance of multiprocessing.Pool which will be
-				used for multiprocessing during the sampling.
 		"""
 		if self.image_selected is False:
 			raise RuntimeError('Select an image before starting your sampler')
 
-		# Set a few parameters associated with the emcee code.
-		self.n_walkers = n_walkers
-		ndim = len(self.emcee_initial_values)
-
-		# Load chains we've used before.
-		if os.path.isfile(save_path):
-			print('Loaded chains found at %s'%(save_path))
-			self.cur_state = None
-
-		# Otherwise create new chains.
-		else:
-			print('No chains found at %s'%(save_path))
-			self.cur_state = (np.random.rand(n_walkers, ndim)*0.05 +
-				self.emcee_initial_values)
-
-		# Initialize backend hdf5 file that will store samples as we go
-		self.backend = emcee.backends.HDFBackend(save_path)
-
-		# Very important I pass in prob_class.log_post_omega here to allow
-		# pickling.
-		self.sampler = emcee.EnsembleSampler(n_walkers, ndim,
-			self._log_likelihood, backend=self.backend,pool=pool)
-
-		print('Optimizing the following parameters:')
-		print(self.emcee_params_list)
+		# Set up the fitting sequence and fitting kwargs from lenstronomy
+		self.walker_ratio = walker_ratio
+		self.chains_save_path = chains_save_path
+		ls_kwargs_data_joint = {'multi_band_list': self.ls_multi_band_list,
+			'multi_band_type': 'multi-linear'}
+		ls_kwargs_constraints = {}
+		self.fitting_seq = FittingSequence(ls_kwargs_data_joint,
+			self.ls_kwargs_model, ls_kwargs_constraints,
+			self.ls_kwargs_likelihood, self.ls_kwargs_params)
 
 		self.sampler_init = True
 
-	def run_sampler(self,n_samps,progress='notebook'):
+	def run_sampler(self,n_samps):
 		"""
 		Run an emcee sampler to get a posterior on the hyperparameters.
 
@@ -330,9 +311,40 @@ class ForwardModel(bnn_inference.InferenceClass):
 		if self.sampler_init is False:
 			raise RuntimeError('Must initialize sampler before running sampler')
 
-		self.sampler.run_mcmc(self.cur_state,n_samps,progress=progress)
+		# Notify user if chains were found
+		if os.path.isfile(self.chains_save_path):
+			print('Using chains found at %s'%(self.chains_save_path))
+			self.start_from_backup = True
+		else:
+			print('No chains found at %s'%(self.chains_save_path))
+			self.start_from_backup = False
 
-		self.cur_state = None
+		# Initialize the fitting kwargs to be passed to the lenstronomy
+		# fitting sequence. We set burnin to 0 since we would like to be
+		# responsible for the burnin.
+		fitting_kwargs_list = [['MCMC',{'n_burn': 0,
+			'n_run': n_samps, 'walkerRatio': self.walker_ratio,
+			'sigma_scale': 0.1, 'backup_filename': self.chains_save_path,
+			'start_from_backup': self.start_from_backup}]]
+		chain_list = self.fitting_seq.fit_sequence(fitting_kwargs_list)
+
+		# Extract the relevant outputs:
+		self.chain_params = chain_list[0][2]
+		# I want the walkers to be seperate so I can chose my own burnin
+		# adventure here.
+		self.chains = chain_list[0][1].reshape((-1,
+			len(self.chain_params)*self.walker_ratio,len(self.chain_params)))
+
+		# Convert chain_params naming convention to the one used by baobab
+		renamed_params = []
+		for param in self.chain_params:
+			if 'lens0' in param:
+				renamed_params.append('lens_mass_'+param[:-6])
+			if 'lens1' in param:
+				renamed_params.append('external_shear_'+param[:-6])
+			if 'source_light0' in param:
+				renamed_params.append('src_light_'+param[:-14])
+		self.chain_params=renamed_params
 
 	def plot_chains(self,burnin=None,block=True):
 		"""
@@ -345,18 +357,19 @@ class ForwardModel(bnn_inference.InferenceClass):
 			block (bool): If true, block excecution after plt.show() command
 		"""
 		# Extract and plot the chains
-		chains = self.sampler.get_chain()
 		if burnin is not None:
-			chains = chains[burnin:]
+			chains = self.chains[burnin:]
+		else:
+			chains = self.chains
 		for ci, chain in enumerate(chains.T):
 			plt.plot(chain.T,'.')
-			plt.title(self.emcee_params_list[ci])
-			plt.ylabel(self.emcee_params_list[ci])
+			plt.title(self.chain_params[ci])
+			plt.ylabel(self.chain_params[ci])
 			plt.xlabel('sample')
-			plt.axhline(self.emcee_initial_values[ci],c='k')
+			plt.axhline(self.true_values[self.chain_params[ci]],c='k')
 			plt.show(block=block)
 
-	def _correct_chains(self,chains,param_names):
+	def _correct_chains(self,chains,param_names,true_values):
 		"""
 		Correct the chains and true values so that their convention agrees with
 		what was used to train the BNN.
@@ -364,14 +377,18 @@ class ForwardModel(bnn_inference.InferenceClass):
 		Parameters
 		----------
 			chains (np.array): A numpy array containing the chain in the
-				original parameter space.
+				original parameter space. Dimensions should be (n_samples,
+				n_params).
 			param_names ([str,...]): A list of string containing the names
 				of each of the parameters in chains.
+			true_values (np.array): A numpy array with the true values for
+				each parameter in the untransformed parameterization. Should
+				have dimensions (n_params).
 
 		Returns
 		-------
-			(np.array,[str,...]): A tuple containing the corrected chains and
-				parameter list.
+			[str,...]: A list containing the corrected parameter names.
+				Everything else is changed in place.
 
 		TODO: Integrate this directly with the dataset code.
 		"""
@@ -379,7 +396,6 @@ class ForwardModel(bnn_inference.InferenceClass):
 		param_names = np.array(param_names)
 		new_param_names = np.copy(param_names)
 		dat_params=self.cfg['dataset_params']
-		self.emcee_initial_values
 
 		# First get all of the parameters that were changed to a cartesian
 		# format.
@@ -399,13 +415,13 @@ class ForwardModel(bnn_inference.InferenceClass):
 			chains[:,param_names==rat_param] = g1
 			chains[:,param_names==ang_param] = g2
 			# Make the same change in the true values
-			gamma = self.true_values[param_names==rat_param]
-			ang = self.true_values[param_names==ang_param]
+			gamma = true_values[param_names==rat_param]
+			ang = true_values[param_names==ang_param]
 			# Calculate g1 and g2.
 			g1 = gamma*np.cos(2*ang)
 			g2 = gamma*np.sin(2*ang)
-			self.true_values[param_names==rat_param] = g1
-			self.true_values[param_names==ang_param] = g2
+			true_values[param_names==rat_param] = g1
+			true_values[param_names==ang_param] = g2
 
 		# Now get all of the parameters that were changed to log space.
 		for log_param in dat_params['lens_params_log']:
@@ -415,10 +431,100 @@ class ForwardModel(bnn_inference.InferenceClass):
 			new_param_names[param_names==log_param] = log_param+'_log'
 			chains[:,param_names==log_param] = np.log(value)
 			# Make the same change in the true values.
-			self.true_values[param_names==log_param] = np.log(self.true_values[
+			true_values[param_names==log_param] = np.log(true_values[
 				param_names==log_param])
 
-		return chains,new_param_names
+		return new_param_names
+
+	def plot_posterior_contours(self,burnin,num_samples,block=True,
+		sample_save_dir=None,color_map=['#FFAA00','#41b6c4'],
+		plot_limits=None,truth_color='#000000',save_fig_path=None,
+		dpi=400):
+		"""
+		Plot the corner plot of chains resulting from the emcee for the
+		lens mass parameters.
+
+		Parameters
+		----------
+			burnin (int): How many of the initial samples to drop as burnin
+			num_samples (int): The number of bnn samples to use for the
+				contour
+			block (bool): If true, block excecution after plt.show() command
+			sample_save_dir (str): A path to a folder to save/load the samples.
+				If None samples will not be saved. Do not include .npy, this will
+				be appended (since several files will be generated).
+			color_map ([str,...]): A list of strings specifying the colors to
+				use in the contour plots.
+			plot_limits ([(float,float),..]): A list of float tuples that define
+				the maximum and minimum plot range for each posterior parameter.
+			truth_color (str): The color to use for plotting the truths in the
+				corner plot.
+			save_fig_path (str): If specified, the figure will be saved to that
+				path.
+			dpi (int): The dpi to use when generating the image.
+		"""
+		# Get the chains from the samples
+		chains = self.chains[burnin:].reshape(-1,len(self.chain_params))
+
+		# Keep only the parameters that our BNN is predicting
+		pi_keep = []
+		chain_params_keep = []
+		for pi, param in enumerate(self.chain_params):
+			if param in self.lens_params:
+				pi_keep.append(pi)
+				chain_params_keep.append(param)
+
+		# Keep only the chains related to the parameters we want to look at.
+		chains = chains.T[pi_keep].T
+		true_values_list = []
+		for param in chain_params_keep:
+			true_values_list.append(self.true_values[param])
+		true_values_list = np.array(true_values_list)
+
+		chain_params_keep = self._correct_chains(chains,chain_params_keep,
+			true_values_list)
+
+		# Modify the parameter names to agree with the print names.
+		for pi, param in enumerate(chain_params_keep):
+			fpi = self.final_params.index(param)
+			chain_params_keep[pi] = self.final_params_print_names[fpi]
+
+		# Iterate through groups of hyperparameters and make the plots
+		fig = corner.corner(chains,
+			labels=chain_params_keep,bins=20,show_titles=True,
+			plot_datapoints=False,label_kwargs=dict(fontsize=10),dpi=dpi,
+			truths=true_values_list,levels=[0.68,0.95],color=color_map[0],
+			fill_contours=True,range=plot_limits,truth_color=truth_color)
+
+		# Now overlay the samples from the BNN
+		self.gen_samples(num_samples,sample_save_dir=sample_save_dir,
+			single_image=self.true_image_noise/np.std(self.true_image_noise))
+		corner.corner(self.predict_samps[:,0,:],bins=20,
+				labels=self.final_params_print_names,show_titles=True,
+				plot_datapoints=False,label_kwargs=dict(fontsize=13),
+				truths=true_values_list,levels=[0.68,0.95],
+				dpi=dpi, color=color_map[1],fig=fig,fill_contours=True,
+				range=plot_limits,truth_color=truth_color)
+
+		left, bottom, width, height = [0.5725,0.8, 0.15, 0.18]
+		ax2 = fig.add_axes([left, bottom, width, height])
+		ax2.imshow(self.true_image_noise,cmap=cm.magma,origin='lower')
+
+		# Add a nice legend to our contours
+		handles = [Line2D([0], [0], color=color_map[0], lw=10),
+			Line2D([0], [0], color=color_map[1], lw=10)]
+		bnn_type = self.cfg['training_params']['bnn_type']
+		if bnn_type == 'gmm':
+			bnn_type = 'GMM'
+		else:
+			bnn_type = bnn_type.capitalize()
+		fig.legend(handles,['Forward Modeling',bnn_type+' BNN'],loc=(0.55,0.75),
+			fontsize=20)
+
+		if save_fig_path is not None:
+			plt.savefig(save_fig_path)
+
+		plt.show(block=block)
 
 	def calculate_p_MMD(self,burnin,num_samples,calc_samps_max=1000,
 		sample_save_dir=None):
@@ -446,20 +552,25 @@ class ForwardModel(bnn_inference.InferenceClass):
 		"""
 		# Grab the samples from the forward modeling and correct them to agree
 		# with BNN output.
-		chains = self.sampler.get_chain()[burnin:].reshape(-1,
-			len(self.emcee_initial_values))
+		chains = self.chains[burnin:].reshape(-1,len(self.chain_params))
 
+		# Keep only the parameters that our BNN is predicting
 		pi_keep = []
-		param_names = []
-		for pi, param in enumerate(self.emcee_params_list):
+		chain_params_keep = []
+		for pi, param in enumerate(self.chain_params):
 			if param in self.lens_params:
 				pi_keep.append(pi)
-				param_names.append(param)
+				chain_params_keep.append(param)
 
 		# Keep only the chains related to the parameters we want to look at.
 		chains = chains.T[pi_keep].T
-		self.true_values = self.emcee_initial_values[pi_keep]
-		chains,_ = self._correct_chains(chains,param_names)
+		true_values_list = []
+		for param in chain_params_keep:
+			true_values_list.append(self.true_values[param])
+		true_values_list = np.array(true_values_list)
+
+		chain_params_keep = self._correct_chains(chains,chain_params_keep,
+			true_values_list)
 
 		# Now get the BNN samples
 		self.gen_samples(num_samples,sample_save_dir=sample_save_dir,
@@ -474,85 +585,3 @@ class ForwardModel(bnn_inference.InferenceClass):
 			prec)
 
 		return -mmd**2*calc_samps_max/(16*K**2)
-
-	def plot_posterior_contours(self,burnin,num_samples,block=True,
-		sample_save_dir=None,color_map=['#FFAA00','#41b6c4'],
-		plot_limits=None,truth_color='#000000'):
-		"""
-		Plot the corner plot of chains resulting from the emcee for the
-		lens mass parameters.
-
-		Parameters
-		----------
-			burnin (int): How many of the initial samples to drop as burnin
-			num_samples (int): The number of bnn samples to use for the
-				contour
-			block (bool): If true, block excecution after plt.show() command
-			sample_save_dir (str): A path to a folder to save/load the samples.
-				If None samples will not be saved. Do not include .npy, this will
-				be appended (since several files will be generated).
-			color_map ([str,...]): A list of strings specifying the colors to
-				use in the contour plots.
-			plot_limits ([(float,float),..]): A list of float tuples that define
-				the maximum and minimum plot range for each posterior parameter.
-			truth_color (str): The color to use for plotting the truths in the
-				corner plot.
-		"""
-		# Get the chains from the samples
-		chains = self.sampler.get_chain()[burnin:].reshape(-1,
-			len(self.emcee_initial_values))
-
-		pi_keep = []
-		param_names = []
-		for pi, param in enumerate(self.emcee_params_list):
-			if param in self.lens_params:
-				pi_keep.append(pi)
-				param_names.append(param)
-
-		# Keep only the chains related to the parameters we want to look at.
-		chains = chains.T[pi_keep].T
-		self.true_values = self.emcee_initial_values[pi_keep]
-		chains,new_param_names = self._correct_chains(chains,param_names)
-
-		for pi, param in enumerate(new_param_names):
-			fpi = self.final_params.index(param)
-			new_param_names[pi] = self.final_params_print_names[fpi]
-
-		# # Iterate through groups of hyperparameters and make the plots
-		fig = corner.corner(chains,
-			labels=new_param_names,
-			bins=20,show_titles=True, plot_datapoints=False,
-			label_kwargs=dict(fontsize=10),truths=self.true_values,
-			levels=[0.68,0.95],color=color_map[0],fill_contours=True,
-			range=plot_limits,truth_color=truth_color,dpi=400)
-
-		# Now overlay the samples from the BNN
-		self.gen_samples(num_samples,sample_save_dir=sample_save_dir,
-			single_image=self.true_image_noise/np.std(self.true_image_noise))
-		corner.corner(self.predict_samps[:,0,:],bins=20,
-				labels=self.final_params_print_names,show_titles=True,
-				plot_datapoints=False,label_kwargs=dict(fontsize=13),
-				truths=self.true_values,levels=[0.68,0.95],
-				dpi=400, color=color_map[1],fig=fig,fill_contours=True,
-				range=plot_limits,truth_color=truth_color)
-
-		left, bottom, width, height = [0.5725,0.8, 0.15, 0.18]
-		ax2 = fig.add_axes([left, bottom, width, height])
-		ax2.imshow(self.true_image_noise,cmap=cm.magma,origin='lower')
-
-		# Add a nice legend to our contours
-		handles = [Line2D([0], [0], color=color_map[0], lw=10),
-			Line2D([0], [0], color=color_map[1], lw=10)]
-		bnn_type = self.cfg['training_params']['bnn_type']
-		if bnn_type == 'gmm':
-			bnn_type = 'GMM'
-		else:
-			bnn_type = bnn_type.capitalize()
-		fig.legend(handles,['Forward Modeling',bnn_type+' BNN'],loc=(0.55,0.75),
-			fontsize=20)
-
-		plt.savefig('test.pdf')
-
-		plt.show(block=block)
-
-

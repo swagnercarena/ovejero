@@ -1,12 +1,12 @@
 import unittest, os, json
-# Eliminate TF warning in tests
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
-# import tensorflow as tf
 from ovejero import bnn_inference, data_tools, bnn_alexnet
 import numpy as np
 import pandas as pd
 import tensorflow as tf
 import matplotlib.pyplot as plt
+
+# Eliminate TF warning in tests
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 class BNNInferenceTest(unittest.TestCase):
 
@@ -37,14 +37,13 @@ class BNNInferenceTest(unittest.TestCase):
 	def test_fix_flip_pairs(self):
 		# Check that fix_flip_pairs always selects the best possible configuration
 		# to return.
-		
 
 		# Get the set of all flip pairs we want to check
 		flip_pairs = self.cfg['training_params']['flip_pairs']
 		flip_set = set()
 		for flip_pair in flip_pairs:
 			flip_set.update(flip_pair)
-		
+
 		y_test = np.ones((self.batch_size,self.num_params))
 		predict_samps = np.ones((10,self.batch_size,self.num_params))
 
@@ -69,7 +68,6 @@ class BNNInferenceTest(unittest.TestCase):
 
 		self.assertEqual(np.sum(np.abs(predict_samps-y_test)),
 			2*self.batch_size*len(dont_flip_set))
-
 
 	def test_undo_param_norm(self):
 		# Test if normalizing the lens parameters works correctly.
@@ -103,7 +101,7 @@ class BNNInferenceTest(unittest.TestCase):
 			lens_params_numpy)),0)
 
 		# Clean up the file now that we're done
-		os.remove(self.normalized_param_path)	
+		os.remove(self.normalized_param_path)
 		os.remove(self.normalization_constants_path)
 
 	def test_gen_samples_diag(self):
@@ -120,12 +118,13 @@ class BNNInferenceTest(unittest.TestCase):
 				self.covariance = covariance
 				self.batch_size = batch_size
 				self.al_std = al_std
+
 			def predict(self,image):
 				# We won't actually be using the image. We just want it for
 				# testing.
 				return tf.constant(np.concatenate([np.random.multivariate_normal(
 					self.mean,self.covariance,self.batch_size),np.zeros((
-					self.batch_size,len(self.mean)))+self.al_std],axis=-1),
+						self.batch_size,len(self.mean)))+self.al_std],axis=-1),
 					tf.float32)
 
 		# Start with a simple covariance matrix example.
@@ -185,7 +184,7 @@ class BNNInferenceTest(unittest.TestCase):
 		self.assertAlmostEqual(np.mean(np.abs(self.infer_class.al_cov-
 			np.eye(self.num_params))),0)
 
-		# Make sure our test probes things well. 
+		# Make sure our test probes things well.
 		wrong_mean = np.random.randn(self.num_params)
 		wrong_covariance = np.random.rand(self.num_params,self.num_params)
 		al_std = -1000
@@ -224,12 +223,13 @@ class BNNInferenceTest(unittest.TestCase):
 				self.batch_size = batch_size
 				self.L_elements = L_elements
 				self.L_elements_len = int(self.num_params*(self.num_params+1)/2)
+
 			def predict(self,image):
 				# We won't actually be using the image. We just want it for
 				# testing.
 				return tf.constant(np.concatenate([np.zeros((
 					self.batch_size,self.num_params))+self.mean,np.zeros((
-					self.batch_size,self.L_elements_len))+self.L_elements],
+						self.batch_size,self.L_elements_len))+self.L_elements],
 					axis=-1),tf.float32)
 
 		# Start with a simple covariance matrix example.
@@ -279,7 +279,7 @@ class BNNInferenceTest(unittest.TestCase):
 
 		# Calculate the corresponding covariance matrix
 		_, _, L_mat = loss_class.construct_precision_matrix(
-					tf.constant(L_elements))
+			tf.constant(L_elements))
 		L_mat = np.linalg.inv(L_mat.numpy()[0].T)
 		cov_mat = np.dot(L_mat,L_mat.T)
 
@@ -320,6 +320,7 @@ class BNNInferenceTest(unittest.TestCase):
 				self.L_elements2 = L_elements2
 				self.pi_logit = pi_logit
 				self.L_elements_len = int(self.num_params*(self.num_params+1)/2)
+
 			def predict(self,image):
 				# We won't actually be using the image. We just want it for
 				# testing.
@@ -475,12 +476,13 @@ class BNNInferenceTest(unittest.TestCase):
 				self.covariance = covariance
 				self.batch_size = batch_size
 				self.al_std = al_std
+
 			def predict(self,image):
 				# We won't actually be using the image. We just want it for
 				# testing.
 				return tf.constant(np.concatenate([np.random.multivariate_normal(
 					self.mean,self.covariance,self.batch_size),np.zeros((
-					self.batch_size,len(self.mean)))+self.al_std],axis=-1),
+						self.batch_size,len(self.mean)))+self.al_std],axis=-1),
 					tf.float32)
 
 		# Start with a simple covariance matrix example.
