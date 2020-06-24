@@ -304,6 +304,12 @@ class HierarchicalClassTest(unittest.TestCase):
 		np.testing.assert_almost_equal(orig_bnn_samps,
 			self.hclass.infer_class.predict_samps)
 
+		# Finall check that subsampling doesn't cause any issues
+		subsample= 10
+		self.hclass.gen_samples(100,save_path,subsample=subsample)
+		np.testing.assert_almost_equal(hierarchical_inference.lens_samps,
+			orig_samps[:,:,:10])
+
 		# Clean up the files we generated
 		os.remove(self.normalization_constants_path)
 		os.remove(self.normalized_param_path)

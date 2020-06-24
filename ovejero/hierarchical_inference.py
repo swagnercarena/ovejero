@@ -323,7 +323,7 @@ class HierarchicalClass:
 		"""
 		return self.prob_class.log_p_omega(hyp)
 
-	def gen_samples(self,num_samples,sample_save_dir=None):
+	def gen_samples(self,num_samples,sample_save_dir=None,subsample=None):
 		"""
 		Generate samples of lens parameters xi for use in hierarchical
 		inference.
@@ -334,6 +334,8 @@ class HierarchicalClass:
 			sample_save_dir (str): A path to a folder to save/load the samples.
 				If None samples will not be saved. Do not include .npy, this will
 				be appended (since several files will be generated).
+			subsample (int): How many of the lenses is the test set to use
+				for hierarchical inference. If None use all the lenses.
 		"""
 
 		if sample_save_dir is None or not os.path.isdir(sample_save_dir):
@@ -408,6 +410,10 @@ class HierarchicalClass:
 			self.infer_class.gen_samples(num_samples,sample_save_dir)
 			lens_samps = np.load(os.path.join(sample_save_dir,'lens_samps.npy'))
 
+		# If subsample is passed in, truncate down to the desired number of
+		# lenses.
+		if subsample is not None:
+			lens_samps = lens_samps[:,:subsample,:]
 		# For numba, we need to change the order of the samples for fast
 		# evaluation.
 		lens_samps = np.ascontiguousarray(np.transpose(lens_samps,axes=(2,0,1)))

@@ -20,6 +20,9 @@ parser.add_argument('num_lens_samples', type=int,
 	help='The number of lens samples to use')
 parser.add_argument('num_emcee_samples', type=int,
 	help='The number of emcee samples to take')
+parser.add_argument('num_lenses', type=int,
+	help='The number oflenses to use from test set. If None use all' +
+	'the lenses',default=None)
 
 args = parser.parse_args()
 
@@ -59,7 +62,8 @@ hier_infer = hierarchical_inference.HierarchicalClass(cfg,
 # Now we just have to ask the InferenceClass to spin up some samples from our BNN.
 # The more samples, the more accurate our plots and metrics will be. The right
 # value to use unfortunately requires a bit of trial and error.
-hier_infer.gen_samples(args.num_lens_samples,args.sample_save_dir)
+hier_infer.gen_samples(args.num_lens_samples,args.sample_save_dir,
+	args.num_lenses)
 
 n_walkers = 50
 pool = Pool()
