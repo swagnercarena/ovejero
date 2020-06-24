@@ -22,9 +22,11 @@ parser.add_argument('num_emcee_samples', type=int,
 	help='The number of emcee samples to take')
 parser.add_argument('num_lenses', type=int,
 	help='The number oflenses to use from test set. If None use all' +
-	'the lenses',default=None)
+	'the lenses. 0 is used to indicate all the lenses.')
 
 args = parser.parse_args()
+if parser.num_lenses == 0:
+	parser.num_lenses = None
 
 # First specify the config path
 root_path = os.getcwd()[:-20]
