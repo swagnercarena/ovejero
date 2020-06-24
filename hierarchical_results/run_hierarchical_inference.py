@@ -25,8 +25,8 @@ parser.add_argument('num_lenses', type=int,
 	'the lenses. 0 is used to indicate all the lenses.')
 
 args = parser.parse_args()
-if parser.num_lenses == 0:
-	parser.num_lenses = None
+if args.num_lenses == 0:
+	args.num_lenses = None
 
 # First specify the config path
 root_path = os.getcwd()[:-20]
