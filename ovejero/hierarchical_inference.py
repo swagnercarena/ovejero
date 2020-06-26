@@ -544,7 +544,7 @@ class HierarchicalClass:
 			plt.show(block=block)
 
 	def plot_corner(self,burnin,hyperparam_plot_names=None,block=True,
-		color='#FFAA00',truth_color='#000000'):
+		color='#FFAA00',truth_color='#000000',plot_range=None):
 		"""
 		Plot the corner plot of chains resulting from the emcee
 
@@ -576,11 +576,12 @@ class HierarchicalClass:
 				label_kwargs=dict(fontsize=10),
 				truths=self.target_eval_dict['hyps'][hyp_s:hyp_e],
 				levels=[0.68,0.95],color=color,fill_contours=True,
-				truth_color=truth_color)
+				truth_color=truth_color,range=plot_range)
 			plt.show(block=block)
 
 	def plot_single_corner(self,burnin,plot_param,hyperparam_plot_names=None,
-		block=True,color='#FFAA00',truth_color='#000000',figure=None):
+		block=True,color='#FFAA00',truth_color='#000000',figure=None,
+		plot_range=None):
 		"""
 		Plot the corner plot of chains resulting from the emcee for a specific
 		parameter
@@ -616,7 +617,7 @@ class HierarchicalClass:
 			label_kwargs=dict(fontsize=13),
 			truths=self.target_eval_dict['hyps'][hyp_s:hyp_e],
 			levels=[0.68,0.95],color=color,fill_contours=True,
-			truth_color=truth_color,fig=figure)
+			truth_color=truth_color,fig=figure,range=plot_range)
 		return figure
 
 	def plot_distributions(self,burnin,param_plot_names=None,block=True,
