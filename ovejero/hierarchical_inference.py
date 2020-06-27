@@ -27,8 +27,10 @@ from matplotlib.lines import Line2D
 # one of the cpus calls the log likelihood function, slowing things down.
 lens_samps = None
 
+# We want two functions. One needs to deal with the training distribution baobab
+# config, and the other with the
 
-def build_evaluation_dictionary(baobab_cfg,lens_params,
+def target_to_evaluation_dictionary(baobab_cfg,lens_params,
 	extract_hyperpriors=False):
 	"""
 	Map between the baobab config and a dictionary that contains the
@@ -68,7 +70,7 @@ def build_evaluation_dictionary(baobab_cfg,lens_params,
 		dist = baobab_cfg.bnn_omega['_'.join(lens_split[:2])][
 			'_'.join(lens_split[2:])]
 
-		# Get the function in question from lenstronomy.
+		# Get the function in question from baobab.
 		eval_fn = getattr(distributions,'eval_{}_logpdf_approx'.format(
 			dist['dist']))
 		eval_sig = signature(eval_fn)
@@ -84,7 +86,7 @@ def build_evaluation_dictionary(baobab_cfg,lens_params,
 			if dist[hyperparam_name] == {}:
 				n_hyps -= 1
 			else:
-				eval_dict['hyps'].extend([dist[hyperparam_name]])
+				eval_dict['hyp_init'].extend([dist[hyperparam_name]['init']])
 				eval_dict['hyp_names'].extend([lens_param+':'+hyperparam_name])
 				if extract_hyperpriors:
 					hypp = dist['hyper_prior']
@@ -98,7 +100,7 @@ def build_evaluation_dictionary(baobab_cfg,lens_params,
 		eval_dict[lens_param]['eval_fn'] = eval_fn
 
 	# Transform list of initial values into np array
-	eval_dict['hyps'] = np.array(eval_dict['hyps'])
+	eval_dict['hyps_init'] = np.array(eval_dict['hyps_init'])
 	eval_dict['hyp_prior'] = np.array(eval_dict['hyp_prior']).T
 
 	return eval_dict
@@ -197,7 +199,7 @@ class ProbabilityClass:
 		# of the samples given the interim prior.
 		global lens_samps
 		self.pt_omegai = log_p_xi_omega(lens_samps,
-			self.interim_eval_dict['hyps'], self.interim_eval_dict,
+			self.interim_eval_dict['hyps_init'], self.interim_eval_dict,
 			self.lens_params)
 		# Set initialziation variable to True.
 		self.samples_init = True
@@ -277,10 +279,10 @@ class HierarchicalClass:
 		n_npy_files = len(glob.glob(os.path.join(test_dataset_path,'X*.npy')))
 		self.cfg['training_params']['batch_size'] = n_npy_files
 		# Build the evaluation dictionaries from the
-		self.interim_eval_dict = build_evaluation_dictionary(
+		self.interim_eval_dict = target_to_evaluation_dictionary(
 			self.interim_baobab_omega, self.lens_params,
 			extract_hyperpriors=False)
-		self.target_eval_dict = build_evaluation_dictionary(
+		self.target_eval_dict = target_to_evaluation_dictionary(
 			self.target_baobab_omega, self.lens_params,
 			extract_hyperpriors=True)
 		# Make our inference class we'll use to generate samples.
@@ -463,7 +465,7 @@ class HierarchicalClass:
 		else:
 			print('No chains found at %s'%(save_path))
 			self.cur_state = (np.random.rand(n_walkers, ndim)*0.05 +
-				self.target_eval_dict['hyps'])
+				self.target_eval_dict['hyps_init'])
 			# Inflate lower and upper bounds since this can otherwise
 			# cause none of the initial samples to be non -np.inf.
 			for hpi in range(len(self.target_eval_dict['hyp_names'])):
@@ -540,7 +542,7 @@ class HierarchicalClass:
 			plt.title(hyperparam_plot_names[ci])
 			plt.ylabel(hyperparam_plot_names[ci])
 			plt.xlabel('sample')
-			plt.axhline(self.target_eval_dict['hyps'][ci],c='k')
+			plt.axhline(self.target_eval_dict['hyps_init'][ci],c='k')
 			plt.show(block=block)
 
 	def plot_corner(self,burnin,hyperparam_plot_names=None,block=True,
@@ -574,7 +576,7 @@ class HierarchicalClass:
 				labels=hyperparam_plot_names[hyp_s:hyp_e],
 				bins=20,show_titles=True, plot_datapoints=False,
 				label_kwargs=dict(fontsize=10),
-				truths=self.target_eval_dict['hyps'][hyp_s:hyp_e],
+				truths=self.target_eval_dict['hyps_init'][hyp_s:hyp_e],
 				levels=[0.68,0.95],color=color,fill_contours=True,
 				truth_color=truth_color,range=plot_range)
 			plt.show(block=block)
@@ -615,7 +617,7 @@ class HierarchicalClass:
 			labels=hyperparam_plot_names[hyp_s:hyp_e],
 			dpi=800,bins=20,show_titles=True, plot_datapoints=False,
 			label_kwargs=dict(fontsize=13),
-			truths=self.target_eval_dict['hyps'][hyp_s:hyp_e],
+			truths=self.target_eval_dict['hyps_init'][hyp_s:hyp_e],
 			levels=[0.68,0.95],color=color,fill_contours=True,
 			truth_color=truth_color,fig=figure,range=plot_range)
 		return figure
@@ -673,7 +675,7 @@ class HierarchicalClass:
 			# Plot the true distribution these parameters were being drawn
 			# from.
 			truth_eval = np.exp(self.target_eval_dict[lens_param]['eval_fn'](
-				eval_pdf_at,*self.target_eval_dict['hyps'][hyp_s:hyp_e]))
+				eval_pdf_at,*self.target_eval_dict['hyps_init'][hyp_s:hyp_e]))
 			plt.plot(eval_pdf_at,truth_eval,color=color_map[2], lw=2.5,
 				ls='--')
 
@@ -683,7 +685,7 @@ class HierarchicalClass:
 			hyp_s = np.min(hyp_ind)
 			hyp_e = np.max(hyp_ind)+1
 			truth_eval = np.exp(self.interim_eval_dict[lens_param]['eval_fn'](
-				eval_pdf_at,*self.interim_eval_dict['hyps'][hyp_s:hyp_e]))
+				eval_pdf_at,*self.interim_eval_dict['hyps_init'][hyp_s:hyp_e]))
 			plt.plot(eval_pdf_at,truth_eval,color=color_map[3], lw=2.5,
 				ls=':')
 
