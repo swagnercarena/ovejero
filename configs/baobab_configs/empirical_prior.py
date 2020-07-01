@@ -89,4 +89,4 @@ cfg.bnn_omega = dict(
                                                         uniform(loc=0,scale=10).logpdf]},
                                                  ),
                                 )
-
+                      )
