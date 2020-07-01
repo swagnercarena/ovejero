@@ -157,7 +157,10 @@ def build_eval_dict(cfg_dict,lens_params,baobab_config=True):
 	# Add covariance matrix information if that's relevant
 	if 'cov_info' in cfg_dict.bnn_omega:
 		cov_dict = cfg_dict.bnn_omega['cov_info']
-		cov_dim = len(cov_dict['cov_omega']['mu']['init'])
+		if baobab_config:
+			cov_dim = len(cov_dict['cov_omega']['mu'])
+		else:
+			cov_dim = len(cov_dict['cov_omega']['mu']['init'])
 		# Add the indices for the mu and tril parameters seperately
 		eval_dict['cov_params_list'] = cov_dict['cov_params_list']
 		eval_dict['cov_params_is_log'] = cov_dict['cov_omega']['is_log']
@@ -169,9 +172,17 @@ def build_eval_dict(cfg_dict,lens_params,baobab_config=True):
 		eval_dict['cov_tril_hyp_ind'] = np.arange(eval_dict['hyp_len'],
 			eval_dict['hyp_len']+n_hyps)
 		eval_dict['hyp_len'] += n_hyps
+		# Now extract the desired dictionary values depending on whether or not
+		# we have passed in a baobab_config.
 		if baobab_config:
-			eval_dict['hyp_values'].extend(cov_dict['cov_omega']['mu']['init'])
-			eval_dict['hyp_values'].extend(cov_dict['cov_omega']['tril']['init'])
+			eval_dict['hyp_values'].extend(cov_dict['cov_omega']['mu'])
+			# The baobab config specifies the covariance matrix, but our
+			# hyperparameters are the lower triangular matrix. Here we
+			# correct for that.
+			cov = np.array(cov_dict['cov_omega']['cov_mat'])
+			tril = np.linalg.cholesky(cov).astype(np.float)
+			tril_mask = np.tri(cov_dim,dtype=bool, k=0)
+			eval_dict['hyp_values'].extend(tril[tril_mask])
 			for i in range(cov_dim):
 				eval_dict['hyp_names'].extend(['cov_mu_%d'%(i)])
 			for i in range(int(cov_dim*(cov_dim+1)/2)):
@@ -323,7 +334,6 @@ class ProbabilityClass:
 		# calculated when the samples are passed in.
 		self.pt_omegai = None
 
-
 	def set_samples(self):
 		"""
 		Set the lens samples that will be used for the log_post_omega
@@ -418,7 +428,7 @@ class HierarchicalClass:
 			# Go through each parameter, mark its index, and make the swap
 			for li, lens_param in enumerate(
 				train_to_test_param_map['orig_params']):
-				self.lens_params_change_ind.extend(self.lens_params_train.index(
+				self.lens_params_change_ind.append(self.lens_params_train.index(
 					lens_param))
 				self.lens_params_test[self.lens_params_change_ind[-1]] = (
 					train_to_test_param_map['new_params'][li])
@@ -432,9 +442,9 @@ class HierarchicalClass:
 			interim_baobab_omega_path)
 		self.target_baobab_omega = load_prior_config(target_ovejero_omega_path)
 		self.interim_eval_dict = build_eval_dict(self.interim_baobab_omega,
-			self.lens_params_test,baobab_config=True)
+			self.lens_params_train,baobab_config=True)
 		self.target_eval_dict = build_eval_dict(self.target_baobab_omega,
-			self.lens_params_train,baobab_config=False)
+			self.lens_params_test,baobab_config=False)
 		self.train_to_test_param_map = train_to_test_param_map
 
 		# Get the number of parameters and set the batch size to the full
@@ -581,7 +591,7 @@ class HierarchicalClass:
 		if self.train_to_test_param_map is not None:
 			lens_samps[self.lens_params_change_ind] = (
 				self.train_to_test_param_map['transform_func'](
-					lens_samps[self.lens_params_change_ind]))
+					*lens_samps[self.lens_params_change_ind]))
 
 	def log_post_omega(self, hyp):
 		"""
@@ -698,7 +708,8 @@ class HierarchicalClass:
 			plt.title(hyperparam_plot_names[ci])
 			plt.ylabel(hyperparam_plot_names[ci])
 			plt.xlabel('sample')
-			plt.axhline(self.true_hyp_values[ci],c='k')
+			if self.true_hyp_values is not None:
+				plt.axhline(self.true_hyp_values[ci],c='k')
 			plt.show(block=block)
 
 	def plot_corner(self,burnin,hyperparam_plot_names=None,block=True,
@@ -730,11 +741,14 @@ class HierarchicalClass:
 				continue
 			hyp_s = np.min(hyp_ind)
 			hyp_e = np.max(hyp_ind)+1
+			truths = None
+			if self.true_hyp_values is not None:
+				truths = self.true_hyp_values[hyp_s:hyp_e]
 			corner.corner(chains[:,hyp_s:hyp_e],
 				labels=hyperparam_plot_names[hyp_s:hyp_e],
 				bins=20,show_titles=True, plot_datapoints=False,
 				label_kwargs=dict(fontsize=10),
-				truths=self.true_hyp_values[hyp_s:hyp_e],
+				truths=truths,
 				levels=[0.68,0.95],color=color,fill_contours=True,
 				truth_color=truth_color,range=plot_range)
 			plt.show(block=block)
@@ -771,11 +785,14 @@ class HierarchicalClass:
 		hyp_ind = self.target_eval_dict[plot_param]['hyp_ind']
 		hyp_s = np.min(hyp_ind)
 		hyp_e = np.max(hyp_ind)+1
+		truths = None
+		if self.true_hyp_values is not None:
+			truths = self.true_hyp_values[hyp_s:hyp_e]
 		figure = corner.corner(chains[:,hyp_s:hyp_e],
 			labels=hyperparam_plot_names[hyp_s:hyp_e],
 			dpi=800,bins=20,show_titles=True, plot_datapoints=False,
 			label_kwargs=dict(fontsize=13),
-			truths=self.true_hyp_values[hyp_s:hyp_e],
+			truths=truths,
 			levels=[0.68,0.95],color=color,fill_contours=True,
 			truth_color=truth_color,fig=figure,range=plot_range)
 		return figure

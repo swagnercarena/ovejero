@@ -1,6 +1,7 @@
 import unittest, os, json, sys
 from ovejero import hierarchical_inference, model_trainer
 from baobab import configs
+from lenstronomy.Util.param_util import ellipticity2phi_q
 from baobab import distributions
 import numpy as np
 from scipy import stats, special
@@ -574,3 +575,299 @@ class HierarchicalClassTest(unittest.TestCase):
 
 		self.hclass.sampler = None
 
+class HierarchicalEmpiricalTest(unittest.TestCase):
+
+	def __init__(self, *args, **kwargs):
+		super(HierarchicalEmpiricalTest, self).__init__(*args, **kwargs)
+		# Open up the config file.
+		self.root_path = os.path.dirname(os.path.abspath(__file__))+'/test_data/'
+		with open(self.root_path+'test.json','r') as json_f:
+			self.cfg = json.load(json_f)
+		self.interim_baobab_omega_path = self.root_path+'test_baobab_cfg.py'
+		self.target_ovejero_omega_path = self.root_path+'test_emp_cfg_prior.py'
+		self.target_baobab_omega_path = self.root_path+'test_emp_cfg.py'
+		self.lens_params = self.cfg['dataset_params']['lens_params']
+		self.num_params = len(self.lens_params)
+		self.batch_size = 20
+
+		self.normalized_param_path = self.root_path + 'new_metadata.csv'
+		self.normalization_constants_path = self.root_path + 'norm.csv'
+		self.final_params = self.cfg['training_params']['final_params']
+		self.cfg['dataset_params']['normalization_constants_path'] = 'norm.csv'
+		self.cfg['training_params']['bnn_type'] = 'diag'
+		self.tf_record_path = self.root_path+self.cfg['validation_params'][
+			'tf_record_path']
+
+		# We'll have to make the tf record and clean it up at the end
+		model_trainer.prepare_tf_record(self.cfg,self.root_path,
+				self.tf_record_path,self.final_params,
+				train_or_test='train')
+
+		# Make the train_to_test_param_map
+		self.train_to_test_param_map = dict(
+			orig_params=['lens_mass_e1','lens_mass_e2'],
+			transform_func=ellipticity2phi_q,
+			new_params=['lens_mass_phi','lens_mass_q'])
+
+		self.hclass = hierarchical_inference.HierarchicalClass(self.cfg,
+			self.interim_baobab_omega_path,self.target_ovejero_omega_path,
+			self.root_path,self.tf_record_path,self.target_baobab_omega_path,
+			self.train_to_test_param_map)
+
+		os.remove(self.tf_record_path)
+
+	def test_init(self):
+		# Check that the true hyperparameter values were correctly initialized.
+		true_hyp_values = np.array([-2.73,0.1,0.0,0.05,0.0,0.05,0.242,-0.408,
+			0.696, 0.30592393, -0.1046923, 0.34144243, -0.04409956, 0.01650766,
+			0.11489763])
+		np.testing.assert_almost_equal(self.hclass.true_hyp_values,
+			true_hyp_values)
+
+	def test_gen_samples(self):
+
+		# Test that generating samples gives reasonable outputs.
+		class ToyModel():
+			def __init__(self,mean,covariance,batch_size,al_std):
+				# We want to make sure our performance is consistent for a
+				# test
+				np.random.seed(4)
+				self.mean=mean
+				self.covariance = covariance
+				self.batch_size = batch_size
+				self.al_std = al_std
+
+			def predict(self,image):
+				# We won't actually be using the image. We just want it for
+				# testing.
+				return tf.constant(np.concatenate([np.random.multivariate_normal(
+					self.mean,self.covariance,self.batch_size),np.zeros((
+						self.batch_size,len(self.mean)))+self.al_std],axis=-1),
+					tf.float32)
+
+		# Start with a simple covariance matrix example.
+		mean = np.ones(self.num_params)*2
+		covariance = np.diag(np.ones(self.num_params))
+		al_std = -1000
+		diag_model = ToyModel(mean,covariance,self.batch_size,al_std)
+
+		# We don't want any flipping going on
+		self.hclass.infer_class.flip_mat_list = [
+			np.diag(np.ones(self.num_params))]
+
+		# Create tf record. This won't be used, but it has to be there for
+		# the function to be able to pull some images.
+		# Make fake norms data
+		fake_norms = {}
+		for lens_param in self.final_params + self.lens_params:
+			fake_norms[lens_param] = np.array([0.0,1.0])
+		fake_norms = pd.DataFrame(data=fake_norms)
+		fake_norms.to_csv(self.normalization_constants_path,index=False)
+		train_or_test = 'test'
+		model_trainer.prepare_tf_record(self.cfg, self.root_path,
+				self.tf_record_path,self.final_params,train_or_test)
+
+		# Replace the real model with our fake model and generate samples
+		self.hclass.infer_class.model = diag_model
+
+		self.hclass.gen_samples(100)
+
+		# All we need to check here is that the mapping from e1, e2 to
+		# phi and q was succesful.
+		self.assertAlmostEqual(np.max(np.abs(self.hclass.predict_samps[:,:,-1]-
+			np.log(hierarchical_inference.lens_samps[-1]))),0)
+		# Now check the catersian to polar for shears.
+		e1 = self.hclass.predict_samps[:,:,4]
+		e2 = self.hclass.predict_samps[:,:,5]
+		phi, q = ellipticity2phi_q(e1,e2)
+		np.testing.assert_almost_equal(phi,hierarchical_inference.lens_samps[4])
+		np.testing.assert_almost_equal(q,hierarchical_inference.lens_samps[5])
+
+		# Clean up the files we generated
+		os.remove(self.normalization_constants_path)
+		os.remove(self.normalized_param_path)
+		os.remove(self.tf_record_path)
+
+	def test_log_post_omega(self):
+		# Test that the log_p_xi_omega function returns the correct value
+		# for some sample data points.
+		hyp = np.array([-2.73,1.05,0.0,0.102,0.0,0.102,0.242,-0.408,0.696,0.5,
+			0.5,0.5,0.4,0.4,0.4])
+		samples = np.ones((8,2,2))*0.3
+
+		# Initialize the fake sampling in our hclass
+		hierarchical_inference.lens_samps=samples
+		self.hclass.prob_class.set_samples()
+		self.hclass.prob_class.pt_omegai=hierarchical_inference.log_p_xi_omega(
+			hierarchical_inference.lens_samps,
+			self.hclass.interim_eval_dict['hyp_values'],
+			self.hclass.interim_eval_dict,self.hclass.lens_params_train)
+
+		lpxo = hierarchical_inference.log_p_xi_omega(samples,hyp,
+			self.hclass.target_eval_dict,self.hclass.lens_params_test)
+		lpo = hierarchical_inference.log_p_omega(hyp,
+			self.hclass.target_eval_dict)
+
+		places = 7
+		post_hand = np.sum(special.logsumexp(lpxo-
+			self.hclass.prob_class.pt_omegai,axis=0))+lpo
+		self.assertAlmostEqual(self.hclass.log_post_omega(hyp),post_hand,
+			places=places)
+
+		samples = np.random.uniform(size=(8,2,2))*0.3
+		hierarchical_inference.lens_samps=samples
+		self.hclass.prob_class.set_samples()
+		self.hclass.prob_class.pt_omegai=hierarchical_inference.log_p_xi_omega(
+			hierarchical_inference.lens_samps,
+			self.hclass.interim_eval_dict['hyp_values'],
+			self.hclass.interim_eval_dict,self.hclass.lens_params_train)
+
+		lpxo = hierarchical_inference.log_p_xi_omega(samples,hyp,
+			self.hclass.target_eval_dict,self.hclass.lens_params_test)
+		lpo = hierarchical_inference.log_p_omega(hyp,
+			self.hclass.target_eval_dict)
+
+		places = 7
+		post_hand = np.sum(special.logsumexp(lpxo-
+			self.hclass.prob_class.pt_omegai,axis=0))+lpo
+		self.assertAlmostEqual(self.hclass.log_post_omega(hyp),post_hand,
+			places=places)
+
+	def test_initialize_sampler(self):
+		# Test that the walker initialization is correct.
+		test_chains_path = self.root_path + 'test_chains_is.h5'
+		n_walkers = 60
+
+		# Make some fake samples.
+		samples = np.ones((8,2,2))*0.3
+		hierarchical_inference.lens_samps=samples
+		self.hclass.prob_class.set_samples()
+		self.hclass.prob_class.pt_omegai=hierarchical_inference.log_p_xi_omega(
+			hierarchical_inference.lens_samps,
+			self.hclass.interim_eval_dict['hyp_values'],
+			self.hclass.interim_eval_dict,self.hclass.lens_params_train)
+
+		self.hclass.initialize_sampler(n_walkers,test_chains_path)
+
+		self.assertTrue(os.path.isfile(test_chains_path))
+		self.assertTrue(self.hclass.cur_state is not None)
+		self.assertEqual(len(self.hclass.cur_state),n_walkers)
+
+		# Check that no walker was initialized to a point with
+		# -np.inf
+		for walker in self.hclass.cur_state:
+			self.assertFalse(self.hclass.log_post_omega(walker)==-np.inf)
+
+		os.remove(test_chains_path)
+
+	def test_run_sampler(self):
+		# Here, we're mostly just testing things don't crash since the
+		# work is being done by emcee.
+		test_chains_path = self.root_path + 'test_chains_rs.h5'
+		n_walkers = 60
+		n_samps = 10
+
+		# Make some fake samples.
+		samples = np.ones((8,2,2))*0.3
+		hierarchical_inference.lens_samps=samples
+		self.hclass.prob_class.set_samples()
+		self.hclass.prob_class.pt_omegai=hierarchical_inference.log_p_xi_omega(
+			hierarchical_inference.lens_samps,
+			self.hclass.interim_eval_dict['hyp_values'],
+			self.hclass.interim_eval_dict,self.hclass.lens_params_train)
+
+		self.hclass.initialize_sampler(n_walkers,test_chains_path)
+		self.hclass.run_sampler(n_samps)
+
+		chains = self.hclass.sampler.get_chain()
+		self.assertEqual(chains.shape[0],n_samps)
+		self.assertEqual(chains.shape[1],n_walkers)
+
+		self.assertGreater(np.max(np.abs(chains[:,-1]-chains[:,-2])),0)
+
+		os.remove(test_chains_path)
+
+	def test_plots(self):
+		# Here, we're mostly just testing things don't crash again.
+		test_chains_path = self.root_path + 'test_chains_tp.h5'
+		n_walkers = 60
+		n_samps = 10
+		burnin = 0
+
+		# Make some fake samples.
+		samples = np.random.uniform(size=(8,2,40))*0.3
+		hierarchical_inference.lens_samps=samples
+		self.hclass.prob_class.set_samples()
+		self.hclass.prob_class.pt_omegai=hierarchical_inference.log_p_xi_omega(
+			hierarchical_inference.lens_samps,
+			self.hclass.interim_eval_dict['hyp_values'],
+			self.hclass.interim_eval_dict,self.hclass.lens_params_train)
+
+		self.hclass.initialize_sampler(n_walkers,test_chains_path)
+		self.hclass.run_sampler(n_samps)
+
+		chains = self.hclass.sampler.get_chain()
+		hyperparam_plot_names = ['test']*chains.shape[-1]
+
+		block = False
+		self.hclass.plot_chains(block=block)
+		plt.close()
+		self.hclass.plot_corner(burnin,block=block)
+		plt.close()
+		self.hclass.plot_distributions(burnin,block=block)
+		plt.close()
+		self.hclass.plot_corner(burnin,hyperparam_plot_names,block=block)
+		plt.close()
+		self.hclass.plot_distributions(burnin,hyperparam_plot_names,block=block,
+			dpi=50)
+		plt.close()
+
+		os.remove(test_chains_path)
+
+	def test_calculate_samples_weights(self):
+		# Test that the weights calculated are as expected.
+		# First we set some samples
+		samples = np.ones((8,2,2))*0.3
+		hierarchical_inference.lens_samps = samples
+
+		# We want some hyperparameters to test. W'll only put two groups of
+		# samples in our fake chain.
+		hyp1 = np.array([-2.73,1.05,0.0,0.5*np.pi,10.0,-0.5*np.pi,0.5*np.pi,0.0,
+			0.102,0.0,0.102,4.0,4.0,-0.55,0.55,4.0,4.0,-0.55,0.55,0.7,0.1,0.0,
+			0.1])
+		hyp2 = np.array([-2.72,1.05,0.0,0.5*np.pi,10.0,-0.5*np.pi,0.5*np.pi,0.0,
+			0.102,0.0,0.102,4.0,4.0,-0.55,0.55,4.0,4.0,-0.55,0.55,0.6,0.1,0.0,
+			0.1])
+
+		# Make a fake samples
+		class FakeSampler():
+			def __init__(self,hyp1,hyp2):
+				self.chain = np.zeros((10,len(hyp1)))
+				self.chain[:5] = hyp1
+				self.chain[5:] = hyp2
+
+			def get_chain(self):
+				return self.chain
+
+		# Make our fake sampler and port that in.
+		self.hclass.sampler = FakeSampler(hyp1,hyp2)
+
+		lpxi1 = hierarchical_inference.log_p_xi_omega(samples,hyp1,
+			self.hclass.target_eval_dict,self.hclass.lens_params_test)
+		lpxi2 = hierarchical_inference.log_p_xi_omega(samples,hyp2,
+			self.hclass.target_eval_dict,self.hclass.lens_params_test)
+		lpi = hierarchical_inference.log_p_xi_omega(samples,
+			self.hclass.interim_eval_dict['hyp_values'],
+			self.hclass.interim_eval_dict,self.hclass.lens_params_train)
+		self.hclass.prob_class.pt_omegai = lpi
+
+		# Calculate weights with function
+		n_p_omega_samps = 10
+		burnin = 0
+		weights = self.hclass.calculate_sample_weights(n_p_omega_samps,burnin)
+
+		# Calculate the weights we expect by hand.
+		hand_weights = 0.5*(np.exp(lpxi1-lpi)+np.exp(lpxi2-lpi))
+		np.testing.assert_almost_equal(weights,hand_weights)
+
+		self.hclass.sampler = None
