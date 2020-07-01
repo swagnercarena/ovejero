@@ -19,6 +19,7 @@ from baobab import distributions
 from ovejero import bnn_inference, data_tools, model_trainer
 from inspect import signature
 import emcee, os, glob, corner, copy
+import scipy.stats as stats
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 import sys
@@ -90,6 +91,11 @@ def build_eval_dict(cfg_dict,lens_params,baobab_config=True):
 	# For each lens parameter add the required hyperparameters and evaluation
 	# function.
 	for lens_param in lens_params:
+		# Skip lens parameters that are in the covariance matrix
+		if ('cov_info' in cfg_dict.bnn_omega and
+			lens_param in cfg_dict.bnn_omega['cov_info']['cov_params_list']):
+			eval_dict[lens_param] = None
+			continue
 		# Make a new entry for the parameter
 		eval_dict[lens_param] = dict()
 
@@ -148,6 +154,40 @@ def build_eval_dict(cfg_dict,lens_params,baobab_config=True):
 		# Finally, actually include the evaluation function.
 		eval_dict[lens_param]['eval_fn'] = eval_fn
 
+	# Add covariance matrix information if that's relevant
+	if 'cov_info' in cfg_dict.bnn_omega:
+		cov_dict = cfg_dict.bnn_omega['cov_info']
+		cov_dim = len(cov_dict['cov_omega']['mu']['init'])
+		# Add the indices for the mu and tril parameters seperately
+		eval_dict['cov_params_list'] = cov_dict['cov_params_list']
+		eval_dict['cov_params_is_log'] = cov_dict['cov_omega']['is_log']
+		n_hyps = cov_dim
+		eval_dict['cov_mu_hyp_ind'] = np.arange(eval_dict['hyp_len'],
+			eval_dict['hyp_len']+n_hyps)
+		eval_dict['hyp_len'] += n_hyps
+		n_hyps = int(cov_dim*(cov_dim+1)/2)
+		eval_dict['cov_tril_hyp_ind'] = np.arange(eval_dict['hyp_len'],
+			eval_dict['hyp_len']+n_hyps)
+		eval_dict['hyp_len'] += n_hyps
+		if baobab_config:
+			eval_dict['hyp_values'].extend(cov_dict['cov_omega']['mu']['init'])
+			eval_dict['hyp_values'].extend(cov_dict['cov_omega']['tril']['init'])
+			for i in range(cov_dim):
+				eval_dict['hyp_names'].extend(['cov_mu_%d'%(i)])
+			for i in range(int(cov_dim*(cov_dim+1)/2)):
+				eval_dict['hyp_names'].extend(['cov_tril_%d'%(i)])
+		else:
+			eval_dict['hyp_init'].extend(cov_dict['cov_omega']['mu']['init'])
+			eval_dict['hyp_init'].extend(cov_dict['cov_omega']['tril']['init'])
+			eval_dict['hyp_sigma'].extend(cov_dict['cov_omega']['mu']['sigma'])
+			eval_dict['hyp_sigma'].extend(cov_dict['cov_omega']['tril']['sigma'])
+			for i in range(cov_dim):
+				eval_dict['hyp_names'].extend(['cov_mu_%d'%(i)])
+			for i in range(int(cov_dim*(cov_dim+1)/2)):
+				eval_dict['hyp_names'].extend(['cov_tril_%d'%(i)])
+			eval_dict['hyp_prior'].extend(cov_dict['cov_omega']['mu']['prior'])
+			eval_dict['hyp_prior'].extend(cov_dict['cov_omega']['tril']['prior'])
+
 	# Transform list of values into np array
 	if baobab_config:
 		eval_dict['hyp_values'] = np.array(eval_dict['hyp_values'])
@@ -184,9 +224,40 @@ def log_p_xi_omega(samples, hyp, eval_dict,lens_params):
 	logpdf = np.zeros((samples.shape[1],samples.shape[2]))
 
 	for li, lens_param in enumerate(lens_params):
+		# Skip covariance parameters.
+		if ('cov_params_list' in eval_dict and
+			lens_param in eval_dict['cov_params_list']):
+			continue
 		logpdf += eval_dict[lens_param]['eval_fn'](samples[li],
 			*hyp[eval_dict[lens_param]['hyp_ind']],
 			**eval_dict[lens_param]['eval_fn_kwargs'])
+
+	# Calculate covariate parameters
+	if 'cov_params_list' in eval_dict:
+		# Identify the samples associated with the covariance parameters
+		cov_samples_index = []
+		for cov_lens_param in eval_dict['cov_params_list']:
+			cov_samples_index.append(lens_params.index(cov_lens_param))
+		cov_samples = samples[cov_samples_index]
+		for ili, is_log in enumerate(eval_dict['cov_params_is_log']):
+			if is_log:
+				cov_samples[ili] = np.log(cov_samples[ili])
+
+		# Get the mean and covariance we want to use
+		mu = hyp[eval_dict['cov_mu_hyp_ind']]
+		tril = hyp[eval_dict['cov_tril_hyp_ind']]
+		tril_mask = np.tri(len(mu),dtype=bool, k=0)
+		tril_mat = np.zeros((len(mu),len(mu)))
+		tril_mat[tril_mask] = tril
+		cov = np.dot(tril_mat.T,tril_mat)
+
+		# Reshape the covariance samples to feed into the logpdf function
+		orig_shape = cov_samples.T.shape
+		cov_samples = cov_samples.T.reshape(-1,len(mu))
+
+		logpdf_cov = stats.multivariate_normal(mean=mu,cov=cov).logpdf(
+			cov_samples)
+		logpdf += logpdf_cov.reshape(orig_shape[:-1]).T
 
 	# Clean up any lingering nans.
 	logpdf[np.isnan(logpdf)] = -np.inf

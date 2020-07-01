@@ -20,14 +20,23 @@ class HierarchicalnferenceTest(unittest.TestCase):
 			'test_baobab_cfg.py')
 		self.cfg_pr = hierarchical_inference.load_prior_config(self.root_path +
 			'test_ovejero_cfg_prior.py')
+		self.cfg_cov = hierarchical_inference.load_prior_config(self.root_path +
+			'test_emp_cfg_prior.py')
 		self.lens_params = ['external_shear_gamma_ext','external_shear_psi_ext',
 			'lens_mass_center_x','lens_mass_center_y',
 			'lens_mass_e1','lens_mass_e2',
+			'lens_mass_gamma','lens_mass_theta_E']
+		self.lens_params_cov = ['external_shear_gamma_ext',
+			'external_shear_psi_ext',
+			'lens_mass_center_x','lens_mass_center_y',
+			'lens_mass_q','lens_mass_phi',
 			'lens_mass_gamma','lens_mass_theta_E']
 		self.eval_dict = hierarchical_inference.build_eval_dict(self.cfg,
 			self.lens_params)
 		self.eval_dict_prior = hierarchical_inference.build_eval_dict(
 			self.cfg_pr,self.lens_params,baobab_config=False)
+		self.eval_dict_cov = hierarchical_inference.build_eval_dict(
+			self.cfg_cov,self.lens_params_cov,baobab_config=False)
 
 	def test_build_eval_dict(self):
 		# Check that the eval dictionary is built correctly for a test config.
@@ -114,7 +123,22 @@ class HierarchicalnferenceTest(unittest.TestCase):
 		for hpi, hyp_prior in enumerate(self.eval_dict_prior['hyp_prior']):
 			self.assertAlmostEqual(hyp_eval_values[hpi],hyp_prior(-0.5))
 
+		# Now test a distribution with a covariance
+		self.assertEqual(self.eval_dict_cov['hyp_len'],15)
+		self.assertListEqual(list(self.eval_dict_cov['hyp_init']),[-2.73,1.05,
+			0.0,0.102,0.0,0.102,0.242, -0.408, 0.696,0.5,0.5,0.5,0.4,0.4,0.4])
+		self.assertListEqual(list(self.eval_dict_cov['hyp_sigma']),[0.5,0.05,
+			0.2,0.03,0.2,0.03,0.1,0.1,0.1,0.5,0.5,0.5,0.4,0.4,0.4])
+		self.assertListEqual(self.eval_dict_cov['hyp_names'],[
+			'external_shear_gamma_ext:mu','external_shear_gamma_ext:sigma',
+			'lens_mass_center_x:mu','lens_mass_center_x:sigma',
+			'lens_mass_center_y:mu','lens_mass_center_y:sigma','cov_mu_0',
+			'cov_mu_1','cov_mu_2','cov_tril_0','cov_tril_1','cov_tril_2',
+			'cov_tril_3','cov_tril_4','cov_tril_5'])
+
 	def test_log_p_omega(self):
+		# Check that the log_p_omega function returns the desired value for both
+		# dicts.
 		hyp=np.ones(14)*0.5
 		self.assertAlmostEqual(hierarchical_inference.log_p_omega(hyp,
 			self.eval_dict_prior),np.sum(np.log([1/10,1/10,1/10,1/10,1/10,1/10,
@@ -122,6 +146,14 @@ class HierarchicalnferenceTest(unittest.TestCase):
 		hyp=-np.ones(14)*0.5
 		self.assertAlmostEqual(hierarchical_inference.log_p_omega(hyp,
 			self.eval_dict_prior),-np.inf)
+
+		hyp=np.ones(15)*0.5
+		self.assertAlmostEqual(hierarchical_inference.log_p_omega(hyp,
+			self.eval_dict_cov),np.log(1/10)*15)
+
+		hyp[-1] = -1
+		self.assertAlmostEqual(hierarchical_inference.log_p_omega(hyp,
+			self.eval_dict_cov),-np.inf)
 
 	def test_log_p_xi_omega(self):
 		# Test that the log_p_xi_omega function returns the correct value
@@ -151,12 +183,36 @@ class HierarchicalnferenceTest(unittest.TestCase):
 
 			return scipy_pdf
 
+		def hand_calc_log_pdf_cov(samples,hyp):
+			# Add each one of the probabilities
+			scipy_pdf = stats.lognorm.logpdf(samples[0],scale=np.exp(hyp[0]),
+				s=hyp[1])
+			scipy_pdf += stats.uniform.logpdf(samples[1],loc=-0.5*np.pi,
+				scale=np.pi)
+
+			scipy_pdf += stats.norm.logpdf(samples[2],loc=hyp[2],scale=hyp[3])
+			scipy_pdf += stats.norm.logpdf(samples[3],loc=hyp[4],scale=hyp[5])
+
+			scipy_pdf += stats.uniform.logpdf(samples[5],loc=-0.5*np.pi,
+				scale=np.pi)
+
+			# Now calculate the covariance matrix values.
+			cov_samples = samples[[7,4,6]]
+			mu = [0.242,-0.408,0.696]
+			cov = np.array([[0.66, 0.41, 0.16],
+				[0.41, 0.41, 0.16],[0.16, 0.16, 0.16]])
+			for i in range(len(scipy_pdf)):
+				for j in range(len(scipy_pdf[0])):
+					scipy_pdf[i,j] += stats.multivariate_normal.logpdf(
+						np.log(cov_samples[:,i,j]),mean=mu,cov=cov)
+			return scipy_pdf
+
 		np.testing.assert_array_almost_equal(
 			hierarchical_inference.log_p_xi_omega(samples,hyp,
 				self.eval_dict_prior,self.lens_params),
 			hand_calc_log_pdf(samples,hyp))
 
-		samples = np.random.uniform(size=(8,2,2))*0.3
+		samples = np.random.uniform(size=(8,2,3))*0.3
 		np.testing.assert_array_almost_equal(
 			hierarchical_inference.log_p_xi_omega(samples,hyp,
 				self.eval_dict_prior,self.lens_params),
@@ -168,6 +224,13 @@ class HierarchicalnferenceTest(unittest.TestCase):
 			hierarchical_inference.log_p_xi_omega(samples,hyp,
 				self.eval_dict_prior,self.lens_params),
 			hand_calc_log_pdf(samples,hyp))
+
+		hyp = np.array([-2.73,1.05,0.0,0.102,0.0,0.102,0.242,-0.408,0.696,0.5,
+			0.5,0.5,0.4,0.4,0.4])
+		np.testing.assert_array_almost_equal(
+			hierarchical_inference.log_p_xi_omega(samples,hyp,
+				self.eval_dict_cov,self.lens_params_cov),
+			hand_calc_log_pdf_cov(samples,hyp))
 
 
 class HierarchicalClassTest(unittest.TestCase):
