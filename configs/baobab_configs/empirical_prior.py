@@ -2,6 +2,7 @@ import os
 import numpy as np
 from addict import Dict
 from lenstronomy.Util.param_util import ellipticity2phi_q
+from scipy.stats import uniform
 
 cfg = Dict()
 
