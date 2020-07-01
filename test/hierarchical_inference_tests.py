@@ -344,7 +344,7 @@ class HierarchicalClassTest(unittest.TestCase):
 			hierarchical_inference.log_p_xi_omega(
 				hierarchical_inference.lens_samps,
 				self.hclass.interim_eval_dict['hyp_values'],
-				self.hclass.interim_eval_dict,self.hclass.lens_params))
+				self.hclass.interim_eval_dict,self.hclass.lens_params_train))
 
 		# Now check that if we offer a save path it gets used.
 		save_path = self.root_path + 'save_samps/'
@@ -388,10 +388,10 @@ class HierarchicalClassTest(unittest.TestCase):
 		self.hclass.prob_class.pt_omegai=hierarchical_inference.log_p_xi_omega(
 			hierarchical_inference.lens_samps,
 			self.hclass.interim_eval_dict['hyp_values'],
-			self.hclass.interim_eval_dict,self.hclass.lens_params)
+			self.hclass.interim_eval_dict,self.hclass.lens_params_train)
 
 		lpxo = hierarchical_inference.log_p_xi_omega(samples,hyp,
-			self.hclass.target_eval_dict,self.hclass.lens_params)
+			self.hclass.target_eval_dict,self.hclass.lens_params_test)
 		lpo = hierarchical_inference.log_p_omega(hyp,
 			self.hclass.target_eval_dict)
 
@@ -407,10 +407,10 @@ class HierarchicalClassTest(unittest.TestCase):
 		self.hclass.prob_class.pt_omegai=hierarchical_inference.log_p_xi_omega(
 			hierarchical_inference.lens_samps,
 			self.hclass.interim_eval_dict['hyp_values'],
-			self.hclass.interim_eval_dict,self.hclass.lens_params)
+			self.hclass.interim_eval_dict,self.hclass.lens_params_train)
 
 		lpxo = hierarchical_inference.log_p_xi_omega(samples,hyp,
-			self.hclass.target_eval_dict,self.hclass.lens_params)
+			self.hclass.target_eval_dict,self.hclass.lens_params_test)
 		lpo = hierarchical_inference.log_p_omega(hyp,
 			self.hclass.target_eval_dict)
 
@@ -423,7 +423,7 @@ class HierarchicalClassTest(unittest.TestCase):
 		hyp = np.array([-2.73,1.10,0.1,0.3,0.01,0.3,0.0,0.1,0.0,0.1,0.8,0.1,
 			0.0,0.1])
 		lpxo = hierarchical_inference.log_p_xi_omega(samples,hyp,
-			self.hclass.target_eval_dict,self.hclass.lens_params)
+			self.hclass.target_eval_dict,self.hclass.lens_params_test)
 		lpo = hierarchical_inference.log_p_omega(hyp,
 			self.hclass.target_eval_dict)
 
@@ -447,7 +447,7 @@ class HierarchicalClassTest(unittest.TestCase):
 		self.hclass.prob_class.pt_omegai=hierarchical_inference.log_p_xi_omega(
 			hierarchical_inference.lens_samps,
 			self.hclass.interim_eval_dict['hyp_values'],
-			self.hclass.interim_eval_dict,self.hclass.lens_params)
+			self.hclass.interim_eval_dict,self.hclass.lens_params_train)
 
 		self.hclass.initialize_sampler(n_walkers,test_chains_path)
 
@@ -475,8 +475,8 @@ class HierarchicalClassTest(unittest.TestCase):
 		self.hclass.prob_class.set_samples()
 		self.hclass.prob_class.pt_omegai=hierarchical_inference.log_p_xi_omega(
 			hierarchical_inference.lens_samps,
-			self.hclass.interim_eval_dict['hyps'], self.hclass.interim_eval_dict,
-			self.hclass.lens_params)
+			self.hclass.interim_eval_dict['hyp_values'],
+			self.hclass.interim_eval_dict,self.hclass.lens_params_train)
 
 		self.hclass.initialize_sampler(n_walkers,test_chains_path)
 		self.hclass.run_sampler(n_samps)
@@ -503,7 +503,7 @@ class HierarchicalClassTest(unittest.TestCase):
 		self.hclass.prob_class.pt_omegai=hierarchical_inference.log_p_xi_omega(
 			hierarchical_inference.lens_samps,
 			self.hclass.interim_eval_dict['hyp_values'],
-			self.hclass.interim_eval_dict,self.hclass.lens_params)
+			self.hclass.interim_eval_dict,self.hclass.lens_params_train)
 
 		self.hclass.initialize_sampler(n_walkers,test_chains_path)
 		self.hclass.run_sampler(n_samps)
@@ -555,12 +555,12 @@ class HierarchicalClassTest(unittest.TestCase):
 		self.hclass.sampler = FakeSampler(hyp1,hyp2)
 
 		lpxi1 = hierarchical_inference.log_p_xi_omega(samples,hyp1,
-			self.hclass.target_eval_dict,self.hclass.lens_params)
+			self.hclass.target_eval_dict,self.hclass.lens_params_test)
 		lpxi2 = hierarchical_inference.log_p_xi_omega(samples,hyp2,
-			self.hclass.target_eval_dict,self.hclass.lens_params)
+			self.hclass.target_eval_dict,self.hclass.lens_params_test)
 		lpi = hierarchical_inference.log_p_xi_omega(samples,
-			self.hclass.interim_eval_dict['hyps'],
-			self.hclass.interim_eval_dict,self.hclass.lens_params)
+			self.hclass.interim_eval_dict['hyp_values'],
+			self.hclass.interim_eval_dict,self.hclass.lens_params_train)
 		self.hclass.prob_class.pt_omegai = lpi
 
 		# Calculate weights with function

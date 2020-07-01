@@ -305,19 +305,24 @@ class ProbabilityClass:
 				containing the target distribution evaluation functions.
 		interim_eval_dict (dict): A dictionary from build_evaluation_dictionary
 				containing the interim distribution evaluation functions.
-		lens_params ([str,....]): A list of strings containing the lens params
-			that should be written out as features
+		lens_params_train ([str,....]): A list of strings containing the lens
+			params used in training.
+		lens_params_test ([str,...]): A list of strings contraining the lens
+			params used in the test set.
 	"""
-	def __init__(self,target_eval_dict,interim_eval_dict,lens_params):
+	def __init__(self,target_eval_dict,interim_eval_dict,lens_params_train,
+		lens_params_test):
 		# Save the parameters we'll need.
 		self.target_eval_dict = copy.deepcopy(target_eval_dict)
 		self.interim_eval_dict = copy.deepcopy(interim_eval_dict)
-		self.lens_params = copy.copy(lens_params)
+		self.lens_params_train = copy.copy(lens_params_train)
+		self.lens_params_test = copy.copy(lens_params_test)
 		# The samples_init flag.
 		self.samples_init = False
 		# The probability of the data given the interim prior. Will be
 		# calculated when the samples are passed in.
 		self.pt_omegai = None
+
 
 	def set_samples(self):
 		"""
@@ -329,7 +334,7 @@ class ProbabilityClass:
 		global lens_samps
 		self.pt_omegai = log_p_xi_omega(lens_samps,
 			self.interim_eval_dict['hyp_values'], self.interim_eval_dict,
-			self.lens_params)
+			self.lens_params_train)
 		# Set initialziation variable to True.
 		self.samples_init = True
 
@@ -361,7 +366,7 @@ class ProbabilityClass:
 
 		# Calculate the probability of each datapoint given omega
 		pt_omega = log_p_xi_omega(lens_samps, hyp, self.target_eval_dict,
-			self.lens_params)
+			self.lens_params_test)
 		# We've already calculated the value of pt_omegai when we generated
 		# the samples. Now we just need to sum them correctly. Note that the
 		# first axis in samples has dimension number of samples, so that is
@@ -391,14 +396,33 @@ class HierarchicalClass:
 			baobab distribution config for the target omega. This will be used
 			to get the true values of the ditribution for plotting. If set to
 			None then no true values for the test distribution will be shown.
+		train_to_test_param_map (dict): If a mapping is required between the
+			lens parameters of the training distribution and the lens
+			parameters of the test distribution this dict should specify
+			them. It should include three entire: orig_params - the original
+			lens parameter names, new_params - the new parameter names,
+			and transform_func - the function to map between them.
 	"""
 	def __init__(self,cfg,interim_baobab_omega_path,target_ovejero_omega_path,
 		test_dataset_path,test_dataset_tf_record_path,
-		target_baobab_omega_path=None):
+		target_baobab_omega_path=None,train_to_test_param_map=None):
 		# Initialzie our class.
 		self.cfg = cfg
 		# Pull the needed param information from the config file.
-		self.lens_params = cfg['dataset_params']['lens_params']
+		self.lens_params_train = cfg['dataset_params']['lens_params']
+		self.lens_params_test = copy.deepcopy(self.lens_params_train)
+		# We will need to encode the difference between the test and train
+		# parameter names.
+		if train_to_test_param_map is not None:
+			self.lens_params_change_ind = []
+			# Go through each parameter, mark its index, and make the swap
+			for li, lens_param in enumerate(
+				train_to_test_param_map['orig_params']):
+				self.lens_params_change_ind.extend(self.lens_params_train.index(
+					lens_param))
+				self.lens_params_test[self.lens_params_change_ind[-1]] = (
+					train_to_test_param_map['new_params'][li])
+
 		self.lens_params_log = cfg['dataset_params']['lens_params_log']
 		self.gampsi = cfg['dataset_params']['gampsi']
 		self.final_params = cfg['training_params']['final_params']
@@ -408,13 +432,14 @@ class HierarchicalClass:
 			interim_baobab_omega_path)
 		self.target_baobab_omega = load_prior_config(target_ovejero_omega_path)
 		self.interim_eval_dict = build_eval_dict(self.interim_baobab_omega,
-			self.lens_params,baobab_config=True)
+			self.lens_params_test,baobab_config=True)
 		self.target_eval_dict = build_eval_dict(self.target_baobab_omega,
-			self.lens_params,baobab_config=False)
+			self.lens_params_train,baobab_config=False)
+		self.train_to_test_param_map = train_to_test_param_map
 
 		# Get the number of parameters and set the batch size to the full
 		# test set.
-		self.num_params = len(self.lens_params)
+		self.num_params = len(self.lens_params_train)
 		self.norm_images = cfg['training_params']['norm_images']
 		n_npy_files = len(glob.glob(os.path.join(test_dataset_path,'X*.npy')))
 		self.cfg['training_params']['batch_size'] = n_npy_files
@@ -441,14 +466,14 @@ class HierarchicalClass:
 
 		# Initialize our probability class
 		self.prob_class = ProbabilityClass(self.target_eval_dict,
-			self.interim_eval_dict,self.lens_params)
+			self.interim_eval_dict,self.lens_params_train,self.lens_params_test)
 
 		# If a baobab config path was provided for the test set we will extract
 		# the true values of the hyperparameters from it
 		if target_baobab_omega_path is not None:
 			temp_config = configs.BaobabConfig.from_file(
 				target_baobab_omega_path)
-			temp_eval_dict = build_eval_dict(temp_config,self.lens_params,
+			temp_eval_dict = build_eval_dict(temp_config,self.lens_params_test,
 				baobab_config=True)
 			# Go through the target_eval_dict and extract the true values
 			# from the temp_eval_dict (i.e. the eval dict generated by the
@@ -498,15 +523,15 @@ class HierarchicalClass:
 			# and training time, we still need to make sure their position
 			# in the new array is correct.
 			for f_param in self.final_params:
-				if f_param in self.lens_params:
-					p_l = self.lens_params.index(f_param)
+				if f_param in self.lens_params_train:
+					p_l = self.lens_params_train.index(f_param)
 					p_f = self.final_params.index(f_param)
 					lens_samps[:,:,p_l] = self.predict_samps[:,:,p_f]
 
 			# Go through all the parameters that were put into log space and
 			# put them back into their original form.
 			for log_param in self.lens_params_log:
-				log_p_l = self.lens_params.index(log_param)
+				log_p_l = self.lens_params_train.index(log_param)
 				log_p_f = self.final_params.index(log_param+'_log')
 				lens_samps[:,:,log_p_l] = np.exp(
 					self.predict_samps[:,:,log_p_f])
@@ -521,8 +546,8 @@ class HierarchicalClass:
 				param_g2 = gamps_pref+'_g2'
 				pg1i = self.final_params.index(param_g1)
 				pg2i = self.final_params.index(param_g2)
-				rati = self.lens_params.index(param_rat)
-				angi = self.lens_params.index(param_ang)
+				rati = self.lens_params_train.index(param_rat)
+				angi = self.lens_params_train.index(param_ang)
 
 				lens_samps[:,:,rati] = np.sqrt(np.square(
 					self.predict_samps[:,:,pg1i]) + np.square(
@@ -530,14 +555,6 @@ class HierarchicalClass:
 				lens_samps[:,:,angi] = np.arctan2(
 					self.predict_samps[:,:,pg2i],
 					self.predict_samps[:,:,pg1i])/2
-
-			# TODO: We need a much better way to deal with this! But for now
-			# we're just going to force it.
-			hard_fix_params = ['lens_mass_e1','lens_mass_e2']
-			for lens_param in hard_fix_params:
-				fixi = self.lens_params.index(lens_param)
-				lens_samps[lens_samps[:,:,fixi]<-0.55,fixi] =-0.55+1e-5
-				lens_samps[lens_samps[:,:,fixi]>0.55,fixi] = 0.55-1e-5
 
 			if sample_save_dir is not None:
 				np.save(os.path.join(sample_save_dir,'lens_samps.npy'),
@@ -558,6 +575,13 @@ class HierarchicalClass:
 
 		# Pass the lens samples to our eval class.
 		self.prob_class.set_samples()
+
+		# Now we can modify our samples to agree with the test parameterization
+		# if need be.
+		if self.train_to_test_param_map is not None:
+			lens_samps[self.lens_params_change_ind] = (
+				self.train_to_test_param_map['transform_func'](
+					lens_samps[self.lens_params_change_ind]))
 
 	def log_post_omega(self, hyp):
 		"""
@@ -700,7 +724,7 @@ class HierarchicalClass:
 			len(hyperparam_plot_names))
 
 		# Iterate through groups of hyperparameters and make the plots
-		for lens_param in self.lens_params:
+		for lens_param in self.lens_params_test:
 			hyp_ind = self.target_eval_dict[lens_param]['hyp_ind']
 			if hyp_ind.size == 0:
 				continue
@@ -778,7 +802,7 @@ class HierarchicalClass:
 			len(hyperparam_plot_names))
 		global lens_samps
 
-		for li, lens_param in enumerate(self.lens_params):
+		for li, lens_param in enumerate(self.lens_params_test):
 			# Grab the lens parameters, the samples, and indices of the
 			# hyperparameters
 			samples = lens_samps[li].flatten()
@@ -822,7 +846,6 @@ class HierarchicalClass:
 			hyp_ind = self.interim_eval_dict[lens_param]['hyp_ind']
 			hyp_s = np.min(hyp_ind)
 			hyp_e = np.max(hyp_ind)+1
-			print(lens_param,self.interim_eval_dict[lens_param]['eval_fn'])
 			truth_eval = np.exp(self.interim_eval_dict[lens_param]['eval_fn'](
 				eval_pdf_at,*self.interim_eval_dict['hyp_values'][hyp_s:hyp_e],
 				**self.interim_eval_dict[lens_param]['eval_fn_kwargs']))
@@ -873,7 +896,7 @@ class HierarchicalClass:
 			lens_samps.shape[2]))
 		for s_i, sample in enumerate(samples):
 			lpos[s_i] = log_p_xi_omega(lens_samps, sample, self.target_eval_dict,
-				self.lens_params)
+				self.lens_params_test)
 		lpi = self.prob_class.pt_omegai
 		# Calculate the weights using the log posterior samples
 		weights = np.mean(np.exp(lpos-lpi),axis=0)
