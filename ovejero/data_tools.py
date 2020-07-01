@@ -189,7 +189,7 @@ def generate_tf_record(root_path,lens_params,lens_params_path,tf_record_path):
 
 
 def build_tf_dataset(tf_record_path,lens_params,batch_size,n_epochs,
-	baobab_config_path,norm_images=False,shift_pixels=0,shift_params=None,
+	baobab_config_path=None,norm_images=False,shift_pixels=0,shift_params=None,
 	normed_pixel_scale={}):
 	"""
 	Return a TFDataset for use in training the model.
@@ -204,7 +204,7 @@ def build_tf_dataset(tf_record_path,lens_params,batch_size,n_epochs,
 		n_epochs (int): The number of training epochs. The dataset object will
 			deal with iterating over the data for repeated epochs.
 		baobab_config_path: The string specifying the path to the baobab config
-			for the training set.
+			for the dataset. If None, no noise will be added.
 		norm_images (bool): If True, images will be normalized to have std 1.
 		shift_pixels (int): If >0, images will be shifted uniformly between 0
 			and shift_pixels pixels in the x and y direction (the shift in the
@@ -230,9 +230,13 @@ def build_tf_dataset(tf_record_path,lens_params,batch_size,n_epochs,
 	raw_dataset = tf.data.TFRecordDataset(tf_record_path)
 
 	# Load a noise model from baobab using the baobab config file.
-	baobab_cfg = configs.BaobabConfig.from_file(baobab_config_path)
-	noise_kwargs = baobab_cfg.get_noise_kwargs()
-	noise_function = noise_tf.NoiseModelTF(**noise_kwargs)
+	if baobab_config_path is not None:
+		baobab_cfg = configs.BaobabConfig.from_file(baobab_config_path)
+		noise_kwargs = baobab_cfg.get_noise_kwargs()
+		noise_function = noise_tf.NoiseModelTF(**noise_kwargs)
+	else:
+		print('No baobab config provided so no noise will be added')
+		noise_function = None
 
 	# Create the feature decoder that will be used
 	def parse_image_features(example):
@@ -243,14 +247,15 @@ def build_tf_dataset(tf_record_path,lens_params,batch_size,n_epochs,
 			'index': tf.io.FixedLenFeature([],tf.int64),
 		}
 		for lens_param in lens_params:
-				data_features[lens_param] = tf.io.FixedLenFeature(
-					[],tf.float32)
+			data_features[lens_param] = tf.io.FixedLenFeature(
+				[],tf.float32)
 		parsed_dataset = tf.io.parse_single_example(example,data_features)
 		image = tf.io.decode_raw(parsed_dataset['image'],out_type=float)
 		image = tf.reshape(image,(parsed_dataset['height'],
 			parsed_dataset['width'],1))
 		# Add the noise using the baobab noise function (which is a tf graph)
-		image = noise_function.add_noise(image)
+		if noise_function is not None:
+			image = noise_function.add_noise(image)
 		# Shift the images if that's specified
 		if shift_pixels>0:
 			# Get the x and y shift from a categorical distribution centered at 0

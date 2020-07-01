@@ -193,12 +193,3 @@ cfg.bnn_omega = dict(
                                              lower=0.0),
                                  ),
                  )
-cfg.expected_parameter_order
-cfg.hyperparameters_names
-
-def log_p_omega(hyp,params):
-
-def log_p_xi_omega(samples, hyp, params):
-  return True
-
-cfg.log_p_xi_omega = log_p_xi_omega

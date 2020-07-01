@@ -10,46 +10,58 @@ cfg.bnn_omega = dict(
                                  center_x = dict(
                                           dist='normal',
                                           mu={'init':0.102,'sigma':0.2,
-                                              'upper':np.inf,'lower':-np.inf},
+                                              'prior':uniform(loc=-5,
+                                                scale=10).logpdf},
                                           sigma={'init':0.05,'sigma':0.03,
-                                              'upper':np.inf,'lower':0}
+                                              'prior':uniform(loc=0,
+                                                scale=10).logpdf}
                                           ),
                                  center_y = dict(
                                           dist='normal',
                                           mu={'init':-0.102,'sigma':0.2,
-                                              'upper':np.inf,'lower':-np.inf},
+                                              'prior':uniform(loc=-5,
+                                                scale=10).logpdf},
                                           sigma={'init':0.05,'sigma':0.03,
-                                              'upper':np.inf,'lower':0}
+                                              'prior':uniform(loc=0,
+                                                scale=10).logpdf}
                                           ),
                                  # Lognormal(mu, sigma^2)
                                  gamma = dict(
                                               dist='lognormal',
                                               mu={'init':0.8,'sigma':0.3,
-                                                'upper':np.inf,'lower':-np.inf},
+                                                'prior':uniform(loc=-5,
+                                                  scale=10).logpdf},
                                               sigma={'init':0.02,'sigma':0.01,
-                                              'upper':np.inf,'lower':0}
+                                              'prior':uniform(loc=0,
+                                                scale=10).logpdf}
                                               ),
                                  theta_E = dict(
                                                 dist='lognormal',
                                                 mu={'init':-0.1,'sigma':0.3,
-                                                  'upper':np.inf,'lower':-np.inf},
+                                                  'prior':uniform(loc=-5,
+                                                    scale=10).logpdf},
                                                 sigma={'init':0.02,'sigma':0.01,
-                                                  'upper':np.inf,'lower':0}
+                                                  'prior':uniform(loc=0,
+                                                    scale=10).logpdf}
                                                 ),
                                  # Beta(a, b)
                                  e1 = dict(
                                            dist='normal',
                                            mu={'init':-0.2,'sigma':0.3,
-                                            'upper':np.inf,'lower':-np.inf},
+                                            'prior':uniform(loc=-1,
+                                                scale=2).logpdf},
                                            sigma={'init':0.03,'sigma':0.01,
-                                                  'upper':np.inf,'lower':0}
+                                                  'prior':uniform(loc=0,
+                                                    scale=10).logpdf}
                                            ),
                                  e2 = dict(
                                            dist='normal',
                                            mu={'init':-0.2,'sigma':0.3,
-                                            'upper':np.inf,'lower':-np.inf},
+                                            'prior':uniform(loc=-1,
+                                                scale=2).logpdf},
                                            sigma={'init':0.03,'sigma':0.01,
-                                                  'upper':np.inf,'lower':0}
+                                                  'prior':uniform(loc=0,
+                                                    scale=10).logpdf}
                                            ),
                                  ),
 
@@ -58,16 +70,20 @@ cfg.bnn_omega = dict(
                                        gamma_ext = dict(
                                                          dist='lognormal',
                                                          mu={'init':-1.3,'sigma':0.5,
-                                                            'upper':np.inf,'lower':-np.inf},
+                                                            'prior':uniform(loc=-5,
+                                                              scale=10).logpdf},
                                                          sigma={'init':0.1,'sigma':0.05,
-                                                            'upper':np.inf,'lower':0}
+                                                            'prior':uniform(loc=0,
+                                                              scale=10).logpdf}
                                                          ),
                                        psi_ext = dict(
                                                      dist='uniform',
                                                      upper={'init':0.5*np.pi,'sigma':0.0,
-                                                            'upper':0.5*np.pi,'lower':0.5*np.pi},
+                                                            'prior':uniform(loc=-0.5*np.pi,
+                                                              scale=np.pi).logpdf},
                                                      lower={'init':0.5*np.pi,'sigma':0.0,
-                                                            'upper':-0.5*np.pi,'lower':-0.5*np.pi},
+                                                            'prior':uniform(loc=-0.5*np.pi,
+                                                              scale=np.pi).logpdf},
                                                      ),
                                        ),
 

@@ -21,42 +21,72 @@ from inspect import signature
 import emcee, os, glob, corner, copy
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
+import sys
+from importlib import import_module
 
 # This is ugly, but we have to set lens samples as a global variable for the
 # pooling to work well. Otherwise the data is pickled and unpickled each time
 # one of the cpus calls the log likelihood function, slowing things down.
 lens_samps = None
 
-# We want two functions. One needs to deal with the training distribution baobab
-# config, and the other with the
 
-def target_to_evaluation_dictionary(baobab_cfg,lens_params,
-	extract_hyperpriors=False):
+def load_prior_config(cfg_path):
+	"""
+	Mirrors the behavior of the baobab config loader without requiring
+	all the baobab config values to be set.
+
+	Parameters
+	----------
+	user_cfg_path (str): Path to the ovejero distribution configuration file.
+
+	Returns
+	-------
+		(addict.Dict): A dictionary with the prior parameters for
+			hierarchical inference.
+	"""
+	dirname, filename = os.path.split(os.path.abspath(cfg_path))
+	module_name, ext = os.path.splitext(filename)
+	sys.path.insert(0, dirname)
+	user_cfg_script = import_module(module_name)
+	user_cfg = getattr(user_cfg_script, 'cfg')
+	return user_cfg
+
+
+def build_eval_dict(cfg_dict,lens_params,baobab_config=True):
 	"""
 	Map between the baobab config and a dictionary that contains the
 	evaluation function and hyperparameter indices for each parameters.
 
 	Parameters
 	----------
-		baobab_cfg (dict): The baobab configuration file containing the
-			distributions we want to consider for each parameter.
-		lens_params ([str,...]): The parameters to pull the distributions from.
-		extract_hyperpriors (bool): If set to true, the function will attempt to
-			read the hyperprios from the config file. For this to work, the
-			config file must include priors for each parameter.
+		cfg_dict (dict): A configuration dictionary containing the
+			entries for each lens parameter. This is either a baobab config
+			(in which case no distributions or priors are extracted) or it
+			is an ovejero distribution config.
+		lens_params ([str,...]): The parameters to pull from the configuration
+			file.
+		baobab_config (bool): If true the input config is a baobab config. If
+			False the input config is an ovejero distribution config.
 	Returns
 	-------
 		dict: The evaluation dictionary used by HierarchicalClass functions to
-			calculate the log pdf.
+			calculate the log pdfs.
 
 	Notes
 	-----
 		This will be automatically forward compatible with new distributions in
-		baobab. Only uniform hyperpriors are supported for now.
+		baobab.
 	"""
 
-	# Initialize eval_dict with empty lists for hyperparameters and hyperpriors.
-	eval_dict = dict(hyp_len=0, hyps=[], hyp_prior=[], hyp_names=[])
+	if baobab_config:
+		# In this case we only need to build the evaluation for each
+		# lens parameter and the hyperparameter values.
+		eval_dict = dict(hyp_len=0, hyp_values=[], hyp_names=[])
+	else:
+		# Initialize eval_dict with empty lists for hyperparameters and
+		# hyperpriors.
+		eval_dict = dict(hyp_len=0, hyp_init=[], hyp_sigma=[], hyp_prior=[],
+			hyp_names=[])
 	# For each lens parameter add the required hyperparameters and evaluation
 	# function.
 	for lens_param in lens_params:
@@ -67,7 +97,7 @@ def target_to_evaluation_dictionary(baobab_cfg,lens_params,
 		lens_split = lens_param.split('_')
 		# This is a bit ugly, but it's the quickest way to map between the
 		# parameter name and the location in the config file.
-		dist = baobab_cfg.bnn_omega['_'.join(lens_split[:2])][
+		dist = cfg_dict.bnn_omega['_'.join(lens_split[:2])][
 			'_'.join(lens_split[2:])]
 
 		# Get the function in question from baobab.
@@ -79,19 +109,38 @@ def target_to_evaluation_dictionary(baobab_cfg,lens_params,
 		# is where to evaluate.
 		n_hyps = len(eval_sig.parameters)-1
 
+		# Initialize the dict of lens_param evaluation function kwargs
+		eval_dict[lens_param]['eval_fn_kwargs'] = {}
+
 		# Add the value of the hyperparameters in the config file. Again skip
 		# the first one.
 		for hyperparam_name in list(eval_sig.parameters.keys())[1:]:
 			# Sometimes hyperparameters are not specified
-			if dist[hyperparam_name] == {}:
+			if hyperparam_name not in dist or dist[hyperparam_name] == {}:
 				n_hyps -= 1
+			# For the baobab config we just populate the hyp values and names
+			elif baobab_config:
+				eval_dict['hyp_values'].extend([dist[hyperparam_name]])
+				eval_dict['hyp_names'].extend([lens_param+':'+hyperparam_name])
+			# For the ovejero distribution config, we want to deal with fixed
+			# hyperparameters. We will do so by passing them in as kwargs to
+			# our evaluation function. Hyperparameters are fixed if they
+			# have a sigma of 0.
+			elif dist[hyperparam_name]['sigma'] == 0:
+				n_hyps -= 1
+				eval_dict[lens_param]['eval_fn_kwargs'][hyperparam_name] = (
+					dist[hyperparam_name]['init'])
+			# For non fixed hyperparameters we need to get their initial value
+			# the spread (sigma) we want to use, and the functional form of the
+			# prior.
 			else:
 				eval_dict['hyp_init'].extend([dist[hyperparam_name]['init']])
+				eval_dict['hyp_sigma'].extend([dist[hyperparam_name]['sigma']])
 				eval_dict['hyp_names'].extend([lens_param+':'+hyperparam_name])
-				if extract_hyperpriors:
-					hypp = dist['hyper_prior']
-					eval_dict['hyp_prior'].extend([hypp[hyperparam_name]])
+				eval_dict['hyp_prior'].extend([dist[hyperparam_name]['prior']])
 
+		# Record the indices we saved the hyperparameter values for this
+		# lens parameter to.
 		eval_dict[lens_param]['hyp_ind'] = np.arange(eval_dict['hyp_len'],
 			eval_dict['hyp_len']+n_hyps)
 		eval_dict['hyp_len'] += n_hyps
@@ -99,9 +148,12 @@ def target_to_evaluation_dictionary(baobab_cfg,lens_params,
 		# Finally, actually include the evaluation function.
 		eval_dict[lens_param]['eval_fn'] = eval_fn
 
-	# Transform list of initial values into np array
-	eval_dict['hyps_init'] = np.array(eval_dict['hyps_init'])
-	eval_dict['hyp_prior'] = np.array(eval_dict['hyp_prior']).T
+	# Transform list of values into np array
+	if baobab_config:
+		eval_dict['hyp_values'] = np.array(eval_dict['hyp_values'])
+	else:
+		eval_dict['hyp_init'] = np.array(eval_dict['hyp_init'])
+		eval_dict['hyp_sigma'] = np.array(eval_dict['hyp_sigma'])
 
 	return eval_dict
 
@@ -129,15 +181,44 @@ def log_p_xi_omega(samples, hyp, eval_dict,lens_params):
 	"""
 
 	# We iterate through each lens parameter and carry out the evaluation
-
-	# TODO: Make this faster. .1 seconds is a bit slow.
 	logpdf = np.zeros((samples.shape[1],samples.shape[2]))
 
-	for li in range(len(lens_params)):
-		lens_param = lens_params[li]
+	for li, lens_param in enumerate(lens_params):
 		logpdf += eval_dict[lens_param]['eval_fn'](samples[li],
-			*hyp[eval_dict[lens_param]['hyp_ind']])
+			*hyp[eval_dict[lens_param]['hyp_ind']],
+			**eval_dict[lens_param]['eval_fn_kwargs'])
+
+	# Clean up any lingering nans.
 	logpdf[np.isnan(logpdf)] = -np.inf
+
+	return logpdf
+
+
+def log_p_omega(hyp, eval_dict):
+	"""
+	Calculate log p(omega) - the probability of the hyperparameters given
+		the hyperprior.
+
+	Parameters
+	----------
+		hyp (np.array): A numpy array with dimensions (n_hyperparameters).
+			These are the hyperparameters that will be used for evaluation.
+		eval_dict (dict): A dictionary from build_evaluation_dictionary to
+			query for the evaluation functions.
+
+	Returns
+	-------
+		np.float: The value of log p(omega)
+	"""
+
+	# We iterate through each hyperparamter and evaluate it on its prior.
+	logpdf = 0
+	for hpi, hyper_param in enumerate(hyp):
+		logpdf += eval_dict['hyp_prior'][hpi](hyper_param)
+
+	# Give -np.inf in the case of a nan.
+	if np.sum(np.isnan(logpdf))>0:
+		logpdf = -np.inf
 
 	return logpdf
 
@@ -167,29 +248,6 @@ class ProbabilityClass:
 		# calculated when the samples are passed in.
 		self.pt_omegai = None
 
-	def log_p_omega(self,hyp):
-		"""
-		Calculate log p(omega) - the probability of the hyperparameters given
-			the hyperprior.
-
-		Parameters
-		----------
-			hyp (np.array): A numpy array with dimensions (n_hyperparameters).
-				These are the hyperparameters that will be used for evaluation.
-
-		Returns
-		-------
-			np.float: The value of log p(omega)
-		"""
-
-		# Currently this only supports the uniform priors from eval_dict.
-		if np.any(hyp<self.target_eval_dict['hyp_prior'][0]):
-			return -np.inf
-		elif np.any(hyp>self.target_eval_dict['hyp_prior'][1]):
-			return -np.inf
-		# No need to calculate the volume since this is just a constant.
-		return 0
-
 	def set_samples(self):
 		"""
 		Set the lens samples that will be used for the log_post_omega
@@ -199,7 +257,7 @@ class ProbabilityClass:
 		# of the samples given the interim prior.
 		global lens_samps
 		self.pt_omegai = log_p_xi_omega(lens_samps,
-			self.interim_eval_dict['hyps_init'], self.interim_eval_dict,
+			self.interim_eval_dict['hyp_values'], self.interim_eval_dict,
 			self.lens_params)
 		# Set initialziation variable to True.
 		self.samples_init = True
@@ -225,7 +283,7 @@ class ProbabilityClass:
 			raise RuntimeError('Must generate samples before fitting')
 		global lens_samps
 		# Add the prior on omega
-		lprior = self.log_p_omega(hyp)
+		lprior = log_p_omega(hyp,self.target_eval_dict)
 
 		if lprior == -np.inf:
 			return lprior
@@ -252,17 +310,20 @@ class HierarchicalClass:
 		cfg (dict): The dictionary attained from reading the json config file.
 		interim_baobab_omega_path (str): The string specifying the path to the
 			baobab config for the interim omega.
-		target_baobab_omega_path (str): The string specifying the path to the
-			baobab config for the target omega. The exact value of the
-			distribution parameters in omega will be used as intitialization
-			points for the mc chains.
+		target_ovejero_omega_path (str): The string specifying the path to the
+			ovejero distribution config for the target omega.
 		test_dataset_path (str): The path to the dataset on which hiearchical
 			inference will be conducted
 		test_dataset_tf_record_path (str): The path where the TFRecord will be
 			saved. If it already exists it will be loaded.
+		target_ovejero_omega_path (str): The string specifying the path to the
+			baobab distribution config for the target omega. This will be used
+			to get the true values of the ditribution for plotting. If set to
+			None then no true values for the test distribution will be shown.
 	"""
-	def __init__(self,cfg,interim_baobab_omega_path,target_baobab_omega_path,
-		test_dataset_path,test_dataset_tf_record_path):
+	def __init__(self,cfg,interim_baobab_omega_path,target_ovejero_omega_path,
+		test_dataset_path,test_dataset_tf_record_path,
+		target_baobab_omega_path=None):
 		# Initialzie our class.
 		self.cfg = cfg
 		# Pull the needed param information from the config file.
@@ -270,21 +331,23 @@ class HierarchicalClass:
 		self.lens_params_log = cfg['dataset_params']['lens_params_log']
 		self.gampsi = cfg['dataset_params']['gampsi']
 		self.final_params = cfg['training_params']['final_params']
+
+		# Read the config files and turn them into evaluation dictionaries
 		self.interim_baobab_omega = configs.BaobabConfig.from_file(
 			interim_baobab_omega_path)
-		self.target_baobab_omega = configs.BaobabConfig.from_file(
-			target_baobab_omega_path)
+		self.target_baobab_omega = load_prior_config(target_ovejero_omega_path)
+		self.interim_eval_dict = build_eval_dict(self.interim_baobab_omega,
+			self.lens_params,baobab_config=True)
+		self.target_eval_dict = build_eval_dict(self.target_baobab_omega,
+			self.lens_params,baobab_config=False)
+
+		# Get the number of parameters and set the batch size to the full
+		# test set.
 		self.num_params = len(self.lens_params)
 		self.norm_images = cfg['training_params']['norm_images']
 		n_npy_files = len(glob.glob(os.path.join(test_dataset_path,'X*.npy')))
 		self.cfg['training_params']['batch_size'] = n_npy_files
-		# Build the evaluation dictionaries from the
-		self.interim_eval_dict = target_to_evaluation_dictionary(
-			self.interim_baobab_omega, self.lens_params,
-			extract_hyperpriors=False)
-		self.target_eval_dict = target_to_evaluation_dictionary(
-			self.target_baobab_omega, self.lens_params,
-			extract_hyperpriors=True)
+
 		# Make our inference class we'll use to generate samples.
 		self.infer_class = bnn_inference.InferenceClass(self.cfg)
 
@@ -309,21 +372,23 @@ class HierarchicalClass:
 		self.prob_class = ProbabilityClass(self.target_eval_dict,
 			self.interim_eval_dict,self.lens_params)
 
-	def log_p_omega(self,hyp):
-		"""
-		Calculate log p(omega) - the probability of the hyperparameters given
-			the hyperprior.
-
-		Parameters
-		----------
-			hyp (np.array): A numpy array with dimensions (n_hyperparameters).
-				These are the hyperparameters that will be used for evaluation.
-
-		Returns
-		-------
-			np.float: The value of log p(omega)
-		"""
-		return self.prob_class.log_p_omega(hyp)
+		# If a baobab config path was provided for the test set we will extract
+		# the true values of the hyperparameters from it
+		if target_baobab_omega_path is not None:
+			temp_config = configs.BaobabConfig.from_file(
+				target_baobab_omega_path)
+			temp_eval_dict = build_eval_dict(temp_config,self.lens_params,
+				baobab_config=True)
+			# Go through the target_eval_dict and extract the true values
+			# from the temp_eval_dict (i.e. the eval dict generated by the
+			# baobab config used to make the test set).
+			self.true_hyp_values = []
+			for name in self.target_eval_dict['hyp_names']:
+				temp_index = temp_eval_dict['hyp_names'].index(name)
+				self.true_hyp_values.append(temp_eval_dict['hyp_values'][
+					temp_index])
+		else:
+			self.true_hyp_values = None
 
 	def gen_samples(self,num_samples,sample_save_dir=None,subsample=None):
 		"""
@@ -464,16 +529,12 @@ class HierarchicalClass:
 			self.cur_state = None
 		else:
 			print('No chains found at %s'%(save_path))
-			self.cur_state = (np.random.rand(n_walkers, ndim)*0.05 +
-				self.target_eval_dict['hyps_init'])
-			# Inflate lower and upper bounds since this can otherwise
-			# cause none of the initial samples to be non -np.inf.
-			for hpi in range(len(self.target_eval_dict['hyp_names'])):
-				name = self.target_eval_dict['hyp_names'][hpi]
-				if 'lower' in name:
-					self.cur_state[:,hpi] -= 0.2
-				if 'upper' in name:
-					self.cur_state[:,hpi] += 0.2
+			# Start samples at initial value randomly distributed around
+			# +- sigma.
+			self.cur_state = ((np.random.rand(n_walkers, ndim)*2-1)*
+				self.target_eval_dict['hyp_sigma'] +
+				self.target_eval_dict['hyp_init'])
+
 			# Ensure that no walkers start at a point with log probability
 			# - np.inf
 			all_finite = False
@@ -542,7 +603,7 @@ class HierarchicalClass:
 			plt.title(hyperparam_plot_names[ci])
 			plt.ylabel(hyperparam_plot_names[ci])
 			plt.xlabel('sample')
-			plt.axhline(self.target_eval_dict['hyps_init'][ci],c='k')
+			plt.axhline(self.true_hyp_values[ci],c='k')
 			plt.show(block=block)
 
 	def plot_corner(self,burnin,hyperparam_plot_names=None,block=True,
@@ -570,13 +631,15 @@ class HierarchicalClass:
 		# Iterate through groups of hyperparameters and make the plots
 		for lens_param in self.lens_params:
 			hyp_ind = self.target_eval_dict[lens_param]['hyp_ind']
+			if hyp_ind.size == 0:
+				continue
 			hyp_s = np.min(hyp_ind)
 			hyp_e = np.max(hyp_ind)+1
 			corner.corner(chains[:,hyp_s:hyp_e],
 				labels=hyperparam_plot_names[hyp_s:hyp_e],
 				bins=20,show_titles=True, plot_datapoints=False,
 				label_kwargs=dict(fontsize=10),
-				truths=self.target_eval_dict['hyps_init'][hyp_s:hyp_e],
+				truths=self.true_hyp_values[hyp_s:hyp_e],
 				levels=[0.68,0.95],color=color,fill_contours=True,
 				truth_color=truth_color,range=plot_range)
 			plt.show(block=block)
@@ -617,13 +680,14 @@ class HierarchicalClass:
 			labels=hyperparam_plot_names[hyp_s:hyp_e],
 			dpi=800,bins=20,show_titles=True, plot_datapoints=False,
 			label_kwargs=dict(fontsize=13),
-			truths=self.target_eval_dict['hyps_init'][hyp_s:hyp_e],
+			truths=self.true_hyp_values[hyp_s:hyp_e],
 			levels=[0.68,0.95],color=color,fill_contours=True,
 			truth_color=truth_color,fig=figure,range=plot_range)
 		return figure
 
 	def plot_distributions(self,burnin,param_plot_names=None,block=True,
-		color_map=["#a1dab4","#41b6c4","#2c7fb8","#253494"],bnn_name='BNN'):
+		color_map=["#a1dab4","#41b6c4","#2c7fb8","#253494"],bnn_name='BNN',
+		dpi=800):
 		"""
 		Plot the posteriors from our MCMC sampling of Omega.
 
@@ -643,12 +707,13 @@ class HierarchicalClass:
 			len(hyperparam_plot_names))
 		global lens_samps
 
-		for li in range(len(self.lens_params)):
+		for li, lens_param in enumerate(self.lens_params):
 			# Grab the lens parameters, the samples, and indices of the
 			# hyperparameters
-			lens_param = self.lens_params[li]
 			samples = lens_samps[li].flatten()
 			hyp_ind = self.target_eval_dict[lens_param]['hyp_ind']
+			if hyp_ind.size == 0:
+				continue
 			hyp_s = np.min(hyp_ind)
 			hyp_e = np.max(hyp_ind)+1
 			plt_min = max(np.mean(samples)-6*np.std(samples),
@@ -660,7 +725,7 @@ class HierarchicalClass:
 			eval_pdf_at = np.linspace(plt_min,plt_max,1000)
 
 			# Plot the samples for the parameter
-			plt.figure(dpi=800)
+			plt.figure(dpi=dpi)
 			plt.hist(samples,bins=100,density=True,align='mid',
 				color=color_map[0],range=(plt_min,plt_max))
 
@@ -668,14 +733,16 @@ class HierarchicalClass:
 			n_chains_plot = 50
 			for chain in chains[np.random.randint(len(chains),size=n_chains_plot)]:
 				chain_eval = np.exp(self.target_eval_dict[lens_param]['eval_fn'](
-					eval_pdf_at,*chain[hyp_s:hyp_e]))
+					eval_pdf_at,*chain[hyp_s:hyp_e],
+					**self.target_eval_dict[lens_param]['eval_fn_kwargs']))
 				plt.plot(eval_pdf_at,chain_eval,color=color_map[1], lw=2,
 					alpha=5/n_chains_plot)
 
 			# Plot the true distribution these parameters were being drawn
 			# from.
 			truth_eval = np.exp(self.target_eval_dict[lens_param]['eval_fn'](
-				eval_pdf_at,*self.target_eval_dict['hyps_init'][hyp_s:hyp_e]))
+				eval_pdf_at,*self.true_hyp_values[hyp_s:hyp_e],
+				**self.target_eval_dict[lens_param]['eval_fn_kwargs']))
 			plt.plot(eval_pdf_at,truth_eval,color=color_map[2], lw=2.5,
 				ls='--')
 
@@ -684,8 +751,10 @@ class HierarchicalClass:
 			hyp_ind = self.interim_eval_dict[lens_param]['hyp_ind']
 			hyp_s = np.min(hyp_ind)
 			hyp_e = np.max(hyp_ind)+1
+			print(lens_param,self.interim_eval_dict[lens_param]['eval_fn'])
 			truth_eval = np.exp(self.interim_eval_dict[lens_param]['eval_fn'](
-				eval_pdf_at,*self.interim_eval_dict['hyps_init'][hyp_s:hyp_e]))
+				eval_pdf_at,*self.interim_eval_dict['hyp_values'][hyp_s:hyp_e],
+				**self.interim_eval_dict[lens_param]['eval_fn_kwargs']))
 			plt.plot(eval_pdf_at,truth_eval,color=color_map[3], lw=2.5,
 				ls=':')
 
