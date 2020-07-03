@@ -51,6 +51,19 @@ if 'empirical' in test_dataset_path:
 else:
 	train_to_test_param_map = None
 
+
+# Correct any path issues.
+def recursive_str_checker(cfg_dict):
+	for key in cfg_dict:
+		if isinstance(cfg_dict[key],str):
+			cfg_dict[key] = cfg_dict[key].replace('/home/swagnercarena/ovejero/',
+				root_path)
+		if isinstance(cfg_dict[key],dict):
+			recursive_str_checker(cfg_dict[key])
+
+
+recursive_str_checker(cfg)
+
 # The InferenceClass will do all the heavy lifting of preparing the model from
 # the configuration file,
 # initializing the validation dataset, and providing outputs correctly
