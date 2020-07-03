@@ -6,8 +6,8 @@ parser = argparse.ArgumentParser(description='Run hiearchical inference on'+
 	' a specific test set')
 parser.add_argument('config_path', type=str,
 	help='The path to the ovejero config used to train the model.')
-parser.add_argument('target_baobab_omega_path', type=str,
-	help='The boabab config containing the target distribution')
+parser.add_argument('target_ovejero_omega_path', type=str,
+	help='The ovejero config containing the target distribution')
 parser.add_argument('test_dataset_path', type=str,
 	help='The path to the test data')
 parser.add_argument('test_dataset_tf_record_path', type=str,
@@ -21,7 +21,7 @@ parser.add_argument('num_lens_samples', type=int,
 parser.add_argument('num_emcee_samples', type=int,
 	help='The number of emcee samples to take')
 parser.add_argument('num_lenses', type=int,
-	help='The number oflenses to use from test set. If None use all' +
+	help='The number of lenses to use from test set. If None use all' +
 	'the lenses. 0 is used to indicate all the lenses.')
 
 args = parser.parse_args()
@@ -35,7 +35,7 @@ config_path = args.config_path
 # We also need the path to the baobab configs for the interim and target omega
 interim_baobab_omega_path = os.path.join(root_path,
 	'configs/baobab_configs/train_diagonal.py')
-target_baobab_omega_path = args.target_baobab_omega_path
+target_ovejero_omega_path = args.target_ovejero_omega_path
 
 test_dataset_path = args.test_dataset_path
 test_dataset_tf_record_path = args.test_dataset_tf_record_path
@@ -58,7 +58,7 @@ recursive_str_checker(cfg)
 # initializing the validation dataset, and providing outputs correctly
 # marginalized over the BNN uncertainties.
 hier_infer = hierarchical_inference.HierarchicalClass(cfg,
-	interim_baobab_omega_path,target_baobab_omega_path,test_dataset_path,
+	interim_baobab_omega_path,target_ovejero_omega_path,test_dataset_path,
 	test_dataset_tf_record_path)
 
 # Now we just have to ask the InferenceClass to spin up some samples from our BNN.
@@ -72,6 +72,4 @@ pool = Pool()
 hier_infer.initialize_sampler(n_walkers,args.chains_save_path,pool=pool)
 
 hier_infer.run_sampler(args.num_emcee_samples,progress=True)
-
-
 
