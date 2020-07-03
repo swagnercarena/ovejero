@@ -43,15 +43,16 @@ test_dataset_tf_record_path = args.test_dataset_tf_record_path
 # Check that the config has what you need
 cfg = model_trainer.load_config(config_path)
 
+
 # Correct any path issues.
 def recursive_str_checker(cfg_dict):
-    for key in cfg_dict:
-        if isinstance(cfg_dict[key],str):
-            cfg_dict[key] = cfg_dict[key].replace('/home/swagnercarena/ovejero/',
-            	root_path)
-        if isinstance(cfg_dict[key],dict):
-            recursive_str_checker(cfg_dict[key])
-recursive_str_checker(cfg)
+	for key in cfg_dict:
+		if isinstance(cfg_dict[key],str):
+			cfg_dict[key] = cfg_dict[key].replace('/home/swagnercarena/ovejero/',
+				root_path)
+		if isinstance(cfg_dict[key],dict):
+			recursive_str_checker(cfg_dict[key])
+
 
 # The InferenceClass will do all the heavy lifting of preparing the model from
 # the configuration file,
@@ -61,9 +62,9 @@ hier_infer = hierarchical_inference.HierarchicalClass(cfg,
 	interim_baobab_omega_path,target_ovejero_omega_path,test_dataset_path,
 	test_dataset_tf_record_path)
 
-# Now we just have to ask the InferenceClass to spin up some samples from our BNN.
-# The more samples, the more accurate our plots and metrics will be. The right
-# value to use unfortunately requires a bit of trial and error.
+# Now we just have to ask the InferenceClass to spin up some samples from our
+# BNN. The more samples, the more accurate our plots and metrics will be. The
+# right value to use unfortunately requires a bit of trial and error.
 hier_infer.gen_samples(args.num_lens_samples,args.sample_save_dir,
 	args.num_lenses)
 
@@ -72,4 +73,3 @@ pool = Pool()
 hier_infer.initialize_sampler(n_walkers,args.chains_save_path,pool=pool)
 
 hier_infer.run_sampler(args.num_emcee_samples,progress=True)
-
