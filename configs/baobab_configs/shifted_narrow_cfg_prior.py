@@ -1,6 +1,7 @@
 import os
 import numpy as np
 from addict import Dict
+from scipy.stats import uniform
 
 cfg = Dict()
 
@@ -81,7 +82,7 @@ cfg.bnn_omega = dict(
                                                      upper={'init':0.5*np.pi,'sigma':0.0,
                                                             'prior':uniform(loc=-0.5*np.pi,
                                                               scale=np.pi).logpdf},
-                                                     lower={'init':0.5*np.pi,'sigma':0.0,
+                                                     lower={'init':-0.5*np.pi,'sigma':0.0,
                                                             'prior':uniform(loc=-0.5*np.pi,
                                                               scale=np.pi).logpdf},
                                                      ),

@@ -252,6 +252,7 @@ def log_p_xi_omega(samples, hyp, eval_dict,lens_params):
 		cov_samples = samples[cov_samples_index]
 		for ili, is_log in enumerate(eval_dict['cov_params_is_log']):
 			if is_log:
+				cov_samples[ili,cov_samples[ili]<=0] = 1e-22
 				cov_samples[ili] = np.log(cov_samples[ili])
 
 		# Get the mean and covariance we want to use
@@ -260,7 +261,7 @@ def log_p_xi_omega(samples, hyp, eval_dict,lens_params):
 		tril_mask = np.tri(len(mu),dtype=bool, k=0)
 		tril_mat = np.zeros((len(mu),len(mu)))
 		tril_mat[tril_mask] = tril
-		cov = np.dot(tril_mat.T,tril_mat)
+		cov = np.dot(tril_mat,tril_mat.T)
 
 		# Reshape the covariance samples to feed into the logpdf function
 		orig_shape = cov_samples.T.shape
@@ -381,7 +382,9 @@ class ProbabilityClass:
 		# the samples. Now we just need to sum them correctly. Note that the
 		# first axis in samples has dimension number of samples, so that is
 		# what we want to log sum exp over.
-		like_ratio = special.logsumexp(pt_omega-self.pt_omegai,axis=0)
+		like_ratio = pt_omega-self.pt_omegai
+		like_ratio[np.isinf(self.pt_omegai)] = -np.inf
+		like_ratio = special.logsumexp(like_ratio,axis=0)
 		like_ratio[np.isnan(like_ratio)] = -np.inf
 
 		return lprior + np.sum(like_ratio)

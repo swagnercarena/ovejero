@@ -1,7 +1,6 @@
 import os
 import numpy as np
 from addict import Dict
-from lenstronomy.Util.param_util import ellipticity2phi_q
 from scipy.stats import uniform
 
 cfg = Dict()
@@ -80,8 +79,8 @@ cfg.bnn_omega = dict(
                                                     'prior':[uniform(loc=-5,
                                                       scale=10).logpdf]*3
                                                 },
-                                                tril={'init':np.array([0.5,0.5,0.5,0.4,0.4,0.4]),
-                                                      'sigma':np.array([0.5,0.5,0.5,0.4,0.4,0.4]),
+                                                tril={'init':np.array([0.3,-0.1,0.3,0.0,0.0,0.04]),
+                                                      'sigma':np.array([0.1,0.1,0.1,0.1,0.1,0.01]),
                                                       'prior':[uniform(loc=0,scale=10).logpdf,
                                                         uniform(loc=-5,scale=10).logpdf,
                                                         uniform(loc=0,scale=10).logpdf,

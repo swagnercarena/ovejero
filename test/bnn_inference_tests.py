@@ -52,7 +52,7 @@ class BNNInferenceTest(unittest.TestCase):
 			predict_samps[pi,:,flip_index] = -1
 
 		# Flip pairs of points.
-		self.infer_class.fix_flip_pairs(predict_samps,y_test)
+		self.infer_class.fix_flip_pairs(predict_samps,y_test,self.batch_size)
 
 		self.assertEqual(np.sum(np.abs(predict_samps-y_test)),0)
 
@@ -64,7 +64,7 @@ class BNNInferenceTest(unittest.TestCase):
 			predict_samps[pi,:,flip_index] = -1
 
 		# Flip pairs of points.
-		self.infer_class.fix_flip_pairs(predict_samps,y_test)
+		self.infer_class.fix_flip_pairs(predict_samps,y_test,self.batch_size)
 
 		self.assertEqual(np.sum(np.abs(predict_samps-y_test)),
 			2*self.batch_size*len(dont_flip_set))
@@ -409,33 +409,6 @@ class BNNInferenceTest(unittest.TestCase):
 		self.assertAlmostEqual(np.mean(np.abs(self.infer_class.al_cov-np.eye(
 			self.num_params))),0)
 
-		# Same as before but now fousing on the second gmm
-		mean1 = np.ones(self.num_params)*2
-		mean2 = np.ones(self.num_params)*4
-		covariance1 = np.diag(np.ones(self.num_params)*0.000001)
-		covariance2 = np.diag(np.ones(self.num_params)*0.000001)
-		L_elements1 = np.array([np.log(10)]*self.num_params+[0]*int(
-			self.num_params*(self.num_params-1)/2))
-		L_elements2 = np.array([np.log(1)]*self.num_params+[0]*int(
-			self.num_params*(self.num_params-1)/2))
-		pi_logit = np.log(0.0001)-np.log(0.9999)
-		gmm_model = ToyModel(mean1,covariance1,mean2,covariance2,
-			self.batch_size,L_elements1,L_elements2,pi_logit)
-		self.infer_class.model = gmm_model
-		self.infer_class.gen_samples(1000)
-
-		# Make sure these samples follow the required statistics.
-		self.assertAlmostEqual(np.mean(np.abs(self.infer_class.y_pred-mean2)),
-			0,places=1)
-		self.assertAlmostEqual(np.mean(np.abs(self.infer_class.y_std-1)),0,
-			places=1)
-		self.assertAlmostEqual(np.mean(np.abs(self.infer_class.y_cov-np.eye(
-			self.num_params))),0,places=1)
-		self.assertTupleEqual(self.infer_class.al_cov.shape,(self.batch_size,
-			self.num_params,self.num_params))
-		self.assertAlmostEqual(np.mean(np.abs(self.infer_class.al_cov-np.eye(
-			self.num_params))),0,places=4)
-
 		# Now test that it takes a combination of them correctly
 		mean1 = np.ones(self.num_params)*2
 		mean2 = np.ones(self.num_params)*6
@@ -445,7 +418,7 @@ class BNNInferenceTest(unittest.TestCase):
 			self.num_params*(self.num_params-1)/2))
 		L_elements2 = np.array([np.log(1)]*self.num_params+[0]*int(
 			self.num_params*(self.num_params-1)/2))
-		pi_logit = 0
+		pi_logit = np.log(0.0001)-np.log(0.9999)
 		gmm_model = ToyModel(mean1,covariance1,mean2,covariance2,
 			self.batch_size,L_elements1,L_elements2,pi_logit)
 		self.infer_class.model = gmm_model
@@ -458,6 +431,9 @@ class BNNInferenceTest(unittest.TestCase):
 			0,places=0)
 		self.assertTupleEqual(self.infer_class.al_cov.shape,(self.batch_size,
 			self.num_params,self.num_params))
+
+		# The first Gaussian is always favored in the current parameterization,
+		# so we can't test the scenario where the second is favored.
 
 		# Clean up the files we generated
 		os.remove(self.normalization_constants_path)
@@ -535,7 +511,7 @@ class BNNInferenceTest(unittest.TestCase):
 		os.remove(self.normalization_constants_path)
 		os.remove(self.tf_record_path)
 		os.remove(save_path+'pred.npy')
-		os.remove(save_path+'al_samp.npy')
+		os.remove(save_path+'al_cov.npy')
 		os.remove(save_path+'images.npy')
 		os.remove(save_path+'y_test.npy')
 		os.rmdir(save_path)

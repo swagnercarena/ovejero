@@ -314,15 +314,15 @@ class InferenceClass:
 			self.undo_param_norm(predict_samps,self.y_test,al_samp)
 
 			self.predict_samps = predict_samps
-			self.al_samp = al_samp
+			self.al_cov = np.mean(al_samp,axis=0)
 
 			# Save the samples if desired.
 			if sample_save_dir is not None:
 				os.mkdir(sample_save_dir)
 				np.save(os.path.join(sample_save_dir,'pred.npy'),
 					self.predict_samps)
-				np.save(os.path.join(sample_save_dir,'al_samp.npy'),
-					self.al_samp)
+				np.save(os.path.join(sample_save_dir,'al_cov.npy'),
+					self.al_cov)
 				np.save(os.path.join(sample_save_dir,'images.npy'),
 					self.images)
 				np.save(os.path.join(sample_save_dir,'y_test.npy'),
@@ -332,11 +332,10 @@ class InferenceClass:
 			print('Loading samples from %s'%(sample_save_dir))
 			self.predict_samps = np.load(os.path.join(sample_save_dir,
 				'pred.npy'))
-			self.al_samp = np.load(os.path.join(sample_save_dir,'al_samp.npy'))
+			self.al_cov = np.load(os.path.join(sample_save_dir,'al_cov.npy'))
 			self.images = np.load(os.path.join(sample_save_dir,'images.npy'))
 			self.y_test = np.load(os.path.join(sample_save_dir,'y_test.npy'))
 
-		self.al_cov = np.mean(self.al_samp,axis=0)
 		self.y_pred = np.mean(self.predict_samps,axis=0)
 		self.y_std = np.std(self.predict_samps,axis=0)
 		self.y_cov = np.zeros((batch_size,self.num_params,self.num_params))
