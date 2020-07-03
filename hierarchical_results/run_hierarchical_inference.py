@@ -1,6 +1,7 @@
 from ovejero import model_trainer, hierarchical_inference
 import argparse, os
 from multiprocessing import Pool
+from lenstronomy.Util.param_util import ellipticity2phi_q
 
 parser = argparse.ArgumentParser(description='Run hiearchical inference on'+
 	' a specific test set')
@@ -27,8 +28,6 @@ parser.add_argument('num_lenses', type=int,
 args = parser.parse_args()
 if args.num_lenses == 0:
 	args.num_lenses = None
-print(args.num_lenses)
-print('test')
 
 # First specify the config path
 root_path = os.getcwd()[:-20]
@@ -45,16 +44,12 @@ test_dataset_tf_record_path = args.test_dataset_tf_record_path
 # Check that the config has what you need
 cfg = model_trainer.load_config(config_path)
 
-
-# Correct any path issues.
-def recursive_str_checker(cfg_dict):
-	for key in cfg_dict:
-		if isinstance(cfg_dict[key],str):
-			cfg_dict[key] = cfg_dict[key].replace('/home/swagnercarena/ovejero/',
-				root_path)
-		if isinstance(cfg_dict[key],dict):
-			recursive_str_checker(cfg_dict[key])
-
+# If we're using the emprical config, we need the transformation dictionary
+if 'empirical' in test_dataset_path:
+	train_to_test_param_map = dict(orig_params=['lens_mass_e1','lens_mass_e2'],
+		transform_func=ellipticity2phi_q,new_params=['lens_mass_phi','lens_mass_q'])
+else:
+	train_to_test_param_map = None
 
 # The InferenceClass will do all the heavy lifting of preparing the model from
 # the configuration file,
@@ -62,7 +57,7 @@ def recursive_str_checker(cfg_dict):
 # marginalized over the BNN uncertainties.
 hier_infer = hierarchical_inference.HierarchicalClass(cfg,
 	interim_baobab_omega_path,target_ovejero_omega_path,test_dataset_path,
-	test_dataset_tf_record_path)
+	test_dataset_tf_record_path,train_to_test_param_map=train_to_test_param_map)
 
 # Now we just have to ask the InferenceClass to spin up some samples from our
 # BNN. The more samples, the more accurate our plots and metrics will be. The
