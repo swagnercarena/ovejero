@@ -27,6 +27,8 @@ parser.add_argument('num_lenses', type=int,
 args = parser.parse_args()
 if args.num_lenses == 0:
 	args.num_lenses = None
+print(args.num_lenses)
+print('test')
 
 # First specify the config path
 root_path = os.getcwd()[:-20]
