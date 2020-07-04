@@ -1,1 +1,0 @@
-sbatch submit_script.sh ../configs/nn1.json ../configs/baobab_configs/cent_narrow_shifted_cfg_prior.py ../datasets/cent_narrow_shifted/ ../datasets/cent_narrow_shifted/tf_record cns_nn1_samps/ cns_nn1.h5 1000 10000

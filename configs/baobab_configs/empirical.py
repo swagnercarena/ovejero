@@ -163,18 +163,16 @@ cfg.bnn_omega = dict(
                                          p=10.0,
                                          ),
                                 # Beta(a, b)
-                                e1 = dict(
+                                q = dict(
                                          dist='normal',
                                          mu=0.0,
                                          sigma=0.25,
                                          lower=-1,
                                          upper=1),
-                                e2 = dict(
-                                         dist='normal',
-                                         mu=0.0,
-                                         sigma=0.25,
-                                         lower=-1,
-                                         upper=1),
+                                phi = dict(
+                                         dist='uniform',
+                                         lower=-0.5*np.pi,
+                                         upper=-0.5*np.pi),
                                 ),
 
                  agn_light = dict(

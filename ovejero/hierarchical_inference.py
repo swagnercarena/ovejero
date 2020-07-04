@@ -715,6 +715,51 @@ class HierarchicalClass:
 				plt.axhline(self.true_hyp_values[ci],c='k')
 			plt.show(block=block)
 
+	def plot_auto_corr(self,hyperparam_plot_names=None,block=True):
+		"""
+		Plot the auto correlation time resulting from the emcee samples to
+		check for convergence.
+		Parameters
+		----------
+			hyperparam_plot_names ([str,...]): A list containing the names
+				of the hyperparameters to be used during plotting
+			block (bool): If true, block excecution after plt.show() command
+		"""
+		if hyperparam_plot_names is None:
+			hyperparam_plot_names = self.target_eval_dict['hyp_names']
+
+		# Both of these functions are pulled from the emcee examples and based
+		# on work in Goodman and Weare 2010
+		def auto_window(taus, c):
+			m = np.arange(len(taus)) < c * taus
+			if np.any(m):
+				return np.argmin(m)
+			return len(taus) - 1
+
+		def autocorr_gw2010(y, c=5.0):
+			f = emcee.autocorr.function_1d(np.mean(y, axis=0))
+			taus = 2.0 * np.cumsum(f) - 1.0
+			window = auto_window(taus, c)
+			return taus[window]
+
+		chains = self.sampler.get_chain()
+		ns = np.logspace(1,np.log10(len(chains)),100)
+		for ci in range(chains.shape[-1]):
+			gw2010_auto_est = []
+			for n in ns:
+				trunc_chains = chains[:int(n),:,ci].T
+				gw2010_auto_est.append(autocorr_gw2010(trunc_chains))
+			plt.plot(ns,gw2010_auto_est)
+			plt.plot(ns,ns/50)
+			plt.yscale('log')
+			plt.xscale('log')
+			plt.ylabel('Autocorrelation Estimate')
+			plt.xlabel('Number of Samples')
+			plt.title('Autocorrelation Time for %s'%(hyperparam_plot_names[ci]))
+			plt.legend(['Autocorrelation Estimate',
+				r'Convergence Threshold ($\tau=N/50$)'])
+			plt.show(block)
+
 	def plot_corner(self,burnin,hyperparam_plot_names=None,block=True,
 		color='#FFAA00',truth_color='#000000',plot_range=None):
 		"""
