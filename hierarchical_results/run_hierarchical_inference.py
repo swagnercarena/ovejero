@@ -48,8 +48,10 @@ cfg = model_trainer.load_config(config_path)
 if 'empirical' in test_dataset_path:
 	train_to_test_param_map = dict(orig_params=['lens_mass_e1','lens_mass_e2'],
 		transform_func=ellipticity2phi_q,new_params=['lens_mass_phi','lens_mass_q'])
+	n_walkers = 200
 else:
 	train_to_test_param_map = None
+	n_walkers = 50
 
 
 # Correct any path issues.
@@ -79,7 +81,6 @@ hier_infer.gen_samples(args.num_lens_samples,args.sample_save_dir,
 	args.num_lenses)
 
 pool = Pool()
-n_walkers = 50
 hier_infer.initialize_sampler(n_walkers,args.chains_save_path,pool=pool)
 
 hier_infer.run_sampler(args.num_emcee_samples,progress=True)
