@@ -104,6 +104,13 @@ class ForwardModelingTests(unittest.TestCase):
 
 		self.assertTrue(fow_model.image_selected)
 
+		# A final check that doing this all again will give the same image
+		# (i.e. that the noise is fixed by the random seed in the config)
+		old_image = np.copy(fow_model.true_image_noise)
+		fow_model.select_image(image_index,block=False)
+		plt.close()
+		np.testing.assert_almost_equal(old_image,fow_model.true_image_noise)
+
 	def test_initialize_sampler(self):
 		# Test that we correctly initialize the lenstronomy fitting sequence
 		# sampler.

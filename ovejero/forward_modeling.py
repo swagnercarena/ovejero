@@ -26,6 +26,7 @@ import numba
 import pandas as pd
 import numpy as np
 import os, corner
+import tensorflow as tf
 from matplotlib import pyplot as plt
 import lenstronomy.Util.util as util
 from matplotlib.lines import Line2D
@@ -229,6 +230,9 @@ class ForwardModel(bnn_inference.InferenceClass):
 		plt.colorbar()
 		plt.show(block=block)
 
+		# Set the random seed since we will be using it to add
+		# noise
+		tf.random.set_seed(self.cfg['training_params']['random_seed'])
 		# Add noise and show the new image_index
 		self.true_image_noise = self.noise_function.add_noise(
 			self.true_image).numpy()
