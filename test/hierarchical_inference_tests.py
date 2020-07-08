@@ -1,4 +1,4 @@
-import unittest, os, json, sys
+import unittest, os, json
 from ovejero import hierarchical_inference, model_trainer
 from baobab import configs
 from lenstronomy.Util.param_util import ellipticity2phi_q

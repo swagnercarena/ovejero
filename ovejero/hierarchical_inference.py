@@ -784,6 +784,10 @@ class HierarchicalClass:
 
 		# Iterate through groups of hyperparameters and make the plots
 		for lens_param in self.lens_params_test:
+			# In the case of a multinormal for the test distribution, some
+			# parameters will have empty dictionary entries
+			if self.target_eval_dict[lens_param] is None:
+				continue
 			hyp_ind = self.target_eval_dict[lens_param]['hyp_ind']
 			if hyp_ind.size == 0:
 				continue
@@ -792,13 +796,15 @@ class HierarchicalClass:
 			truths = None
 			if self.true_hyp_values is not None:
 				truths = self.true_hyp_values[hyp_s:hyp_e]
+			hist_kwargs = {'density':True,'color':color}
 			corner.corner(chains[:,hyp_s:hyp_e],
 				labels=hyperparam_plot_names[hyp_s:hyp_e],
 				bins=20,show_titles=True, plot_datapoints=False,
 				label_kwargs=dict(fontsize=10),
 				truths=truths,
 				levels=[0.68,0.95],color=color,fill_contours=True,
-				truth_color=truth_color,range=plot_range)
+				truth_color=truth_color,range=plot_range,
+				hist_kwargs=hist_kwargs)
 			plt.show(block=block)
 
 	def plot_single_corner(self,burnin,plot_param,hyperparam_plot_names=None,
@@ -836,18 +842,20 @@ class HierarchicalClass:
 		truths = None
 		if self.true_hyp_values is not None:
 			truths = self.true_hyp_values[hyp_s:hyp_e]
+		hist_kwargs = {'density':True,'color':color}
 		figure = corner.corner(chains[:,hyp_s:hyp_e],
 			labels=hyperparam_plot_names[hyp_s:hyp_e],
 			dpi=800,bins=20,show_titles=True, plot_datapoints=False,
 			label_kwargs=dict(fontsize=13),
 			truths=truths,
 			levels=[0.68,0.95],color=color,fill_contours=True,
-			truth_color=truth_color,fig=figure,range=plot_range)
+			truth_color=truth_color,fig=figure,range=plot_range,
+			hist_kwargs=hist_kwargs)
 		return figure
 
 	def plot_distributions(self,burnin,param_plot_names=None,block=True,
 		color_map=["#a1dab4","#41b6c4","#2c7fb8","#253494"],bnn_name='BNN',
-		dpi=800):
+		dpi=200,plot_param=None,save_fig_path=None):
 		"""
 		Plot the posteriors from our MCMC sampling of Omega.
 
@@ -861,6 +869,11 @@ class HierarchicalClass:
 				distribution samples, the true distribution, and the interim
 				distribution respectively.
 			bnn_name (str): The BNN name to use for the plot titles.
+			dpi (int): The resolution of the output figures
+			plot_param (str): The lens parameter to plot the distributions
+				for. If None all lens parameters will be used.
+			save_fig_path (str): The path to save the figure to. If no
+				plot_param is specified only the last parameter will be saved.
 		"""
 		hyperparam_plot_names = self.target_eval_dict['hyp_names']
 		chains = self.sampler.get_chain()[burnin:].reshape(-1,
@@ -868,26 +881,43 @@ class HierarchicalClass:
 		global lens_samps
 
 		for li, lens_param in enumerate(self.lens_params_test):
-			# Grab the lens parameters, the samples, and indices of the
-			# hyperparameters
+			# If only a specific lens parameter is specified skip the others
+			if plot_param is not None and not lens_param == plot_param:
+				continue
+			# In the case of a multinormal for the test distribution, some
+			# parameters will have empty dictionary entries
+			if self.target_eval_dict[lens_param] is None:
+				continue
+			# Grab the the samples and indices of the hyperparameters
 			samples = lens_samps[li].flatten()
 			hyp_ind = self.target_eval_dict[lens_param]['hyp_ind']
 			if hyp_ind.size == 0:
 				continue
-			hyp_s = np.min(hyp_ind)
-			hyp_e = np.max(hyp_ind)+1
 			plt_min = max(np.mean(samples)-6*np.std(samples),
 				np.min(samples)-0.1)
 			plt_max = min(np.mean(samples)+6*np.std(samples),
 				np.max(samples)+0.1)
+			plt.figure(figsize=(8.5,5), dpi=dpi)
 
 			# Select the range of parameter values to evaluate the pdf at
 			eval_pdf_at = np.linspace(plt_min,plt_max,1000)
 
+			# Plot the interim distribution these parameters were being drawn
+			# from.
+			hyp_ind_int = self.interim_eval_dict[lens_param]['hyp_ind']
+			hyp_s = np.min(hyp_ind_int)
+			hyp_e = np.max(hyp_ind_int)+1
+			truth_eval = np.exp(self.interim_eval_dict[lens_param]['eval_fn'](
+				eval_pdf_at,*self.interim_eval_dict['hyp_values'][hyp_s:hyp_e],
+				**self.interim_eval_dict[lens_param]['eval_fn_kwargs']))
+			plt.plot(eval_pdf_at,truth_eval,color=color_map[0], lw=2.5,
+				ls=':')
+
 			# Plot the samples for the parameter
-			plt.figure(dpi=dpi)
+			hyp_s = np.min(hyp_ind)
+			hyp_e = np.max(hyp_ind)+1
 			plt.hist(samples,bins=100,density=True,align='mid',
-				color=color_map[0],range=(plt_min,plt_max))
+				color=color_map[1],range=(plt_min,plt_max))
 
 			# Sample 100 chains and plot them
 			n_chains_plot = 50
@@ -895,7 +925,7 @@ class HierarchicalClass:
 				chain_eval = np.exp(self.target_eval_dict[lens_param]['eval_fn'](
 					eval_pdf_at,*chain[hyp_s:hyp_e],
 					**self.target_eval_dict[lens_param]['eval_fn_kwargs']))
-				plt.plot(eval_pdf_at,chain_eval,color=color_map[1], lw=2,
+				plt.plot(eval_pdf_at,chain_eval,color=color_map[2], lw=2,
 					alpha=5/n_chains_plot)
 
 			# Plot the true distribution these parameters were being drawn
@@ -903,27 +933,19 @@ class HierarchicalClass:
 			truth_eval = np.exp(self.target_eval_dict[lens_param]['eval_fn'](
 				eval_pdf_at,*self.true_hyp_values[hyp_s:hyp_e],
 				**self.target_eval_dict[lens_param]['eval_fn_kwargs']))
-			plt.plot(eval_pdf_at,truth_eval,color=color_map[2], lw=2.5,
-				ls='--')
-
-			# Plot the interim distribution these parameters were being drawn
-			# from.
-			hyp_ind = self.interim_eval_dict[lens_param]['hyp_ind']
-			hyp_s = np.min(hyp_ind)
-			hyp_e = np.max(hyp_ind)+1
-			truth_eval = np.exp(self.interim_eval_dict[lens_param]['eval_fn'](
-				eval_pdf_at,*self.interim_eval_dict['hyp_values'][hyp_s:hyp_e],
-				**self.interim_eval_dict[lens_param]['eval_fn_kwargs']))
 			plt.plot(eval_pdf_at,truth_eval,color=color_map[3], lw=2.5,
-				ls=':')
+				ls='--')
 
 			# Construct the legend.
 			custom_lines = [Line2D([0], [0], color=color_map[0], lw=4),
 				Line2D([0], [0], color=color_map[1], lw=4),
 				Line2D([0], [0], color=color_map[2], lw=4),
 				Line2D([0], [0], color=color_map[3], lw=4)]
-			plt.legend(custom_lines, ['BNN Samples', 'Posterior Samples',
-				'True Distribution','Interim Distribution'])
+			plt.legend(custom_lines, [
+				r'Training Distribution: $p(\xi^{\star}|\Omega_\mathrm{int})$',
+				r'BNN Samples: $p(\{\xi\}|\{d\},\Omega_\mathrm{int})$',
+				r'Posterior Samples: $p(\xi^{\star}|\Omega)p(\Omega|\{d\}) $',
+				r'Test Distribution: $p(\xi^{\star})$'])
 
 			if param_plot_names is None:
 				plt.xlabel(lens_param)
@@ -935,7 +957,25 @@ class HierarchicalClass:
 				plt.title('%s Distribtuions for p(%s)'%(bnn_name,
 					param_plot_names[li]))
 			plt.xlim([plt_min,plt_max])
+
+			if save_fig_path is not None:
+				plt.savefig(save_fig_path)
+
 			plt.show(block=block)
+
+	def sample_mu_cov(self,burnin):
+		hyperparam_plot_names = self.target_eval_dict['hyp_names']
+		chains = self.sampler.get_chain()[burnin:].reshape(-1,
+			len(hyperparam_plot_names))
+		ci = np.random.randint(len(chains))
+		hyp = chains[ci]
+		mu = hyp[self.target_eval_dict['cov_mu_hyp_ind']]
+		tril = hyp[self.target_eval_dict['cov_tril_hyp_ind']]
+		tril_mask = np.tri(len(mu),dtype=bool, k=0)
+		tril_mat = np.zeros((len(mu),len(mu)))
+		tril_mat[tril_mask] = tril
+		cov = np.dot(tril_mat,tril_mat.T)
+		return mu,cov
 
 	def calculate_sample_weights(self,n_p_omega_samps,burnin):
 		"""
@@ -1035,7 +1075,3 @@ class HierarchicalClass:
 		fig = self.infer_class.plot_calibration(color_map=color_map[1:],
 			n_perc_points=n_perc_points,figure=fig,show_plot=False,
 			weights=weights,legend=legend)
-
-
-
-
