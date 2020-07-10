@@ -185,7 +185,10 @@ class InferenceClass:
 		if single_image is None:
 			batch_size = self.batch_size
 		else:
-			batch_size = 1
+			# Even in the single image case, we want to take advantage of
+			# parallelism
+			batch_size = min(256,num_samples)
+			num_samples = int(np.ceil(num_samples/batch_size))
 
 		if sample_save_dir is None or not os.path.isdir(sample_save_dir):
 			if sample_save_dir is not None:
@@ -197,9 +200,9 @@ class InferenceClass:
 					self.y_test = yt_batch.numpy()
 			else:
 				self.images = tf.convert_to_tensor(np.expand_dims(
-					np.expand_dims(single_image,axis=0),axis=-1))
+					np.stack([single_image]*batch_size),axis=-1))
 				# We cannot read y_test, so we will just set it to zeros.
-				self.y_test = np.zeros((1,self.num_params))
+				self.y_test = np.zeros((batch_size,self.num_params))
 
 			# This is where we will save the samples for each prediction. We will
 			# use this to numerically extract the covariance.

@@ -945,7 +945,7 @@ class HierarchicalClass:
 				r'Training Distribution: $p(\xi^{\star}|\Omega_\mathrm{int})$',
 				r'BNN Samples: $p(\{\xi\}|\{d\},\Omega_\mathrm{int})$',
 				r'Posterior Samples: $p(\xi^{\star}|\Omega)p(\Omega|\{d\}) $',
-				r'Test Distribution: $p(\xi^{\star})$'])
+				r'Test Distribution: $p(\xi^{\star}|\Omega_\mathrm{test})$'])
 
 			if param_plot_names is None:
 				plt.xlabel(lens_param)

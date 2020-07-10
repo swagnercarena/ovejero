@@ -506,8 +506,8 @@ class ForwardModel(bnn_inference.InferenceClass):
 		# Now overlay the samples from the BNN
 		self.gen_samples(num_samples,sample_save_dir=sample_save_dir,
 			single_image=self.true_image_noise/np.std(self.true_image_noise))
-		corner.corner(self.predict_samps[:,0,:],bins=20,
-				labels=self.final_params_print_names,show_titles=True,
+		corner.corner(self.predict_samps.reshape(-1,self.predict_samps.shape[-1]),
+				bins=20,labels=self.final_params_print_names,show_titles=True,
 				plot_datapoints=False,label_kwargs=dict(fontsize=13),
 				truths=reordered_true_values,levels=[0.68,0.95],
 				dpi=dpi, color=color_map[1],fig=fig,fill_contours=True,
