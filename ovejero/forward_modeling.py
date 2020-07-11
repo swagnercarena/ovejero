@@ -443,7 +443,7 @@ class ForwardModel(bnn_inference.InferenceClass):
 	def plot_posterior_contours(self,burnin,num_samples,block=True,
 		sample_save_dir=None,color_map=['#FFAA00','#41b6c4'],
 		plot_limits=None,truth_color='#000000',save_fig_path=None,
-		dpi=400,fig=None):
+		dpi=400,fig=None,show_plot=True):
 		"""
 		Plot the corner plot of chains resulting from the emcee for the
 		lens mass parameters.
@@ -469,6 +469,8 @@ class ForwardModel(bnn_inference.InferenceClass):
 			fig (matplotlib.Figure): The figure to use as a starting point. Best
 				to leave this as None unless you're passing in another corner
 				plot.
+			show_plot (bool): Whether or not to show the plot or just return
+				the figure.
 		"""
 		# Get the chains from the samples
 		chains = self.chains[burnin:].reshape(-1,len(self.chain_params))
@@ -540,7 +542,8 @@ class ForwardModel(bnn_inference.InferenceClass):
 		if save_fig_path is not None:
 			plt.savefig(save_fig_path)
 
-		plt.show(block=block)
+		if show_plot:
+			plt.show(block=block)
 
 		return fig
 
