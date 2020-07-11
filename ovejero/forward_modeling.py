@@ -443,7 +443,7 @@ class ForwardModel(bnn_inference.InferenceClass):
 	def plot_posterior_contours(self,burnin,num_samples,block=True,
 		sample_save_dir=None,color_map=['#FFAA00','#41b6c4'],
 		plot_limits=None,truth_color='#000000',save_fig_path=None,
-		dpi=400):
+		dpi=400,fig=None):
 		"""
 		Plot the corner plot of chains resulting from the emcee for the
 		lens mass parameters.
@@ -466,6 +466,9 @@ class ForwardModel(bnn_inference.InferenceClass):
 			save_fig_path (str): If specified, the figure will be saved to that
 				path.
 			dpi (int): The dpi to use when generating the image.
+			fig (matplotlib.Figure): The figure to use as a starting point. Best
+				to leave this as None unless you're passing in another corner
+				plot.
 		"""
 		# Get the chains from the samples
 		chains = self.chains[burnin:].reshape(-1,len(self.chain_params))
@@ -498,7 +501,6 @@ class ForwardModel(bnn_inference.InferenceClass):
 
 		# Make a corner plot for the BNN samples
 		hist_kwargs = {'density':True,'color':color_map[0]}
-		fig = None
 		self.gen_samples(num_samples,sample_save_dir=sample_save_dir,
 			single_image=self.true_image_noise/np.std(self.true_image_noise))
 		corner_bnn_samples = self.predict_samps.reshape(-1,
