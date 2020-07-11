@@ -507,7 +507,7 @@ class ForwardModel(bnn_inference.InferenceClass):
 				bins=20,labels=self.final_params_print_names,show_titles=True,
 				plot_datapoints=False,label_kwargs=dict(fontsize=13),
 				truths=reordered_true_values,levels=[0.68,0.95],
-				dpi=dpi, color=color_map[1],fig=fig,fill_contours=True,
+				dpi=dpi, color=color_map[0],fig=fig,fill_contours=True,
 				range=plot_limits,truth_color=truth_color,
 				hist_kwargs=hist_kwargs)
 
@@ -516,7 +516,7 @@ class ForwardModel(bnn_inference.InferenceClass):
 		fig = corner.corner(reordered_chains,
 			labels=self.final_params_print_names,bins=20,show_titles=True,
 			plot_datapoints=False,label_kwargs=dict(fontsize=10),dpi=dpi,
-			truths=reordered_true_values,levels=[0.68,0.95],color=color_map[0],
+			truths=reordered_true_values,levels=[0.68,0.95],color=color_map[1],
 			fill_contours=True,range=plot_limits,truth_color=truth_color,
 			hist_kwargs=hist_kwargs,fig=fig)
 
@@ -532,7 +532,7 @@ class ForwardModel(bnn_inference.InferenceClass):
 			bnn_type = 'GMM'
 		else:
 			bnn_type = bnn_type.capitalize()
-		fig.legend(handles,['Forward Modeling',bnn_type+' BNN'],loc=(0.55,0.75),
+		fig.legend(handles,[bnn_type+' BNN','Forward Modeling'],loc=(0.55,0.75),
 			fontsize=20)
 
 		if save_fig_path is not None:
