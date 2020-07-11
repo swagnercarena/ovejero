@@ -505,7 +505,7 @@ class ForwardModel(bnn_inference.InferenceClass):
 			self.predict_samps.shape[-1])
 		fig = corner.corner(corner_bnn_samples,
 				bins=20,labels=self.final_params_print_names,show_titles=True,
-				plot_datapoints=False,label_kwargs=dict(fontsize=13),
+				plot_datapoints=False,label_kwargs=dict(fontsize=14),
 				truths=reordered_true_values,levels=[0.68,0.95],
 				dpi=dpi, color=color_map[0],fig=fig,fill_contours=True,
 				range=plot_limits,truth_color=truth_color,
@@ -515,7 +515,7 @@ class ForwardModel(bnn_inference.InferenceClass):
 		hist_kwargs['color'] = color_map[1]
 		fig = corner.corner(reordered_chains,
 			labels=self.final_params_print_names,bins=20,show_titles=True,
-			plot_datapoints=False,label_kwargs=dict(fontsize=10),dpi=dpi,
+			plot_datapoints=False,label_kwargs=dict(fontsize=14),dpi=dpi,
 			truths=reordered_true_values,levels=[0.68,0.95],color=color_map[1],
 			fill_contours=True,range=plot_limits,truth_color=truth_color,
 			hist_kwargs=hist_kwargs,fig=fig)
@@ -539,6 +539,8 @@ class ForwardModel(bnn_inference.InferenceClass):
 			plt.savefig(save_fig_path)
 
 		plt.show(block=block)
+
+		return fig
 
 	def calculate_p_MMD(self,burnin,num_samples,calc_samps_max=1000,
 		sample_save_dir=None):
