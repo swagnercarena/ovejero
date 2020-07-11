@@ -496,26 +496,29 @@ class ForwardModel(bnn_inference.InferenceClass):
 			reordered_chains[:,fpi] = chains[:,pi]
 			reordered_true_values[fpi] = true_values_list[pi]
 
-		# Make a corner plot for the forward modeling samples
+		# Make a corner plot for the BNN samples
 		hist_kwargs = {'density':True,'color':color_map[0]}
-		fig = corner.corner(reordered_chains,
-			labels=self.final_params_print_names,bins=20,show_titles=True,
-			plot_datapoints=False,label_kwargs=dict(fontsize=10),dpi=dpi,
-			truths=reordered_true_values,levels=[0.68,0.95],color=color_map[0],
-			fill_contours=True,range=plot_limits,truth_color=truth_color,
-			hist_kwargs=hist_kwargs)
-
-		# Now overlay the samples from the BNN
+		fig = None
 		self.gen_samples(num_samples,sample_save_dir=sample_save_dir,
 			single_image=self.true_image_noise/np.std(self.true_image_noise))
-		hist_kwargs['color'] = color_map[1]
-		corner.corner(self.predict_samps.reshape(-1,self.predict_samps.shape[-1]),
+		corner_bnn_samples = self.predict_samps.reshape(-1,
+			self.predict_samps.shape[-1])
+		fig = corner.corner(corner_bnn_samples,
 				bins=20,labels=self.final_params_print_names,show_titles=True,
 				plot_datapoints=False,label_kwargs=dict(fontsize=13),
 				truths=reordered_true_values,levels=[0.68,0.95],
 				dpi=dpi, color=color_map[1],fig=fig,fill_contours=True,
 				range=plot_limits,truth_color=truth_color,
 				hist_kwargs=hist_kwargs)
+
+		# Now overlay the forward modeling samples
+		hist_kwargs['color'] = color_map[1]
+		fig = corner.corner(reordered_chains,
+			labels=self.final_params_print_names,bins=20,show_titles=True,
+			plot_datapoints=False,label_kwargs=dict(fontsize=10),dpi=dpi,
+			truths=reordered_true_values,levels=[0.68,0.95],color=color_map[0],
+			fill_contours=True,range=plot_limits,truth_color=truth_color,
+			hist_kwargs=hist_kwargs,fig=fig)
 
 		left, bottom, width, height = [0.5725,0.8, 0.15, 0.18]
 		ax2 = fig.add_axes([left, bottom, width, height])
