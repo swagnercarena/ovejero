@@ -110,6 +110,7 @@ def build_eval_dict(cfg_dict,lens_params,baobab_config=True):
 		eval_fn = getattr(distributions,'eval_{}_logpdf_approx'.format(
 			dist['dist']))
 		eval_sig = signature(eval_fn)
+		fn_name = dist['dist']
 
 		# Hyperparameters is number of parameters-1 because the first parameter
 		# is where to evaluate.
@@ -153,6 +154,7 @@ def build_eval_dict(cfg_dict,lens_params,baobab_config=True):
 
 		# Finally, actually include the evaluation function.
 		eval_dict[lens_param]['eval_fn'] = eval_fn
+		eval_dict[lens_param]['fn_name'] = fn_name
 
 	# Add covariance matrix information if that's relevant
 	if 'cov_info' in cfg_dict.bnn_omega:
@@ -269,6 +271,13 @@ def log_p_xi_omega(samples, hyp, eval_dict,lens_params):
 
 		logpdf_cov = stats.multivariate_normal(mean=mu,cov=cov).logpdf(
 			cov_samples)
+
+		# This is a hardcode, but for axis ratio we want to renormalize by
+		# the area cut by q<=1.
+		if 'lens_mass_q' in eval_dict['cov_params_list']:
+			qi = eval_dict['cov_params_list'].index('lens_mass_q')
+			logpdf_cov -= np.log(stats.norm(mu[qi],np.sqrt(cov[qi,qi])).cdf(1))
+
 		logpdf += logpdf_cov.reshape(orig_shape[:-1]).T
 
 	# Clean up any lingering nans.
@@ -888,7 +897,7 @@ class HierarchicalClass:
 			# parameters will have empty dictionary entries
 			if self.target_eval_dict[lens_param] is None:
 				continue
-			# Grab the the samples and indices of the hyperparameters
+			# Grab the samples and indices of the hyperparameters
 			samples = lens_samps[li].flatten()
 			hyp_ind = self.target_eval_dict[lens_param]['hyp_ind']
 			if hyp_ind.size == 0:
@@ -943,7 +952,7 @@ class HierarchicalClass:
 				Line2D([0], [0], color=color_map[3], lw=4)]
 			plt.legend(custom_lines, [
 				r'Training Distribution: $p(\xi^{\star}|\Omega_\mathrm{int})$',
-				r'BNN Samples: $p(\{\xi\}|\{d\},\Omega_\mathrm{int})$',
+				r'Stacked BNN Samples: $p(\{\xi\}|\{d\},\Omega_\mathrm{int})$',
 				r'Posterior Samples: $p(\xi^{\star}|\Omega)p(\Omega|\{d\}) $',
 				r'Test Distribution: $p(\xi^{\star}|\Omega_\mathrm{test})$'])
 
@@ -977,7 +986,7 @@ class HierarchicalClass:
 		cov = np.dot(tril_mat,tril_mat.T)
 		return mu,cov
 
-	def calculate_sample_weights(self,n_p_omega_samps,burnin):
+	def calculate_sample_log_weights(self,n_p_omega_samps,burnin):
 		"""
 		Calculate the weights from the posterior on Omega needed for
 		reweighting.
@@ -986,6 +995,10 @@ class HierarchicalClass:
 		----------
 			n_p_omega_samps (int): The number of samples from p(Omega|{d}) to
 				use in the reweighting.
+
+		Returns
+		-------
+			(np.array): The log of the weights for the lens samples.
 		"""
 		# Define the global variables we'll use.
 		global lens_samps
@@ -1003,9 +1016,9 @@ class HierarchicalClass:
 			lpos[s_i] = log_p_xi_omega(lens_samps, sample, self.target_eval_dict,
 				self.lens_params_test)
 		lpi = self.prob_class.pt_omegai
-		# Calculate the weights using the log posterior samples
-		weights = np.mean(np.exp(lpos-lpi),axis=0)
-		return weights
+		# Calculate the log weights using the log posterior samples
+		log_weights = special.logsumexp(lpos-lpi,axis=0)-np.log(n_p_omega_samps)
+		return log_weights
 
 	def plot_reweighted_lens_posterior(self,burnin,image_index,plot_limits=None,
 		n_p_omega_samps=100, color_map=["#FFAA00","#41b6c4"],
@@ -1037,9 +1050,9 @@ class HierarchicalClass:
 				dpi=1600, color=color_map[0],fill_contours=True,
 				range=plot_limits,truth_color=truth_color)
 
-		weights = self.calculate_sample_weights(n_p_omega_samps,burnin)
-		weights /= np.sum(weights,axis=0)
-		weights = weights[:,image_index]
+		log_weights = self.calculate_sample_log_weights(n_p_omega_samps,burnin)
+		log_weights -= special.logsumexp(log_weights,axis=0)
+		weights = np.exp(log_weights)[:,image_index]
 
 		corner.corner(self.infer_class.predict_samps[:,image_index,:],bins=20,
 				labels=self.infer_class.final_params_print_names,show_titles=True,
@@ -1049,9 +1062,10 @@ class HierarchicalClass:
 				weights=weights, fig=fig,range=plot_limits,
 				truth_color=truth_color)
 
-	def plot_reweighted_calibration(self,burnin,n_perc_points,
-		n_p_omega_samps=100,color_map=['#1b9e77','#d95f02','#7570b3'],
-		legend=['Perfect Calibration','Bare Network','Reweighted Network']):
+	def plot_reweighted_calibration(self,burnin,n_perc_points=20,
+		n_p_omega_samps=100,color_map=['#000000','#1b9e77','#d95f02'],
+		legend=['Perfect Calibration','Bare Network','Reweighted Network'],
+		ls_list=['-','--'],figure=None):
 		"""
 		Plot the calibration plot reweighted using the samples of Omega
 
@@ -1063,15 +1077,102 @@ class HierarchicalClass:
 			n_p_omega_samps (int): The number of samples from p(Omega|{d}) to
 				use in the reweighting.
 			color_map ([str,...]): The colors to use in the calibration
-				plots. Must include 3 colors.
+				plots. Must include 3 colors. They are the colors for the
+				perfect calibration line, the orginial calibration (with
+				the interim prior assumption), and the reweighted calibration.
+			legend ([str,...]): The legend to use when labeling the
+				output lines
+			ls_list ([str,...]): A list of line styles to use for each
+				line type.
+			figure (matplotlib.pyplot.figure): A figure that was previously
+				returned by plot_calibration to overplot onto.
+
+		Returns
+		-------
+			(matplotlib.pyplot.figure): The figure object that contains the
+				plot
 		"""
 		# For the first plot we can just use the original BNN code.
-		fig = self.infer_class.plot_calibration(color_map=color_map,
-			n_perc_points=n_perc_points,show_plot=False,legend=legend)
+		figure = self.infer_class.plot_calibration(color_map=color_map,
+			n_perc_points=n_perc_points,show_plot=False,legend=legend,
+			ls=ls_list[0],figure=figure)
 
-		weights = self.calculate_sample_weights(n_p_omega_samps,burnin)
-		weights /= np.mean(weights,axis=0)
+		# Grab a sample of the weights we will use on the posteriors.
+		log_weights = self.calculate_sample_log_weights(n_p_omega_samps,burnin)
+		log_weights -= special.logsumexp(log_weights,axis=0)-np.log(
+			len(log_weights))
+		weights = np.exp(log_weights)
 
-		fig = self.infer_class.plot_calibration(color_map=color_map[1:],
-			n_perc_points=n_perc_points,figure=fig,show_plot=False,
-			weights=weights,legend=legend)
+		# Recreate the same calibration plot with the new weights folded
+		# in.
+		figure = self.infer_class.plot_calibration(color_map=color_map[1:],
+			n_perc_points=n_perc_points,figure=figure,show_plot=False,
+			weights=weights,legend=legend,ls=ls_list[1])
+
+		return figure
+
+	def plot_parameter_distribtuion(self,burnin,lens_params,n_p_omega_samps=100,
+		samps_per_omega=100, param_print_names=None,color='#000000',
+		fontsize=13,plot_limits=None,figure=None):
+		"""
+		For the desired lens parameters, plot a corner plot of the distribution
+		of each parameter.
+
+		Parameters
+		----------
+			burnin (int): How many of the initial samples to drop as burnin
+			lens_params ([str,...]): The lens params to plot the distributions
+				for.
+			n_p_omega_samps (int): The number of samples from p(Omega|{d}) to
+				use.
+			samps_per_omega (int): How many samples to pull for each omega.
+			param_print_names ([str,...]): A list of string matching lens_params
+				with the string that should be used for the parameter name
+				in plotting (allows pretty labels).
+			color (str): The color to use for plotting the contour.
+			fontsize (int): The fontsize to use for labeling.
+			plot_limits ([(float,float),..]): A list of float tuples that define
+				the maximum and minimum plot range for each posterior parameter.
+			figure (matplotlib.pyplot.figure): A figure that was previously
+				returned by plot_single_corner to overplot onto.
+		"""
+		# Grab the chains with burnin
+		chains = self.sampler.get_chain()[burnin:]
+		chains = chains.reshape(-1,chains.shape[-1])
+		corner_param_samples = []
+
+		for li, lens_param in enumerate(lens_params):
+			# In the case of a multinormal for the test distribution, some
+			# parameters will have empty dictionary entries
+			if self.target_eval_dict[lens_param] is None:
+				continue
+
+			# Grab the indices of the hyperparameters
+			hyp_ind = self.target_eval_dict[lens_param]['hyp_ind']
+			hyp_s = np.min(hyp_ind)
+			hyp_e = np.max(hyp_ind)+1
+
+			# Pull the function to sample from
+			samp_fn = getattr(distributions,'sample_{}_vectorize'.format(
+				self.target_eval_dict[lens_param]['fn_name']))
+			param_samps = []
+
+			# Sample the desired number of population hyperparameter values and
+			# sample the desired number of lens parameter value for each one.
+			for chain in chains[np.random.randint(len(chains),
+				size=n_p_omega_samps)]:
+				param_samps.append(samp_fn(samps_per_omega,*chain[hyp_s:hyp_e],
+					**self.target_eval_dict[lens_param]['eval_fn_kwargs']))
+			corner_param_samples.append(np.array(param_samps).flatten())
+		corner_param_samples = np.array(corner_param_samples)
+
+		# Now plot our samples
+		if param_print_names is None:
+			param_print_names = lens_params
+
+		hist_kwargs = {'density':True,'color':color}
+		corner.corner(corner_param_samples.T,labels=param_print_names,bins=30,
+			show_titles=True, plot_datapoints=False,
+			label_kwargs=dict(fontsize=fontsize),color=color,levels=[0.68,0.95],
+			fill_contours=True,fig=figure,range=plot_limits,
+			hist_kwargs=hist_kwargs)

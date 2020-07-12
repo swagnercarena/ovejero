@@ -200,12 +200,14 @@ class HierarchicalnferenceTest(unittest.TestCase):
 			# Now calculate the covariance matrix values.
 			cov_samples = samples[[7,4,6]]
 			mu = [0.242,-0.408,0.696]
-			cov = np.array([[0.66, 0.41, 0.16],
-				[0.41, 0.41, 0.16],[0.16, 0.16, 0.16]])
+			cov = np.array([[0.25, 0.25, 0.2],
+				[0.25, 0.5, 0.4],[0.2, 0.4, 0.48]])
 			for i in range(len(scipy_pdf)):
 				for j in range(len(scipy_pdf[0])):
 					scipy_pdf[i,j] += stats.multivariate_normal.logpdf(
 						np.log(cov_samples[:,i,j]),mean=mu,cov=cov)
+					scipy_pdf[i,j] -= np.log(stats.norm(mu[1],
+						np.sqrt(cov[1,1])).cdf(1))
 			return scipy_pdf
 
 		np.testing.assert_array_almost_equal(
@@ -567,11 +569,12 @@ class HierarchicalClassTest(unittest.TestCase):
 		# Calculate weights with function
 		n_p_omega_samps = 10
 		burnin = 0
-		weights = self.hclass.calculate_sample_weights(n_p_omega_samps,burnin)
+		weights = self.hclass.calculate_sample_log_weights(n_p_omega_samps,
+			burnin)
 
 		# Calculate the weights we expect by hand.
 		hand_weights = 0.5*(np.exp(lpxi1-lpi)+np.exp(lpxi2-lpi))
-		np.testing.assert_almost_equal(weights,hand_weights)
+		np.testing.assert_almost_equal(np.exp(weights),hand_weights)
 
 		self.hclass.sampler = None
 

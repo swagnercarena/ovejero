@@ -550,7 +550,7 @@ class InferenceClass:
 
 	def plot_calibration(self,color_map=["#377eb8", "#4daf4a"],n_perc_points=20,
 		figure=None,legend=None,show_plot=True,block=True,weights=None,
-		title=None,ls='-',loc=9):
+		title=None,ls='-',loc=9,dpi=200):
 		"""
 		Plot the percentage of draws from the predicted distributions with
 		||draws||_2 > ||truth||_2 for our different batch examples.
@@ -574,6 +574,7 @@ class InferenceClass:
 				BNN.
 			loc (int or tuple): The location for the legend in the calibration
 				plot.
+			dpi (int): The dpi to use for the figure.
 
 		Returns
 		-------
@@ -597,7 +598,7 @@ class InferenceClass:
 		percentages = np.linspace(0.0,1.0,n_perc_points)
 		p_images = np.zeros_like(percentages)
 		if figure is None:
-			figure = plt.figure(figsize=(8,8),dpi=200)
+			figure = plt.figure(figsize=(8,8),dpi=dpi)
 			plt.plot(percentages,percentages,c=color_map[0],ls='--')
 
 		# We'll estimate the uncertainty in our plat using a jacknife method.
@@ -616,10 +617,11 @@ class InferenceClass:
 		# our sample variance.
 		plt.fill_between(percentages,p_images+p_dlt_std,p_images-p_dlt_std,
 			color=color_map[1],alpha=0.3)
-		plt.xlabel('Percentage of Probability Volume')
-		plt.ylabel('Percent of Lenses With True Value in the Volume')
-		plt.text(-0.03,1,'Underconfident')
-		plt.text(0.85,0,'Overconfident')
+		if figure is None:
+			plt.xlabel('Percentage of Probability Volume')
+			plt.ylabel('Percent of Lenses With True Value in the Volume')
+			plt.text(-0.03,1,'Underconfident')
+			plt.text(0.85,0,'Overconfident')
 		if title is None:
 			plt.title('Calibration of Network Posterior')
 		else:
