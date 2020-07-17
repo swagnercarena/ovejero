@@ -58,4 +58,4 @@ num_lenses = ['0','0','0','0','0','0','0','0','0','256','64','0','0']
 for arg_list in zip(config_path,target_ovejero_omega_path,test_dataset_path,
 	test_dataset_tf_record_path,sample_save_dir,chains_save_path,num_lens_samples,
 	num_emcee_samples,num_lenses):
-	os.system('sbatch submit_sciprt.sh ' + ' '.join(arg_list))
+	print('sbatch submit_sciprt.sh ' + ' '.join(arg_list))
