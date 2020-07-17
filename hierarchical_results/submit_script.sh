@@ -3,7 +3,7 @@
 # h_inf.sbatch
 #
 #SBATCH -J h_inf         # A single job name for the array
-#SBATCH -p kipac,normal,iric,hns
+#SBATCH -p kipac,normal,iric,hns,owners
 #SBATCH -c 16
 #SBATCH -N 1
 #SBATCH -t 0-24         # Running time of 1 day
