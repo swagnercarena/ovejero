@@ -18,7 +18,7 @@ from baobab import configs
 from baobab import distributions
 from ovejero import bnn_inference, data_tools, model_trainer
 from inspect import signature
-import emcee, os, glob, corner, copy
+import emcee, os, glob, corner, copy, numba
 import scipy.stats as stats
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
@@ -38,7 +38,8 @@ def load_prior_config(cfg_path):
 
 	Parameters
 	----------
-	user_cfg_path (str): Path to the ovejero distribution configuration file.
+		user_cfg_path (str): Path to the ovejero distribution configuration
+			file.
 
 	Returns
 	-------
@@ -51,6 +52,58 @@ def load_prior_config(cfg_path):
 	user_cfg_script = import_module(module_name)
 	user_cfg = getattr(user_cfg_script, 'cfg')
 	return user_cfg
+
+
+def convert_tril_to_cov(tril):
+	"""
+	Convert a list of lower triangular matrix entries to the corresponding
+	covariance matrix.
+
+	Parameters
+	----------
+		tril (np.array): A 1D array with the lower triangular values
+
+	Returns
+	-------
+		(np.array): The covariance matrix
+	"""
+	# Format the lower triangular matrix and return the dot product.
+	n_params = int(0.5*(np.sqrt(1+8*len(tril))-1))
+	tril_mask = np.tri(n_params,dtype=bool, k=0)
+	tril_mat = np.zeros((n_params,n_params))
+	tril_mat[tril_mask] = tril
+	return np.dot(tril_mat,tril_mat.T)
+
+
+def convert_trils_to_covs(tril):
+	"""
+	Convert a list of lower triangular matrix entries to the corresponding
+	covariance matrix.
+
+	Parameters
+	----------
+		tril (np.array): A 1D array with the lower triangular values
+
+	Returns
+	-------
+		(np.array): The covariance matrix
+	"""
+	# Format the lower triangular matrix and return the dot product.
+	n_params = int(0.5*(np.sqrt(1+8*tril.shape[-1])-1))
+	tril_mask = np.tri(n_params,dtype=bool, k=0)
+	tril_mats = np.zeros((tril.shape[0],n_params,n_params))
+	cov_mats = np.zeros((tril.shape[0],n_params,n_params))
+	for i in range(tril.shape[0]):
+		tril_mats[i,tril_mask] = tril[i]
+
+	# We'll do the dot product in numba to speed things up a bit.
+	@numba.njit()
+	def tril_to_cov_mats(tril_mats,cov_mats):
+		for i in range(tril_mats.shape[0]):
+			cov_mats[i] = np.dot(tril_mats[i],tril_mats[i].T)
+
+	tril_to_cov_mats(tril_mats,cov_mats)
+	return cov_mats
 
 
 def build_eval_dict(cfg_dict,lens_params,baobab_config=True):
@@ -260,10 +313,7 @@ def log_p_xi_omega(samples, hyp, eval_dict,lens_params):
 		# Get the mean and covariance we want to use
 		mu = hyp[eval_dict['cov_mu_hyp_ind']]
 		tril = hyp[eval_dict['cov_tril_hyp_ind']]
-		tril_mask = np.tri(len(mu),dtype=bool, k=0)
-		tril_mat = np.zeros((len(mu),len(mu)))
-		tril_mat[tril_mask] = tril
-		cov = np.dot(tril_mat,tril_mat.T)
+		cov = convert_tril_to_cov(tril)
 
 		# Reshape the covariance samples to feed into the logpdf function
 		orig_shape = cov_samples.T.shape
@@ -770,7 +820,7 @@ class HierarchicalClass:
 			plt.show(block)
 
 	def plot_corner(self,burnin,hyperparam_plot_names=None,block=True,
-		color='#FFAA00',truth_color='#000000',plot_range=None):
+		color='#FFAA00',truth_color='#000000',plot_range=None,dpi=200):
 		"""
 		Plot the corner plot of chains resulting from the emcee
 
@@ -783,6 +833,7 @@ class HierarchicalClass:
 			color (str): The color to use for plotting the contour.
 			truth_color (str): The color to use for plotting the truths in the
 				corner plot.
+			dpi (int): The dpi of the figure.
 		"""
 		if hyperparam_plot_names is None:
 			hyperparam_plot_names = self.target_eval_dict['hyp_names']
@@ -808,17 +859,17 @@ class HierarchicalClass:
 			hist_kwargs = {'density':True,'color':color}
 			corner.corner(chains[:,hyp_s:hyp_e],
 				labels=hyperparam_plot_names[hyp_s:hyp_e],
-				bins=20,show_titles=True, plot_datapoints=False,
+				bins=20,show_titles=False, plot_datapoints=False,
 				label_kwargs=dict(fontsize=10),
 				truths=truths,
 				levels=[0.68,0.95],color=color,fill_contours=True,
 				truth_color=truth_color,range=plot_range,
-				hist_kwargs=hist_kwargs)
+				hist_kwargs=hist_kwargs,dpi=dpi)
 			plt.show(block=block)
 
 	def plot_single_corner(self,burnin,plot_param,hyperparam_plot_names=None,
 		block=True,color='#FFAA00',truth_color='#000000',figure=None,
-		plot_range=None):
+		plot_range=None,dpi=200):
 		"""
 		Plot the corner plot of chains resulting from the emcee for a specific
 		parameter
@@ -836,6 +887,7 @@ class HierarchicalClass:
 				corner plot.
 			figure (matplotlib.pyplot.figure): A figure that was previously
 				returned by plot_single_corner to overplot onto.
+			dpi (int): The dpi of the figure.
 		"""
 		if hyperparam_plot_names is None:
 			hyperparam_plot_names = self.target_eval_dict['hyp_names']
@@ -854,13 +906,91 @@ class HierarchicalClass:
 		hist_kwargs = {'density':True,'color':color}
 		figure = corner.corner(chains[:,hyp_s:hyp_e],
 			labels=hyperparam_plot_names[hyp_s:hyp_e],
-			dpi=800,bins=20,show_titles=True, plot_datapoints=False,
+			dpi=dpi,bins=20,show_titles=False, plot_datapoints=False,
 			label_kwargs=dict(fontsize=13),
-			truths=truths,
-			levels=[0.68,0.95],color=color,fill_contours=True,
+			truths=truths,levels=[0.68,0.95],color=color,fill_contours=True,
 			truth_color=truth_color,fig=figure,range=plot_range,
 			hist_kwargs=hist_kwargs)
 		return figure
+
+	def plot_cov_corner(self,burnin,hyperparam_plot_names=None,
+		block=True,color='#FFAA00',truth_color='#000000',figures=None,
+		plot_range=None,dpi=200):
+		"""
+		Plot the corner plot of chains resulting from the emcee of the
+		covariance matrix parameters for population inference.
+
+		Parameters
+		----------
+			burnin (int): How many of the initial samples to drop as burnin
+			plot_param (str): The lens parameter to plot the hyperprior
+				posteriors for.
+			hyperparam_plot_names ([str,...]): A list containing the names
+				of the hyperparameters to be used during plotting
+			block (bool): If true, block excecution after plt.show() command
+			color (str): The color to use for plotting the contour.
+			truth_color (str): The color to use for plotting the truths in the
+				corner plot.
+			figure [(matplotlib.pyplot.figure),...]: A 2 elements list of
+				figures that were previously returned by plot_cov_corner to
+				overplot onto. Two figure are required since we will make a
+				corner plot for the mean and the covariance.
+			dpi (int): The dpi of the figure.
+		"""
+		if hyperparam_plot_names is None:
+			hyperparam_plot_names = self.target_eval_dict['hyp_names']
+
+		# We need the Nones to be in list form
+		if figures is None:
+			figures = [None,None]
+
+		# Get the chains from the samples
+		chains = self.sampler.get_chain()[burnin:].reshape(-1,
+			len(hyperparam_plot_names))
+
+		# First plot the posterior on the covariance matrix mean.
+		mu_ind = self.target_eval_dict['cov_mu_hyp_ind']
+		mu_hyp_s = np.min(mu_ind)
+		mu_hyp_e = np.max(mu_ind)+1
+		truths = None
+		if self.true_hyp_values is not None:
+			truths = self.true_hyp_values[mu_hyp_s:mu_hyp_e]
+		hist_kwargs = {'density':True,'color':color}
+		figures[0] = corner.corner(chains[:,mu_hyp_s:mu_hyp_e],
+			labels=hyperparam_plot_names[mu_hyp_s:mu_hyp_e],
+			dpi=dpi,bins=20,show_titles=False, plot_datapoints=False,
+			label_kwargs=dict(fontsize=13),
+			truths=truths,levels=[0.68,0.95],color=color,fill_contours=True,
+			truth_color=truth_color,fig=figures[0],range=plot_range,
+			hist_kwargs=hist_kwargs)
+
+		# Now repeat the same but for the covariance parameters. We will
+		# convert from the lower triangular matrix to the covariance matrix.
+		tril_ind = self.target_eval_dict['cov_tril_hyp_ind']
+		tril_hyp_s = np.min(tril_ind)
+		tril_hyp_e = np.max(tril_ind)+1
+		truths = None
+		if self.true_hyp_values is not None:
+			truths = self.true_hyp_values[tril_hyp_s:tril_hyp_e]
+
+		# Convert posterior samples and truths to of the lower triangular
+		# matrix to covariance matrix samples.
+		tril_mask = np.tri(len(mu_ind),dtype=bool, k=0)
+		cov_truth = convert_tril_to_cov(truths)
+		cov_truth = cov_truth[tril_mask]
+		chains_covs = convert_trils_to_covs(chains[:,tril_hyp_s:tril_hyp_e])
+		chains_covs = chains_covs[:,tril_mask]
+
+		hist_kwargs = {'density':True,'color':color}
+		figures[1]= corner.corner(chains_covs,
+			labels=hyperparam_plot_names[tril_hyp_s:tril_hyp_e],
+			dpi=dpi,bins=20,show_titles=False, plot_datapoints=False,
+			label_kwargs=dict(fontsize=13),
+			truths=cov_truth,levels=[0.68,0.95],color=color,fill_contours=True,
+			truth_color=truth_color,fig=figures[1],range=plot_range,
+			hist_kwargs=hist_kwargs)
+
+		return figures
 
 	def plot_distributions(self,burnin,param_plot_names=None,block=True,
 		color_map=["#a1dab4","#41b6c4","#2c7fb8","#253494"],bnn_name='BNN',
@@ -972,20 +1102,6 @@ class HierarchicalClass:
 
 			plt.show(block=block)
 
-	def sample_mu_cov(self,burnin):
-		hyperparam_plot_names = self.target_eval_dict['hyp_names']
-		chains = self.sampler.get_chain()[burnin:].reshape(-1,
-			len(hyperparam_plot_names))
-		ci = np.random.randint(len(chains))
-		hyp = chains[ci]
-		mu = hyp[self.target_eval_dict['cov_mu_hyp_ind']]
-		tril = hyp[self.target_eval_dict['cov_tril_hyp_ind']]
-		tril_mask = np.tri(len(mu),dtype=bool, k=0)
-		tril_mat = np.zeros((len(mu),len(mu)))
-		tril_mat[tril_mask] = tril
-		cov = np.dot(tril_mat,tril_mat.T)
-		return mu,cov
-
 	def calculate_sample_log_weights(self,n_p_omega_samps,burnin):
 		"""
 		Calculate the weights from the posterior on Omega needed for
@@ -1044,7 +1160,7 @@ class HierarchicalClass:
 		# Plot the contours without the reweighting first.
 		fig = corner.corner(self.infer_class.predict_samps[:,image_index,:],
 				bins=20, labels=self.infer_class.final_params_print_names,
-				show_titles=True,plot_datapoints=False,
+				show_titles=False,plot_datapoints=False,
 				label_kwargs=dict(fontsize=13),
 				truths=self.infer_class.y_test[image_index],levels=[0.68,0.95],
 				dpi=1600, color=color_map[0],fill_contours=True,
@@ -1055,8 +1171,9 @@ class HierarchicalClass:
 		weights = np.exp(log_weights)[:,image_index]
 
 		corner.corner(self.infer_class.predict_samps[:,image_index,:],bins=20,
-				labels=self.infer_class.final_params_print_names,show_titles=True,
-				plot_datapoints=False,label_kwargs=dict(fontsize=13),
+				labels=self.infer_class.final_params_print_names,
+				show_titles=False,plot_datapoints=False,
+				label_kwargs=dict(fontsize=13),
 				truths=self.infer_class.y_test[image_index],levels=[0.68,0.95],
 				dpi=1600, color=color_map[1],fill_contours=True,
 				weights=weights, fig=fig,range=plot_limits,
@@ -1113,7 +1230,7 @@ class HierarchicalClass:
 
 	def plot_parameter_distribtuion(self,burnin,lens_params,n_p_omega_samps=100,
 		samps_per_omega=100, param_print_names=None,color='#000000',
-		fontsize=13,plot_limits=None,figure=None):
+		fontsize=13,plot_limits=None,figure=None, cov_params=False):
 		"""
 		For the desired lens parameters, plot a corner plot of the distribution
 		of each parameter.
@@ -1135,6 +1252,8 @@ class HierarchicalClass:
 				the maximum and minimum plot range for each posterior parameter.
 			figure (matplotlib.pyplot.figure): A figure that was previously
 				returned by plot_single_corner to overplot onto.
+			cov_params (bool): If true, will also attempt to print
+				the distribution for the covariate parameters.
 		"""
 		# Grab the chains with burnin
 		chains = self.sampler.get_chain()[burnin:]
@@ -1164,6 +1283,47 @@ class HierarchicalClass:
 				param_samps.append(samp_fn(samps_per_omega,*chain[hyp_s:hyp_e],
 					**self.target_eval_dict[lens_param]['eval_fn_kwargs']))
 			corner_param_samples.append(np.array(param_samps).flatten())
+
+		# Numpy arrays are easier to work with.
+		corner_param_samples = np.array(corner_param_samples).T
+
+		# Deal with covariate parameters
+		if cov_params:
+			# Get the indices we'll use for sampling
+			mu_ind = self.target_eval_dict['cov_mu_hyp_ind']
+			tril_ind = self.target_eval_dict['cov_tril_hyp_ind']
+			param_samps = []
+
+			# We will want to impose a cut on any samples above 1 in qi
+			qi = self.target_eval_dict['cov_params_list'].index('lens_mass_q')
+
+			# Sample the desired number of population hyperparameter values and
+			# sample the desired number of lens parameter value for each one.
+			for chain in chains[np.random.randint(len(chains),
+				size=n_p_omega_samps)]:
+				# Grab mu and tril and turn the latter into the covariance
+				# matrix.
+				mu = chain[mu_ind]
+				tril = chain[tril_ind]
+				cov = convert_tril_to_cov(tril)
+				cov_samps = np.exp(np.random.multivariate_normal(mu,cov,
+					size=samps_per_omega))
+
+				# Resample and points with q>1.
+				while np.sum(cov_samps[:,qi]>1)>0:
+					cov_samps[cov_samps[:,qi]>1] = np.exp(
+						np.random.multivariate_normal(mu,cov,
+							size=np.sum(cov_samps[:,qi]>1)))
+
+				# Append the samples to our list once we've dealth with the
+				# resampling.
+				param_samps.append(cov_samps)
+
+			param_samps = np.array(param_samps).reshape(-1,len(mu))
+			corner_param_samples = np.concatenate([corner_param_samples,
+				param_samps],axis=1)
+
+		# Numpy arrays are easier to work with.
 		corner_param_samples = np.array(corner_param_samples)
 
 		# Now plot our samples
@@ -1171,8 +1331,8 @@ class HierarchicalClass:
 			param_print_names = lens_params
 
 		hist_kwargs = {'density':True,'color':color}
-		corner.corner(corner_param_samples.T,labels=param_print_names,bins=30,
-			show_titles=True, plot_datapoints=False,
+		corner.corner(corner_param_samples,labels=param_print_names,bins=30,
+			show_titles=False, plot_datapoints=False,
 			label_kwargs=dict(fontsize=fontsize),color=color,levels=[0.68,0.95],
 			fill_contours=True,fig=figure,range=plot_limits,
 			hist_kwargs=hist_kwargs)

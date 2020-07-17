@@ -508,7 +508,7 @@ class ForwardModel(bnn_inference.InferenceClass):
 		corner_bnn_samples = self.predict_samps.reshape(-1,
 			self.predict_samps.shape[-1])
 		fig = corner.corner(corner_bnn_samples,
-				bins=20,labels=self.final_params_print_names,show_titles=True,
+				bins=20,labels=self.final_params_print_names,show_titles=False,
 				plot_datapoints=False,label_kwargs=dict(fontsize=14),
 				truths=reordered_true_values,levels=[0.68,0.95],
 				dpi=dpi, color=color_map[0],fig=fig,fill_contours=True,
@@ -518,7 +518,7 @@ class ForwardModel(bnn_inference.InferenceClass):
 		# Now overlay the forward modeling samples
 		hist_kwargs['color'] = color_map[1]
 		fig = corner.corner(reordered_chains,
-			labels=self.final_params_print_names,bins=20,show_titles=True,
+			labels=self.final_params_print_names,bins=20,show_titles=False,
 			plot_datapoints=False,label_kwargs=dict(fontsize=14),dpi=dpi,
 			truths=reordered_true_values,levels=[0.68,0.95],color=color_map[1],
 			fill_contours=True,range=plot_limits,truth_color=truth_color,

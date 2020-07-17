@@ -42,7 +42,7 @@ test_dataset_tf_record_path = ['../datasets/cent_narrow/tf_record_cn',
 sample_save_dir = ['cn_nn1_hr_samps','cn_nn2_slr_samps','cn_nn3_slr_samps',
 	'sn_nn1_hr_samps','sn_nn2_slr_samps','sn_nn3_slr_samps','emp_nn1_hr_samps',
 	'emp_nn2_slr_samps','emp_nn3_slr_samps','cn_nn3_slr_samps',
-	'cn_nn3_slr_samps','cn_nn3_slr_samps','cn_nn3_slr_samps']
+	'cn_nn3_slr_samps','cn_nn3_lr_samps','cn_nn3_samps']
 
 chains_save_path = ['cn_nn1_hr.h5','cn_nn2_slr.h5','cn_nn3_slr.h5',
 	'sn_nn1_hr.h5','sn_nn2_slr.h5','sn_nn3_slr.h5','emp_nn1_hr.h5',

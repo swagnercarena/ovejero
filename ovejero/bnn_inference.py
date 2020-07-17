@@ -442,7 +442,7 @@ class InferenceClass:
 
 		# Now show the posterior contour for the image
 		corner.corner(self.predict_samps[:,image_index,:],bins=20,
-				labels=self.final_params_print_names,show_titles=True,
+				labels=self.final_params_print_names,show_titles=False,
 				plot_datapoints=False,label_kwargs=dict(fontsize=13),
 				truths=self.y_test[image_index],levels=[0.68,0.95],
 				dpi=200, color=contour_color,fill_contours=True,
