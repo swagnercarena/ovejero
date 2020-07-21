@@ -399,20 +399,18 @@ class InferenceClass:
 
 	def report_stats(self):
 		"""
-		Print out performance statistics of the model. So far this includes rmse,
-		median error, and median std on each parameter.
+		Print out performance statistics of the model. So far this includes
+		median absolute error, and median std on each parameter.
 		"""
 		if self.samples_init is False:
 			raise RuntimeError('Must generate samples before statistics are '+
 				'reported')
 		# Median error on each parameter
-		rmse = np.sqrt(np.mean(np.square(self.y_pred-self.y_test),axis=0))
 		medians = np.median(np.abs(self.y_pred-self.y_test),axis=0)
 		med_std = np.median(self.y_std,axis=0)
 		print('Parameter, RMSE, Median Abs Error, Median Std')
 		for param_i in range(len(self.final_params)):
-			print(self.final_params[param_i],rmse[param_i],medians[param_i],
-				med_std[param_i])
+			print(self.final_params[param_i],medians[param_i],med_std[param_i])
 
 	def plot_posterior_contours(self,image_index,contour_color='#FFAA00',
 		block=True,truth_color='#000000'):
@@ -460,12 +458,20 @@ class InferenceClass:
 			norm_diagonal (bool): If true, normalize the matrices such that
 				the diagonal entries are 0. This helps disentangle large
 				parameter covariances from large parameter values.
+
+		Returns
+			([matplotlib.pyplot.Figure,...]) A list of two figures, one for
+				the comparison and one for the ratio.
 		"""
 		if self.samples_init is False:
 			raise RuntimeError('Must generate samples before plotting')
 
+		# Keep the figures to return later
+		figures = []
+
 		# Plot the two uncertanties side by side with the same scale.
-		fig, axes = plt.subplots(nrows=1, ncols=2,figsize=(12,12),dpi=200)
+		fig, axes = plt.subplots(nrows=1, ncols=2,figsize=(12,6))
+		figures.append(fig)
 		al_median = np.median(np.abs(self.al_cov),axis=0)
 		y_cov_median = np.median(np.abs(self.y_cov),axis=0)
 		# Normalize by the diagonal term for plotting.
@@ -497,11 +503,14 @@ class InferenceClass:
 		# Now we want to plot the ratio to get an idea for how dominant
 		# one is over the other.
 		fig = plt.figure(figsize=(6,6))
+		figures.append(fig)
 		plt.imshow(al_median/y_cov_median,vmax=1,vmin=0)
 		plt.title('Median Aleatoric / Total Covariance')
 		fig.axes[0].set_xticklabels([0]+self.final_params_print_names)
 		fig.axes[0].set_yticklabels([0]+self.final_params_print_names)
 		plt.colorbar()
+
+		return figures
 
 	def calc_p_dlt(self,weights=None,cov_emp=None):
 		"""
