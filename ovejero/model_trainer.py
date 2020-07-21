@@ -15,9 +15,11 @@ from tensorflow.keras.callbacks import TensorBoard, ModelCheckpoint
 from tensorflow.keras.optimizers import Adam
 import argparse, json, os
 import pandas as pd
+import copy, glob
 
 # Import the code to construct the bnn and the data pipeline
 from ovejero import bnn_alexnet, data_tools
+
 
 def config_checker(cfg):
 	"""
@@ -49,19 +51,20 @@ def config_checker(cfg):
 
 	# Load the check json file
 	root_path = os.path.dirname(os.path.abspath(__file__))
-	with open(root_path+'/check.json','r') as json_f:
+	with open(os.path.join(root_path,'check.json'),'r') as json_f:
 		cfg_ref = json.load(json_f)
 
 	recursive_key_checker(cfg,cfg_ref)
 
+
 def load_config(config_path):
 	"""
-	Load a configuration file from the path and check that it meets the 
+	Load a configuration file from the path and check that it meets the
 	requirements.
 
 	Parameters
 	----------
-		config_path (str): The path to the config file to be loaded 
+		config_path (str): The path to the config file to be loaded
 
 	Returns
 	-------
@@ -95,19 +98,22 @@ def prepare_tf_record(cfg,root_path,tf_record_path,final_params,train_or_test):
 			saved. If train, the training normalizations will be used.
 	"""
 	# Path to csv containing lens parameters.
-	lens_params_path = root_path + cfg['dataset_params']['lens_params_path']
-	# The list of lens parameters that should be trained on
-	lens_params = cfg['dataset_params']['lens_params']
-	# Where to save the lens parameters to after the preprocessing 
+	lens_params_path = os.path.join(root_path,
+		cfg['dataset_params']['lens_params_path'])
+	# The list of lens parameters that should be trained on. We will
+	# append to this, so we want to make a copy.
+	lens_params = copy.copy(cfg['dataset_params']['lens_params'])
+	# Where to save the lens parameters to after the preprocessing
 	# transformations
-	new_param_path = root_path + cfg['dataset_params']['new_param_path']
+	new_param_path = os.path.join(root_path,
+		cfg['dataset_params']['new_param_path'])
 	# Where to save the normalization constants to. Note that we take the
 	# root path associated with the training_params here, even if validation
 	# params root path was passed in. This is because we always want to use
 	# the training norms!
-	normalization_constants_path = cfg['training_params'][
-		'root_path'] + cfg['dataset_params'][
-		'normalization_constants_path']
+	normalization_constants_path = os.path.join(
+		cfg['training_params']['root_path'],
+		cfg['dataset_params']['normalization_constants_path'])
 	# Parameters to convert to log space
 	if 'lens_params_log' in cfg['dataset_params']:
 		lens_params_log = cfg['dataset_params']['lens_params_log']
@@ -123,7 +129,8 @@ def prepare_tf_record(cfg,root_path,tf_record_path,final_params,train_or_test):
 		# The parameter names of the angles
 		gampsi_params_ang = cfg_gampsi['gampsi_params_ang']
 	else:
-		gampsi_parameter_prefixes=None; gampsi_params_rat=None;
+		gampsi_parameter_prefixes=None
+		gampsi_params_rat=None
 		gampsi_params_ang=None
 
 	# First write desired parameters in log space.
@@ -164,9 +171,10 @@ def prepare_tf_record(cfg,root_path,tf_record_path,final_params,train_or_test):
 	data_tools.generate_tf_record(root_path,lens_params,new_param_path,
 		tf_record_path)
 
+
 def get_normed_pixel_scale(cfg,pixel_scale):
 	"""
-	Return a dictionary with the pixel scale normalized according to the 
+	Return a dictionary with the pixel scale normalized according to the
 	normalization of each shift parameter.
 
 	Parameters
@@ -176,14 +184,15 @@ def get_normed_pixel_scale(cfg,pixel_scale):
 
 	Returns
 	-------
-		(dict): A dictionary of the pixel scales renormalized in the same way as 
+		(dict): A dictionary of the pixel scales renormalized in the same way as
 			the shift parameters.
 	"""
 	# Get the parameters we need to read the normalization from
 	shift_params = cfg['training_params']['shift_params']
 	# Adjust the pixel scale by the normalization
-	normalization_constants_path = cfg['training_params']['root_path'] + cfg[
-		'dataset_params']['normalization_constants_path']
+	normalization_constants_path = os.path.join(
+		cfg['training_params']['root_path'],
+		cfg['dataset_params']['normalization_constants_path'])
 	norm_const_dict = pd.read_csv(normalization_constants_path, index_col=None)
 	# Set the normed pixel scale for each parameter
 	normed_pixel_scale = {}
@@ -194,6 +203,7 @@ def get_normed_pixel_scale(cfg,pixel_scale):
 		normed_pixel_scale[shift_param] = pixel_scale/norm_const_dict[
 			shift_param][1]
 	return normed_pixel_scale
+
 
 def model_loss_builder(cfg, verbose=False):
 	"""
@@ -208,8 +218,8 @@ def model_loss_builder(cfg, verbose=False):
 	Returns
 	-------
 		(tf.keras.model, function): A bnn model of the type specified in config
-			and a callable function to construct the tesnorflow graph for the 
-			loss. 
+			and a callable function to construct the tesnorflow graph for the
+			loss.
 	"""
 	# Load the parameters we need from the config file. Some of these will
 	# be repeats from the main script.
@@ -227,17 +237,18 @@ def model_loss_builder(cfg, verbose=False):
 	# model.
 	kr = cfg['training_params']['kernel_regularizer']
 	dr = cfg['training_params']['dropout_regularizer']
+	dropout_rate = cfg['training_params']['dropout_rate']
 	# If the any of the parameters contain excentricities then the e1/e2
 	# pair should be included in the flip list for the correct loss function
 	# behavior. See the example config files.
 	flip_pairs = cfg['training_params']['flip_pairs']
 	# The type of BNN output (either diag, full, or gmm).
 	bnn_type = cfg['training_params']['bnn_type']
+	dropout_type = cfg['training_params']['dropout_type']
 	# The path to the model weights. If they already exist they will be loaded
 	model_weights = cfg['training_params']['model_weights']
 	# Finally set the random seed we will use for training
 	random_seed = cfg['training_params']['random_seed']
-
 
 	# Initialize the log function according to bnn_type
 	loss_class = bnn_alexnet.LensingLossFunctions(flip_pairs,num_params)
@@ -254,12 +265,23 @@ def model_loss_builder(cfg, verbose=False):
 		raise RuntimeError('BNN type %s does not exist'%(bnn_type))
 	# The mse loss doesn't depend on model type.
 	mse_loss = loss_class.mse_loss
+	adam = Adam(lr=learning_rate,amsgrad=False)#,decay=decay)
 
-	model = bnn_alexnet.concrete_alexnet((img_dim, img_dim, 1), num_outputs,
-		kernel_regularizer=kr,dropout_regularizer=dr,random_seed=random_seed)
+	if dropout_type == 'concrete':
+		model = bnn_alexnet.concrete_alexnet((img_dim, img_dim, 1), num_outputs,
+			kernel_regularizer=kr,dropout_regularizer=dr,random_seed=random_seed)
+		# The final metric here is a hack to be able to track the average dropout
+		# value.
+		model.compile(loss=loss, optimizer=adam, metrics=[loss,mse_loss,
+			bnn_alexnet.p_value(model)])
+	elif dropout_type == 'standard':
+		model = bnn_alexnet.dropout_alexnet((img_dim, img_dim, 1), num_outputs,
+			kernel_regularizer=kr,dropout_rate=dropout_rate)
+		model.compile(loss=loss, optimizer=adam, metrics=[loss,mse_loss])
+	else:
+		raise ValueError('dropout type %s is not an option.'%(dropout_type) +
+			' Either standard or concrete')
 
-	adam = Adam(lr=learning_rate,amsgrad=False,decay=decay)
-	model.compile(loss=loss, optimizer=adam, metrics=[loss,mse_loss])
 	if verbose:
 		print('Is model built: ' + str(model.built))
 
@@ -273,14 +295,15 @@ def model_loss_builder(cfg, verbose=False):
 
 	return model, loss
 
+
 def main():
 	"""
-	Initializes and trains a BNN network. Path to config file are read from 
+	Initializes and trains a BNN network. Path to config file are read from
 	command line arguments.
 	"""
 	# Initialize argument parser to pull neccesary paths
 	parser = argparse.ArgumentParser()
-	parser.add_argument('config',help='json config file containing BNN type ' + 
+	parser.add_argument('config',help='json config file containing BNN type ' +
 		'and data/model paths')
 	args = parser.parse_args()
 
@@ -297,15 +320,19 @@ def main():
 	# The same but for validation
 	root_path_v = cfg['validation_params']['root_path']
 	# The filename of the TFRecord for training data
-	tf_record_path_t = root_path_t+cfg['training_params']['tf_record_path']
+	tf_record_path_t = os.path.join(root_path_t,
+		cfg['training_params']['tf_record_path'])
 	# The same but for validation
-	tf_record_path_v = root_path_v+cfg['validation_params']['tf_record_path']
+	tf_record_path_v = os.path.join(root_path_v,
+		cfg['validation_params']['tf_record_path'])
 	# The final parameters that need to be in tf_record_path
 	final_params = cfg['training_params']['final_params']
 	# The path to the model weights. If they already exist they will be loaded
 	model_weights = cfg['training_params']['model_weights']
 	# The path for the Tensorboard logs
 	tensorboard_log_dir = cfg['training_params']['tensorboard_log_dir']
+	# The path to the baobab config file that will be used to add noise
+	baobab_config_path = cfg['training_params']['baobab_config_path']
 
 	# The parameters govern the augmentation of the data
 	# Whether or not the images should be normalzied to have standard
@@ -322,6 +349,10 @@ def main():
 	# Finally set the random seed we will use for training
 	random_seed = cfg['training_params']['random_seed']
 	tf.random.set_seed(random_seed)
+
+	# Number of steps per epoch is number of examples over the batch size
+	npy_file_list = glob.glob(os.path.join(root_path_t,'X*.npy'))
+	steps_per_epoch = len(npy_file_list)//batch_size
 
 	print('Checking for training data.')
 	if not os.path.exists(tf_record_path_t):
@@ -345,24 +376,29 @@ def main():
 
 	# We let keras deal with epochs instead of the tf dataset object.
 	tf_dataset_t = data_tools.build_tf_dataset(tf_record_path_t,final_params,
-		batch_size,1,norm_images=norm_images,shift_pixels=shift_pixels,
-		shift_params=shift_params, normed_pixel_scale=normed_pixel_scale)
+		batch_size,n_epochs,baobab_config_path,norm_images=norm_images,
+		shift_pixels=shift_pixels,shift_params=shift_params,
+		normed_pixel_scale=normed_pixel_scale)
 	# Validation dataset will, by default, have no augmentation but will have
 	# the images normalized if requested.
 	tf_dataset_v = data_tools.build_tf_dataset(tf_record_path_v,final_params,
-		batch_size,1,norm_images=norm_images)
+		batch_size,1,baobab_config_path,norm_images=norm_images)
 
 	print('Initializing the model')
 
 	model, loss = model_loss_builder(cfg,verbose=True)
+	print(model.losses)
 
 	tensorboard = TensorBoard(log_dir=tensorboard_log_dir,update_freq='batch')
-	modelcheckpoint = ModelCheckpoint(model_weights)
+	modelcheckpoint = ModelCheckpoint(model_weights,monitor='val_loss',
+		save_best_only=True,save_freq='epoch')
 
 	# TODO add validation data.
 	model.fit(tf_dataset_t,callbacks=[tensorboard, modelcheckpoint],
-		epochs = n_epochs, validation_data=tf_dataset_v)
+		epochs=n_epochs, steps_per_epoch=steps_per_epoch,
+		validation_data=tf_dataset_v)
+
 
 if __name__ == '__main__':
-    main()
+	main()
 

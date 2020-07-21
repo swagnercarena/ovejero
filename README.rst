@@ -15,8 +15,11 @@ Otherswise use the command
 
 .. code-block:: bash
 
-	$ pip install tensorflow-gpu==2.0.0a0 --user
+	$ pip install tensorflow-gpu==2.0.0b1 --user
+	$ pip uninstall gast
+	$ pip install gast==0.2.2 --user --no-cache-dir
 
+The gast lines are a workaround for current issues with tensorflow and gast.
 Then clone the directory and run the setup.py file to complete the installation
 
 .. code-block:: bash

@@ -3,7 +3,7 @@ import unittest, json, glob, os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 import tensorflow as tf
 import numpy as np
-import pandas as pd 
+import pandas as pd
 from ovejero import model_trainer, data_tools
 from helpers import dataset_comparison
 
@@ -64,7 +64,7 @@ class DataPrepTests(unittest.TestCase):
 		with self.assertRaises(RuntimeError):
 			model_trainer.load_config(temp_cfg_path)
 
-		os.remove(temp_cfg_path)			
+		os.remove(temp_cfg_path)
 
 
 	def test_prepare_tf_record(self):
@@ -73,7 +73,7 @@ class DataPrepTests(unittest.TestCase):
 			cfg = json.load(json_f)
 		with self.assertRaises(FileNotFoundError):
 			train_or_test='test'
-			model_trainer.prepare_tf_record(cfg, self.root_path, 
+			model_trainer.prepare_tf_record(cfg, self.root_path,
 				self.tf_record_path,self.lens_params,train_or_test)
 		train_or_test='train'
 		model_trainer.prepare_tf_record(cfg, self.root_path, self.tf_record_path,
@@ -138,12 +138,13 @@ class DataPrepTests(unittest.TestCase):
 		# Test that the model and loss returned from model_loss_builder
 		# agree with what is expected.
 		cfg = model_trainer.load_config(self.root_path+'test.json')
+		cfg['training_params']['dropout_type'] = 'concrete'
 		final_params = cfg['training_params']['final_params']
 		num_params = len(final_params)
 
 		model, loss = model_trainer.model_loss_builder(cfg)
 		y_true = np.ones((1,num_params))
-		y_pred = np.ones((1,2*(num_params + 
+		y_pred = np.ones((1,2*(num_params +
 			int(num_params*(num_params+1)/2))+1))
 		yptf = tf.constant(y_pred,dtype=tf.float32)
 		yttf = tf.constant(y_true,dtype=tf.float32)
@@ -165,8 +166,8 @@ class DataPrepTests(unittest.TestCase):
 		# tests of the loss function can be found in the test_bnn_alexnet.
 		loss(yttf,yptf)
 		self.assertEqual(len(model.layers),13)
-		self.assertEqual(model.layers[-1].output_shape[-1],y_pred.shape[-1])	
-		
+		self.assertEqual(model.layers[-1].output_shape[-1],y_pred.shape[-1])
+
 		cfg['training_params']['bnn_type'] = 'diag'
 		model, loss = model_trainer.model_loss_builder(cfg)
 		y_true = np.ones((1,num_params))
@@ -178,6 +179,20 @@ class DataPrepTests(unittest.TestCase):
 		# tests of the loss function can be found in the test_bnn_alexnet.
 		loss(yttf,yptf)
 		self.assertEqual(len(model.layers),13)
+		self.assertEqual(model.layers[-1].output_shape[-1],y_pred.shape[-1])
+
+		cfg['training_params']['bnn_type'] = 'diag'
+		cfg['training_params']['dropout_type'] = 'standard'
+		model, loss = model_trainer.model_loss_builder(cfg)
+		y_true = np.ones((1,num_params))
+		y_pred = np.ones((1,2*num_params))
+		yptf = tf.constant(y_pred,dtype=tf.float32)
+		yttf = tf.constant(y_true,dtype=tf.float32)
+
+		# Check that the loss function has the right dimensions. More rigerous
+		# tests of the loss function can be found in the test_bnn_alexnet.
+		loss(yttf,yptf)
+		self.assertEqual(len(model.layers),21)
 		self.assertEqual(model.layers[-1].output_shape[-1],y_pred.shape[-1])
 
 	def test_get_normed_pixel_scale(self):
@@ -206,15 +221,14 @@ class DataPrepTests(unittest.TestCase):
 		lens_params_csv = pd.read_csv(lens_params_path, index_col=None)
 		norm_params_csv = pd.read_csv(normalized_param_path, index_col=None)
 
-		self.assertAlmostEqual(np.std(lens_params_csv['lens_mass_center_x'] / 
-			pixel_scale - norm_params_csv['lens_mass_center_x'] / 
+		self.assertAlmostEqual(np.std(lens_params_csv['lens_mass_center_x'] /
+			pixel_scale - norm_params_csv['lens_mass_center_x'] /
 			normed_pixel_scale['lens_mass_center_x']),0)
-		self.assertAlmostEqual(np.std(lens_params_csv['lens_mass_center_y'] / 
-			pixel_scale - norm_params_csv['lens_mass_center_y'] / 
+		self.assertAlmostEqual(np.std(lens_params_csv['lens_mass_center_y'] /
+			pixel_scale - norm_params_csv['lens_mass_center_y'] /
 			normed_pixel_scale['lens_mass_center_y']),0)
 
-				# Clean up the file now that we're done
-		os.remove(normalized_param_path)	
-		os.remove(normalization_constants_path)	
-
+		# Clean up the file now that we're done
+		os.remove(normalized_param_path)
+		os.remove(normalization_constants_path)
 
