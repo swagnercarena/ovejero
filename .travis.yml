@@ -1,0 +1,29 @@
+language: python
+
+python:
+    - '3.6'
+
+cache:
+    ccache: true
+    pip: true
+
+before_install:
+  - sudo apt-get install gfortran
+  - pip install coveralls
+  - pip install python-coveralls
+  - pip install tensorflow
+
+install:
+  - pip install .
+  - pip install -r requirements.txt
+
+before_script:
+  - "export DISPLAY=:99.0"
+  - sleep 3
+
+script:
+  - coverage run --source ovejero setup.py test
+
+after_success:
+  - codecov
+  - coveralls

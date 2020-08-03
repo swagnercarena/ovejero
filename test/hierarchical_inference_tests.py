@@ -373,7 +373,7 @@ class HierarchicalClassTest(unittest.TestCase):
 		os.remove(self.tf_record_path)
 		os.remove(save_path+'lens_samps.npy')
 		os.remove(save_path+'pred.npy')
-		os.remove(save_path+'al_samp.npy')
+		os.remove(save_path+'al_cov.npy')
 		os.remove(save_path+'images.npy')
 		os.remove(save_path+'y_test.npy')
 		os.rmdir(save_path)
@@ -537,12 +537,10 @@ class HierarchicalClassTest(unittest.TestCase):
 
 		# We want some hyperparameters to test. W'll only put two groups of
 		# samples in our fake chain.
-		hyp1 = np.array([-2.73,1.05,0.0,0.5*np.pi,10.0,-0.5*np.pi,0.5*np.pi,0.0,
-			0.102,0.0,0.102,4.0,4.0,-0.55,0.55,4.0,4.0,-0.55,0.55,0.7,0.1,0.0,
-			0.1])
-		hyp2 = np.array([-2.72,1.05,0.0,0.5*np.pi,10.0,-0.5*np.pi,0.5*np.pi,0.0,
-			0.102,0.0,0.102,4.0,4.0,-0.55,0.55,4.0,4.0,-0.55,0.55,0.6,0.1,0.0,
-			0.1])
+		hyp1 = np.array([-2.73,1.10,0.1,0.3,0.01,0.3,0.0,0.1,0.0,0.1,0.8,0.1,
+			0.0,0.1])
+		hyp2 = np.array([-2.72,1.10,0.1,0.3,0.01,0.3,0.0,0.1,0.0,0.1,0.7,0.1,
+			0.0,0.1])
 
 		# Make a fake samples
 		class FakeSampler():
@@ -835,12 +833,10 @@ class HierarchicalEmpiricalTest(unittest.TestCase):
 
 		# We want some hyperparameters to test. W'll only put two groups of
 		# samples in our fake chain.
-		hyp1 = np.array([-2.73,1.05,0.0,0.5*np.pi,10.0,-0.5*np.pi,0.5*np.pi,0.0,
-			0.102,0.0,0.102,4.0,4.0,-0.55,0.55,4.0,4.0,-0.55,0.55,0.7,0.1,0.0,
-			0.1])
-		hyp2 = np.array([-2.72,1.05,0.0,0.5*np.pi,10.0,-0.5*np.pi,0.5*np.pi,0.0,
-			0.102,0.0,0.102,4.0,4.0,-0.55,0.55,4.0,4.0,-0.55,0.55,0.6,0.1,0.0,
-			0.1])
+		hyp1 = np.array([-2.73,1.05,0.0,0.102,0.0,0.102,0.242,-0.408,0.696,0.5,
+			0.5,0.5,0.4,0.4,0.4])
+		hyp2 = np.array([-2.72,1.05,0.0,0.102,0.0,0.102,0.242,-0.408,0.696,0.5,
+			0.4,0.4,0.4,0.4,0.4])
 
 		# Make a fake samples
 		class FakeSampler():
@@ -867,10 +863,10 @@ class HierarchicalEmpiricalTest(unittest.TestCase):
 		# Calculate weights with function
 		n_p_omega_samps = 10
 		burnin = 0
-		weights = self.hclass.calculate_sample_weights(n_p_omega_samps,burnin)
+		weights = self.hclass.calculate_sample_log_weights(n_p_omega_samps,burnin)
 
 		# Calculate the weights we expect by hand.
 		hand_weights = 0.5*(np.exp(lpxi1-lpi)+np.exp(lpxi2-lpi))
-		np.testing.assert_almost_equal(weights,hand_weights)
+		np.testing.assert_almost_equal(weights,np.log(hand_weights))
 
 		self.hclass.sampler = None
