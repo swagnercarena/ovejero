@@ -66,12 +66,11 @@ class DataPrepTests(unittest.TestCase):
 
 		os.remove(temp_cfg_path)
 
-
 	def test_prepare_tf_record(self):
 		# Test that the prepare_tf_record function works as expected.
 		with open(self.root_path+'test.json','r') as json_f:
 			cfg = json.load(json_f)
-		with self.assertRaises(FileNotFoundError):
+		with self.assertRaises(ValueError):
 			train_or_test='test'
 			model_trainer.prepare_tf_record(cfg, self.root_path,
 				self.tf_record_path,self.lens_params,train_or_test)
@@ -86,17 +85,18 @@ class DataPrepTests(unittest.TestCase):
 
 		# Open up this TFRecord file and take a look inside
 		raw_dataset = tf.data.TFRecordDataset(self.tf_record_path)
+
 		# Define a mapping function to parse the image
 		def parse_image(example):
 			data_features = {
-				'image' : tf.io.FixedLenFeature([],tf.string),
-				'height' : tf.io.FixedLenFeature([],tf.int64),
-				'width' : tf.io.FixedLenFeature([],tf.int64),
-				'index' : tf.io.FixedLenFeature([],tf.int64),
+				'image': tf.io.FixedLenFeature([],tf.string),
+				'height': tf.io.FixedLenFeature([],tf.int64),
+				'width': tf.io.FixedLenFeature([],tf.int64),
+				'index': tf.io.FixedLenFeature([],tf.int64),
 			}
 			for lens_param in self.lens_params:
-					data_features[lens_param] = tf.io.FixedLenFeature(
-						[],tf.float32)
+				data_features[lens_param] = tf.io.FixedLenFeature(
+					[],tf.float32)
 			return tf.io.parse_single_example(example,data_features)
 		batch_size = 10
 		dataset = raw_dataset.map(parse_image).batch(batch_size)
@@ -113,18 +113,6 @@ class DataPrepTests(unittest.TestCase):
 
 		# Open up this TFRecord file and take a look inside
 		raw_dataset = tf.data.TFRecordDataset(self.tf_record_path)
-		# Define a mapping function to parse the image
-		def parse_image(example):
-			data_features = {
-				'image' : tf.io.FixedLenFeature([],tf.string),
-				'height' : tf.io.FixedLenFeature([],tf.int64),
-				'width' : tf.io.FixedLenFeature([],tf.int64),
-				'index' : tf.io.FixedLenFeature([],tf.int64),
-			}
-			for lens_param in self.lens_params:
-					data_features[lens_param] = tf.io.FixedLenFeature(
-						[],tf.float32)
-			return tf.io.parse_single_example(example,data_features)
 		batch_size = 10
 		dataset = raw_dataset.map(parse_image).batch(batch_size)
 		dataset_comparison(self,dataset,batch_size,num_npy)

@@ -22,7 +22,6 @@ from baobab.sim_utils import instantiate_PSF_kwargs
 from baobab.data_augmentation import noise_tf, noise_lenstronomy
 from lenstronomy.Workflow.fitting_sequence import FittingSequence
 from matplotlib import cm
-import numba
 import pandas as pd
 import numpy as np
 import os, corner
@@ -30,58 +29,6 @@ import tensorflow as tf
 from matplotlib import pyplot as plt
 import lenstronomy.Util.util as util
 from matplotlib.lines import Line2D
-
-
-@numba.njit()
-def max_mean_discp(x,y,prec):
-	"""
-	Calculate the maximum mean discrepancy between samples from two
-	distributions. See http://jmlr.csail.mit.edu/papers/volume13/gretton12a.
-
-	Parameters
-	----------
-		x (np.array): Samples from the poposed distribution
-		y (np.array): Samples from the true distribtion
-		prec (np.array): A precision matrix for the Gaussian kernel.
-
-	Returns
-	-------
-		(int,int): The MMD for the two sets of distribution samples and the
-			kernel output for the proposed distribution.
-
-	Notes
-	-----
-	It's important to distinguish between the proposed distribution and the true
-	distribution so that the outputted MMD can be normalized to agree with the
-	hypothesis testing criteria. A Gaussian kernel will be used.
-	"""
-	# Get the number of samples in each distribution
-	ms = len(x)
-	ns = len(y)
-
-	mmd = 0
-	# First the x distribution
-	for i in range(ms):
-		for j in range(ms):
-			if i != j:
-				mmd += 1/(ms*(ms-1)) * np.exp(-0.5*np.dot(x[i]-x[j],
-					np.dot(prec,x[i]-x[j])))
-	K = mmd
-
-	# Then the y distribution
-	for i in range(ns):
-		for j in range(ns):
-			if i != j:
-				mmd += 1/(ns*(ns-1)) * np.exp(-0.5*np.dot(y[i]-y[j],
-					np.dot(prec,y[i]-y[j])))
-
-	# And finall the cross distribution
-	for i in range(ms):
-		for j in range(ns):
-			mmd -= 2/(ns*ms) * np.exp(-0.5*np.dot(x[i]-y[j],
-					np.dot(prec,x[i]-y[j])))
-
-	return mmd,K
 
 
 class ForwardModel(bnn_inference.InferenceClass):
@@ -443,7 +390,8 @@ class ForwardModel(bnn_inference.InferenceClass):
 	def plot_posterior_contours(self,burnin,num_samples,block=True,
 		sample_save_dir=None,color_map=['#FFAA00','#41b6c4'],
 		plot_limits=None,truth_color='#000000',save_fig_path=None,
-		dpi=400,fig=None,show_plot=True):
+		dpi=400,fig=None,show_plot=True,plot_fow_model=True,
+		add_legend=True):
 		"""
 		Plot the corner plot of chains resulting from the emcee for the
 		lens mass parameters.
@@ -471,6 +419,10 @@ class ForwardModel(bnn_inference.InferenceClass):
 				plot.
 			show_plot (bool): Whether or not to show the plot or just return
 				the figure.
+			plot_fow_model (bool): Whether or not to plot the forward modeling
+				posteriors. This is mostly here  for plotting multiple BNN
+				posteriors on one plot.
+			add_legend (bool): Whether or not to add an auto-generated legend.
 		"""
 		# Get the chains from the samples
 		chains = self.chains[burnin:].reshape(-1,len(self.chain_params))
@@ -516,17 +468,18 @@ class ForwardModel(bnn_inference.InferenceClass):
 				hist_kwargs=hist_kwargs)
 
 		# Now overlay the forward modeling samples
-		hist_kwargs['color'] = color_map[1]
-		fig = corner.corner(reordered_chains,
-			labels=self.final_params_print_names,bins=20,show_titles=False,
-			plot_datapoints=False,label_kwargs=dict(fontsize=14),dpi=dpi,
-			truths=reordered_true_values,levels=[0.68,0.95],color=color_map[1],
-			fill_contours=True,range=plot_limits,truth_color=truth_color,
-			hist_kwargs=hist_kwargs,fig=fig)
+		if plot_fow_model:
+			hist_kwargs['color'] = color_map[1]
+			fig = corner.corner(reordered_chains,
+				labels=self.final_params_print_names,bins=20,show_titles=False,
+				plot_datapoints=False,label_kwargs=dict(fontsize=14),dpi=dpi,
+				truths=reordered_true_values,levels=[0.68,0.95],
+				color=color_map[1],fill_contours=True,range=plot_limits,
+				truth_color=truth_color,hist_kwargs=hist_kwargs,fig=fig)
 
-		left, bottom, width, height = [0.5725,0.8, 0.15, 0.18]
-		ax2 = fig.add_axes([left, bottom, width, height])
-		ax2.imshow(self.true_image_noise,cmap=cm.magma,origin='lower')
+			left, bottom, width, height = [0.5725,0.8, 0.15, 0.18]
+			ax2 = fig.add_axes([left, bottom, width, height])
+			ax2.imshow(self.true_image_noise,cmap=cm.magma,origin='lower')
 
 		# Add a nice legend to our contours
 		handles = [Line2D([0], [0], color=color_map[0], lw=10),
@@ -536,8 +489,10 @@ class ForwardModel(bnn_inference.InferenceClass):
 			bnn_type = 'GMM'
 		else:
 			bnn_type = bnn_type.capitalize()
-		fig.legend(handles,[bnn_type+' BNN','Forward Modeling'],loc=(0.55,0.75),
-			fontsize=20)
+
+		if add_legend:
+			fig.legend(handles,[bnn_type+' BNN','Forward Modeling'],
+				loc=(0.55,0.75),fontsize=20)
 
 		if save_fig_path is not None:
 			plt.savefig(save_fig_path)
@@ -546,63 +501,3 @@ class ForwardModel(bnn_inference.InferenceClass):
 			plt.show(block=block)
 
 		return fig
-
-	def calculate_p_MMD(self,burnin,num_samples,calc_samps_max=1000,
-		sample_save_dir=None):
-		"""
-		Calculate the upper bound on the likelihood that the the forward modeling
-		samples and the BNN output samples come from the same distribution using
-		the maximum mean discrepancy metric.
-
-		Parameters
-		----------
-			burnin (int): How many of the initial samples to drop as burnin
-			num_samples (int): The number of bnn samples to use for the
-				contour
-			calc_samps_max (int): The maximum number of samples to use from the
-				forward modeling for the calculation. MMD calculation scales like
-				N^2, so a conservative cut will have an enormous impact on
-				performance.
-			sample_save_dir (str): A path to a folder to save/load the samples.
-				If None samples will not be saved. Do not include .npy, this will
-				be appended (since several files will be generated).
-
-		Returns
-		-------
-			(int): Returns log of p(MMD_u^2).
-		"""
-		# Grab the samples from the forward modeling and correct them to agree
-		# with BNN output.
-		chains = self.chains[burnin:].reshape(-1,len(self.chain_params))
-
-		# Keep only the parameters that our BNN is predicting
-		pi_keep = []
-		chain_params_keep = []
-		for pi, param in enumerate(self.chain_params):
-			if param in self.lens_params:
-				pi_keep.append(pi)
-				chain_params_keep.append(param)
-
-		# Keep only the chains related to the parameters we want to look at.
-		chains = chains.T[pi_keep].T
-		true_values_list = []
-		for param in chain_params_keep:
-			true_values_list.append(self.true_values[param])
-		true_values_list = np.array(true_values_list)
-
-		chain_params_keep = self._correct_chains(chains,chain_params_keep,
-			true_values_list)
-
-		# Now get the BNN samples
-		self.gen_samples(num_samples,sample_save_dir=sample_save_dir,
-			single_image=self.true_image_noise/np.std(self.true_image_noise))
-
-		# Calculate the MMD metric between the two sets of samples. Use the
-		# the forward sampling chains to set the covariance matrix.
-		fow_model_samps = chains[np.random.randint(len(chains),
-			size=calc_samps_max)]
-		prec = np.linalg.inv(np.diag(np.diag(np.cov(chains.T))))
-		mmd,K = max_mean_discp(self.predict_samps[:,0,:],fow_model_samps,
-			prec)
-
-		return -mmd**2*calc_samps_max/(16*K**2)
