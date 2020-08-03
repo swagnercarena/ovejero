@@ -15,7 +15,7 @@ PACKAGE_PATH = os.path.abspath(os.path.join(__file__, os.pardir))
 required_packages = ['numpy>=1.13', 'scipy>=0.14.0', 'configparser',
 	'pandas>=0.24.2','corner>=2.0.1','tensorflow-probability>=0.8.0',
 	'tensorflow>=2.1.0','matplotlib>=3.3.0','numba>=0.48.0',
-	'tdqm>=4.42.1','emcee>=3.0.2']
+	'tqdm>=4.42.1','emcee>=3.0.2']
 
 setup(
 	name='ovejero',
