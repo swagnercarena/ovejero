@@ -1,4 +1,4 @@
-import unittest, os, json
+import unittest, os, json, gc
 from ovejero import hierarchical_inference, model_trainer
 from baobab import configs
 from lenstronomy.Util.param_util import ellipticity2phi_q
@@ -281,6 +281,8 @@ class HierarchicalClassTest(unittest.TestCase):
 		# Do some cleanup for memory management
 		self.hclass = None
 		self.cfg = None
+		# Force collection
+		gc.collect()
 
 	def test_init(self):
 		# Check that the true hyperparameter values were correctly initialized.
@@ -633,6 +635,8 @@ class HierarchicalEmpiricalTest(unittest.TestCase):
 		self.hclass = None
 		self.cfg = None
 		self.train_to_test_param_map = None
+		# This is so bad I'm going to force garbage collection
+		gc.collect()
 
 	def test_init(self):
 		# Check that the true hyperparameter values were correctly initialized.
@@ -754,7 +758,7 @@ class HierarchicalEmpiricalTest(unittest.TestCase):
 	def test_initialize_sampler(self):
 		# Test that the walker initialization is correct.
 		test_chains_path = self.root_path + 'test_chains_is.h5'
-		n_walkers = 20
+		n_walkers = 60
 
 		# Make some fake samples.
 		samples = np.ones((8,2,2))*0.3
@@ -782,7 +786,7 @@ class HierarchicalEmpiricalTest(unittest.TestCase):
 		# Here, we're mostly just testing things don't crash since the
 		# work is being done by emcee.
 		test_chains_path = self.root_path + 'test_chains_rs.h5'
-		n_walkers = 20
+		n_walkers = 60
 		n_samps = 2
 
 		# Make some fake samples.
@@ -808,7 +812,7 @@ class HierarchicalEmpiricalTest(unittest.TestCase):
 	def test_plots(self):
 		# Here, we're mostly just testing things don't crash again.
 		test_chains_path = self.root_path + 'test_chains_tp.h5'
-		n_walkers = 20
+		n_walkers = 60
 		n_samps = 2
 		burnin = 0
 
