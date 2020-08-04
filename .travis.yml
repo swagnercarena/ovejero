@@ -29,8 +29,7 @@ before_script:
 
 script:
   - cd test
-  - python -m unittest -v model_trainer_tests
-  #- coverage run -m unittest -v *
+  - coverage run -m unittest -v *
 
 after_success:
   - codecov
