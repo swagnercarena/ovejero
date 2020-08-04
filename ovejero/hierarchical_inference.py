@@ -474,10 +474,14 @@ class HierarchicalClass:
 			them. It should include three entire: orig_params - the original
 			lens parameter names, new_params - the new parameter names,
 			and transform_func - the function to map between them.
+		lite_class (bool): If True, do not bother loading the BNN model weights.
+			This allows the user to save on memory, but will cause an error
+			if the BNN samples have not already been drawn.
 	"""
 	def __init__(self,cfg,interim_baobab_omega_path,target_ovejero_omega_path,
 		test_dataset_path,test_dataset_tf_record_path,
-		target_baobab_omega_path=None,train_to_test_param_map=None):
+		target_baobab_omega_path=None,train_to_test_param_map=None,
+		lite_class=False):
 		# Initialzie our class.
 		self.cfg = cfg
 		# Pull the needed param information from the config file.
@@ -517,7 +521,7 @@ class HierarchicalClass:
 		self.cfg['training_params']['batch_size'] = n_npy_files
 
 		# Make our inference class we'll use to generate samples.
-		self.infer_class = bnn_inference.InferenceClass(self.cfg)
+		self.infer_class = bnn_inference.InferenceClass(self.cfg,lite_class)
 
 		# The inference class will load the validation set from the config
 		# file. We do not want this. Therefore we must reset it here.

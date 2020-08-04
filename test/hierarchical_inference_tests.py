@@ -273,8 +273,8 @@ class HierarchicalClassTest(unittest.TestCase):
 
 		self.hclass = hierarchical_inference.HierarchicalClass(self.cfg,
 			self.interim_baobab_omega_path,self.target_ovejero_omega_path,
-			self.root_path,self.tf_record_path,self.target_baobab_omega_path)
-		self.hclass.infer_class.model = None
+			self.root_path,self.tf_record_path,self.target_baobab_omega_path,
+			lite_class=True)
 
 		os.remove(self.tf_record_path)
 
@@ -337,6 +337,9 @@ class HierarchicalClassTest(unittest.TestCase):
 
 		# Replace the real model with our fake model and generate samples
 		self.hclass.infer_class.model = diag_model
+		# Set this to false so the system doesn't complain when we try
+		# to generate samples.
+		self.hclass.infer_class.lite_class = False
 
 		self.hclass.gen_samples(100)
 
@@ -628,7 +631,7 @@ class HierarchicalEmpiricalTest(unittest.TestCase):
 		self.hclass = hierarchical_inference.HierarchicalClass(self.cfg,
 			self.interim_baobab_omega_path,self.target_ovejero_omega_path,
 			self.root_path,self.tf_record_path,self.target_baobab_omega_path,
-			self.train_to_test_param_map)
+			self.train_to_test_param_map,lite_class=True)
 
 		os.remove(self.tf_record_path)
 
@@ -694,6 +697,9 @@ class HierarchicalEmpiricalTest(unittest.TestCase):
 
 		# Replace the real model with our fake model and generate samples
 		self.hclass.infer_class.model = diag_model
+		# Set this to false so the system doesn't complain when we try
+		# to generate samples.
+		self.hclass.infer_class.lite_class = False
 
 		self.hclass.gen_samples(100)
 
