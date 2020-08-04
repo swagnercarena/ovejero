@@ -590,7 +590,7 @@ class HierarchicalClassTest(unittest.TestCase):
 
 class HierarchicalEmpiricalTest(unittest.TestCase):
 
-	def setUp(self, *args, **kwargs):
+	def setUp(self):
 		# Open up the config file.
 		self.root_path = os.path.dirname(os.path.abspath(__file__))+'/test_data/'
 		with open(self.root_path+'test.json','r') as json_f:
@@ -632,6 +632,7 @@ class HierarchicalEmpiricalTest(unittest.TestCase):
 		# Clean up to save memory
 		self.hclass = None
 		self.cfg = None
+		self.train_to_test_param_map = None
 
 	def test_init(self):
 		# Check that the true hyperparameter values were correctly initialized.
@@ -753,7 +754,7 @@ class HierarchicalEmpiricalTest(unittest.TestCase):
 	def test_initialize_sampler(self):
 		# Test that the walker initialization is correct.
 		test_chains_path = self.root_path + 'test_chains_is.h5'
-		n_walkers = 60
+		n_walkers = 20
 
 		# Make some fake samples.
 		samples = np.ones((8,2,2))*0.3
@@ -781,8 +782,8 @@ class HierarchicalEmpiricalTest(unittest.TestCase):
 		# Here, we're mostly just testing things don't crash since the
 		# work is being done by emcee.
 		test_chains_path = self.root_path + 'test_chains_rs.h5'
-		n_walkers = 60
-		n_samps = 10
+		n_walkers = 20
+		n_samps = 2
 
 		# Make some fake samples.
 		samples = np.ones((8,2,2))*0.3
@@ -807,8 +808,8 @@ class HierarchicalEmpiricalTest(unittest.TestCase):
 	def test_plots(self):
 		# Here, we're mostly just testing things don't crash again.
 		test_chains_path = self.root_path + 'test_chains_tp.h5'
-		n_walkers = 60
-		n_samps = 10
+		n_walkers = 20
+		n_samps = 2
 		burnin = 0
 
 		# Make some fake samples.
