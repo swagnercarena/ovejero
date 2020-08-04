@@ -315,7 +315,6 @@ class LensingLossFunctionsTests(unittest.TestCase):
 			tf.constant(y_pred,dtype=tf.float32))
 		self.assertGreater(np.sum(mse_tensor.numpy()),0.1)
 
-
 	def test_log_gauss_diag(self):
 		# Will not be used for this test, but must be passed in.
 		flip_pairs = []

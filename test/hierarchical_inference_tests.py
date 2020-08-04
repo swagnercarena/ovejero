@@ -12,8 +12,7 @@ import matplotlib.pyplot as plt
 
 class HierarchicalnferenceTest(unittest.TestCase):
 
-	def __init__(self, *args, **kwargs):
-		super(HierarchicalnferenceTest, self).__init__(*args, **kwargs)
+	def setUp(self):
 		# Open up the config file.
 		np.random.seed(2)
 		self.root_path = os.path.dirname(os.path.abspath(__file__))+'/test_data/'
@@ -38,6 +37,15 @@ class HierarchicalnferenceTest(unittest.TestCase):
 			self.cfg_pr,self.lens_params,baobab_config=False)
 		self.eval_dict_cov = hierarchical_inference.build_eval_dict(
 			self.cfg_cov,self.lens_params_cov,baobab_config=False)
+
+	def tearDown(self):
+		# Clean up for memory
+		self.cfg = None
+		self.cfg_pr = None
+		self.cfg_cov = None
+		self.eval_dict = None
+		self.eval_dict_prior = None
+		self.eval_dict_cov = None
 
 	def test_build_eval_dict(self):
 		# Check that the eval dictionary is built correctly for a test config.
@@ -238,8 +246,7 @@ class HierarchicalnferenceTest(unittest.TestCase):
 
 class HierarchicalClassTest(unittest.TestCase):
 
-	def __init__(self, *args, **kwargs):
-		super(HierarchicalClassTest, self).__init__(*args, **kwargs)
+	def setUp(self):
 		# Open up the config file.
 		self.root_path = os.path.dirname(os.path.abspath(__file__))+'/test_data/'
 		with open(self.root_path+'test.json','r') as json_f:
@@ -269,6 +276,11 @@ class HierarchicalClassTest(unittest.TestCase):
 			self.root_path,self.tf_record_path,self.target_baobab_omega_path)
 
 		os.remove(self.tf_record_path)
+
+	def tearDown(self):
+		# Do some cleanup for memory management
+		self.hclass = None
+		self.cfg = None
 
 	def test_init(self):
 		# Check that the true hyperparameter values were correctly initialized.
@@ -578,8 +590,7 @@ class HierarchicalClassTest(unittest.TestCase):
 
 class HierarchicalEmpiricalTest(unittest.TestCase):
 
-	def __init__(self, *args, **kwargs):
-		super(HierarchicalEmpiricalTest, self).__init__(*args, **kwargs)
+	def setUp(self, *args, **kwargs):
 		# Open up the config file.
 		self.root_path = os.path.dirname(os.path.abspath(__file__))+'/test_data/'
 		with open(self.root_path+'test.json','r') as json_f:
@@ -616,6 +627,11 @@ class HierarchicalEmpiricalTest(unittest.TestCase):
 			self.train_to_test_param_map)
 
 		os.remove(self.tf_record_path)
+
+	def tearDown(self):
+		# Clean up to save memory
+		self.hclass = None
+		self.cfg = None
 
 	def test_init(self):
 		# Check that the true hyperparameter values were correctly initialized.
