@@ -144,7 +144,7 @@ class DataPrepTests(unittest.TestCase):
 		self.assertEqual(model.layers[-1].output_shape[-1],y_pred.shape[-1])
 
 		# Let's do some aggressive garabge collecting to not have memory issues
-		model = None
+		del model
 		gc.collect()
 
 		cfg['training_params']['bnn_type'] = 'full'
@@ -161,7 +161,7 @@ class DataPrepTests(unittest.TestCase):
 		self.assertEqual(model.layers[-1].output_shape[-1],y_pred.shape[-1])
 
 		# Let's do some aggressive garabge collecting to not have memory issues
-		model = None
+		del model
 		gc.collect()
 
 		cfg['training_params']['bnn_type'] = 'diag'
@@ -178,7 +178,7 @@ class DataPrepTests(unittest.TestCase):
 		self.assertEqual(model.layers[-1].output_shape[-1],y_pred.shape[-1])
 
 		# Let's do some aggressive garabge collecting to not have memory issues
-		model = None
+		del model
 		gc.collect()
 
 		cfg['training_params']['bnn_type'] = 'diag'
