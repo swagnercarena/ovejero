@@ -14,6 +14,10 @@ class BNNTests(unittest.TestCase):
 		tf.random.set_seed(self.random_seed)
 		np.random.seed(self.random_seed)
 
+	def tearDown(self):
+		# Make sure we don't have any models lingering in memory.
+		tf.keras.backend.clear_session()
+
 	def test_AlwaysDropout(self):
 		# Test that the implementation of Always dropout behaves as expected.
 		# Start with no dropout and make sure that behaves how you want it to.

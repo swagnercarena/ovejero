@@ -17,7 +17,6 @@ class DataPrepTests(unittest.TestCase):
 			'lens_mass_e2','lens_mass_gamma','lens_mass_theta_E_log']
 		self.lens_params_path = self.root_path + 'new_metadata.csv'
 		self.tf_record_path = self.root_path + 'tf_record_test'
-		tf.keras.backend.clear_session()
 
 	def test_config_checker(self):
 		# Test that the config checker doesn't fail correct configuration files
@@ -131,6 +130,8 @@ class DataPrepTests(unittest.TestCase):
 		final_params = cfg['training_params']['final_params']
 		num_params = len(final_params)
 
+		tf.keras.backend.clear_session()
+
 		model, loss = model_trainer.model_loss_builder(cfg)
 		y_true = np.ones((1,num_params))
 		y_pred = np.ones((1,2*(num_params +
@@ -151,6 +152,8 @@ class DataPrepTests(unittest.TestCase):
 		cfg['training_params']['dropout_type'] = 'concrete'
 		final_params = cfg['training_params']['final_params']
 		num_params = len(final_params)
+
+		tf.keras.backend.clear_session()
 
 		cfg['training_params']['bnn_type'] = 'full'
 		model, loss = model_trainer.model_loss_builder(cfg)
@@ -173,6 +176,8 @@ class DataPrepTests(unittest.TestCase):
 		final_params = cfg['training_params']['final_params']
 		num_params = len(final_params)
 
+		tf.keras.backend.clear_session()
+
 		cfg['training_params']['bnn_type'] = 'diag'
 		model, loss = model_trainer.model_loss_builder(cfg)
 		y_true = np.ones((1,num_params))
@@ -193,6 +198,8 @@ class DataPrepTests(unittest.TestCase):
 		cfg['training_params']['dropout_type'] = 'concrete'
 		final_params = cfg['training_params']['final_params']
 		num_params = len(final_params)
+
+		tf.keras.backend.clear_session()
 
 		cfg['training_params']['bnn_type'] = 'diag'
 		cfg['training_params']['dropout_type'] = 'standard'
