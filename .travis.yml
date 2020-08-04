@@ -29,7 +29,7 @@ before_script:
 
 script:
   - cd test
-  - coverage run -m unittest *
+  - coverage run -m unittest -v *
 
 after_success:
   - codecov
