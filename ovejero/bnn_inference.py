@@ -30,7 +30,7 @@ class InferenceClass:
 	models for inference. This class will output correctly marginalized
 	predictions as well as make important performance plots.
 	"""
-	def __init__(self,cfg,lite_class):
+	def __init__(self,cfg,lite_class=False):
 		"""
 		Initialize the InferenceClass instance using the parameters of the
 		configuration file.

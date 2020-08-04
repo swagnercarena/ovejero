@@ -36,7 +36,7 @@ class ForwardModel(bnn_inference.InferenceClass):
 	A class that inherets from InferenceClass and adds the ability to forward
 	# model.
 	"""
-	def __init__(self,cfg,lite_class):
+	def __init__(self,cfg,lite_class=False):
 		"""
 		Initialize the ForwardModel instance using the parameters of the
 		configuration file.
