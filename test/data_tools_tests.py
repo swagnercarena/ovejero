@@ -297,5 +297,3 @@ class TFRecordTests(unittest.TestCase):
 				sum_cur += np.sum(np.abs(image))
 			sums.append(sum_cur)
 		self.assertNotEqual(sums[0],sums[1])
-
-

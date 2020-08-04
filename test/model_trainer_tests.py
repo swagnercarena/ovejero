@@ -1,4 +1,4 @@
-import unittest, json, glob, os, gc
+import unittest, json, glob, os
 # Eliminate TF warning in tests
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 import tensorflow as tf
@@ -17,10 +17,7 @@ class DataPrepTests(unittest.TestCase):
 			'lens_mass_e2','lens_mass_gamma','lens_mass_theta_E_log']
 		self.lens_params_path = self.root_path + 'new_metadata.csv'
 		self.tf_record_path = self.root_path + 'tf_record_test'
-
-	def tearDown(self):
-		# Collect the garbage to avoid memeory issues
-		gc.collect()
+		tf.keras.backend.clear_session()
 
 	def test_config_checker(self):
 		# Test that the config checker doesn't fail correct configuration files

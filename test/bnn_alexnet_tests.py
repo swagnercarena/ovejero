@@ -530,7 +530,6 @@ class LensingLossFunctionsTests(unittest.TestCase):
 
 			self.assertAlmostEqual(np.sum(diag_loss.numpy()),scipy_nlp,places=4)
 
-
 		# Confirm that when the wrong pair is flipped, it does not
 		# return the same answer.
 		y_pred4 = np.ones((1,num_params)); y_pred4[:,[5,2]] = -1
@@ -667,7 +666,6 @@ class LensingLossFunctionsTests(unittest.TestCase):
 				self.assertAlmostEqual(np.sum(diag_loss.numpy()),
 					scipy_nlp,places=4)
 
-
 		# Confirm that when the wrong pair is flipped, it does not
 		# return the same answer.
 		y_pred4 = np.ones((1,num_params)); y_pred4[:,[5,2]] = -1
@@ -678,7 +676,6 @@ class LensingLossFunctionsTests(unittest.TestCase):
 		diag_loss = loss_class.gm_full_covariance_loss(yttf,yptf)
 
 		self.assertGreater(np.abs(diag_loss.numpy()-scipy_nlp),0.1)
-
 
 		# Finally, confirm that batching works
 		single_batch1 = np.concatenate([y_pred2,L_elements,y_pred,L_elements,
@@ -709,4 +706,3 @@ class LensingLossFunctionsTests(unittest.TestCase):
 			init_min=0.3,init_max=0.3)
 		p_fake_loss = bnn_alexnet.p_value(model)
 		self.assertAlmostEqual(p_fake_loss(None,None).numpy(),0.3)
-
