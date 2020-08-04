@@ -732,7 +732,7 @@ class HierarchicalClass:
 
 		self.sampler_init = True
 
-	def run_sampler(self,n_samps,progress='notebook'):
+	def run_sampler(self,n_samps,progress=True):
 		"""
 		Run an emcee sampler to get a posterior on the hyperparameters.
 
