@@ -274,6 +274,7 @@ class HierarchicalClassTest(unittest.TestCase):
 		self.hclass = hierarchical_inference.HierarchicalClass(self.cfg,
 			self.interim_baobab_omega_path,self.target_ovejero_omega_path,
 			self.root_path,self.tf_record_path,self.target_baobab_omega_path)
+		self.hclass.infer_class.model = None
 
 		os.remove(self.tf_record_path)
 
