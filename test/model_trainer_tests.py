@@ -7,10 +7,10 @@ import pandas as pd
 from ovejero import model_trainer, data_tools
 from helpers import dataset_comparison
 
+
 class DataPrepTests(unittest.TestCase):
 
-	def __init__(self, *args, **kwargs):
-		super(DataPrepTests, self).__init__(*args, **kwargs)
+	def setUp(self):
 		self.root_path = os.path.dirname(os.path.abspath(__file__))+'/test_data/'
 		self.lens_params = ['external_shear_g1','external_shear_g2',
 			'lens_mass_center_x','lens_mass_center_y','lens_mass_e1',

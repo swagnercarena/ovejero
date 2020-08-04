@@ -1,5 +1,5 @@
 import unittest, os
-from ovejero import forward_modeling, model_trainer, data_tools
+from ovejero import forward_modeling, model_trainer
 import matplotlib.pyplot as plt
 import numpy as np
 from baobab import configs
@@ -11,8 +11,7 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 class ForwardModelingTests(unittest.TestCase):
 
-	def __init__(self, *args, **kwargs):
-		super(ForwardModelingTests, self).__init__(*args, **kwargs)
+	def setUp(self):
 		# Open up the config file.
 		# Initialize the class with a test baobab config
 		self.root_path = os.path.dirname(os.path.abspath(__file__))+'/test_data/'
@@ -32,6 +31,9 @@ class ForwardModelingTests(unittest.TestCase):
 			'lens_mass_gamma','lens_mass_theta_E']
 		self.normalization_constants_path = self.root_path + 'norms.csv'
 		self.tf_record_path = self.root_path + 'tf_record_test'
+
+	def tearDown(self):
+		self.cfg = None
 
 	def test_class_initialization(self):
 		# Just test that the basic variables of the class are initialized as

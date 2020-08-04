@@ -8,10 +8,10 @@ import pandas as pd
 from helpers import dataset_comparison
 from matplotlib import pyplot as plt
 
+
 class TFRecordTests(unittest.TestCase):
 
-	def __init__(self, *args, **kwargs):
-		super(TFRecordTests, self).__init__(*args, **kwargs)
+	def setUp(self, *args, **kwargs):
 		self.root_path = os.path.dirname(os.path.abspath(__file__))+'/test_data/'
 		self.lens_params = ['external_shear_gamma_ext','external_shear_psi_ext',
 			'lens_mass_center_x','lens_mass_center_y',
@@ -36,7 +36,7 @@ class TFRecordTests(unittest.TestCase):
 
 		for lens_param in self.lens_params:
 			# Assert that the two lists agree once we factor for normalization
-			self.assertAlmostEqual(np.sum(np.abs(lens_params_csv[lens_param] - 
+			self.assertAlmostEqual(np.sum(np.abs(lens_params_csv[lens_param] -
 				(norm_params_csv[lens_param]*norm_constants_csv[lens_param][1]+
 				norm_constants_csv[lens_param][0]))),0)
 
@@ -52,13 +52,13 @@ class TFRecordTests(unittest.TestCase):
 		norm_params_csv = pd.read_csv(normalized_param_path, index_col=None)
 		for lens_param in self.lens_params:
 			# Assert that the two lists agree once we factor for normalization
-			self.assertAlmostEqual(np.sum(np.abs(lens_params_csv[lens_param] - 
+			self.assertAlmostEqual(np.sum(np.abs(lens_params_csv[lens_param] -
 				(norm_params_csv[lens_param]*norm_constants_csv[lens_param][1]+
 				norm_constants_csv[lens_param][0]))),0)
 
 		# Clean up the file now that we're done
-		os.remove(normalized_param_path)	
-		os.remove(normalization_constants_path)	
+		os.remove(normalized_param_path)
+		os.remove(normalization_constants_path)
 
 	def test_write_parameters_in_log_space(self):
 		# Test if putting the lens parameters in log space works correctly.
@@ -71,11 +71,11 @@ class TFRecordTests(unittest.TestCase):
 		self.assertTrue('lens_mass_theta_E_log' in lens_params_csv)
 		# Assert that the two parameters agree once we factor for log
 		self.assertAlmostEqual(np.sum(np.abs(
-			lens_params_csv['lens_mass_theta_E_log'] - 
+			lens_params_csv['lens_mass_theta_E_log'] -
 			np.log(lens_params_csv['lens_mass_theta_E']))),0)
 
 		# Clean up the file now that we're done
-		os.remove(new_lens_params_path)	
+		os.remove(new_lens_params_path)
 
 	def test_gampsi_2_g1g2(self):
 		# Test if putting the lens parameters in excentricities works correctly.
@@ -93,16 +93,16 @@ class TFRecordTests(unittest.TestCase):
 		ang = lens_params_csv['external_shear_psi_ext']
 		g1 = gamma*np.cos(2*ang)
 		g2 = gamma*np.sin(2*ang)
-		self.assertAlmostEqual(np.sum(np.abs(g1 - 
+		self.assertAlmostEqual(np.sum(np.abs(g1 -
 			lens_params_csv['external_shear_g1'])),0)
-		self.assertAlmostEqual(np.sum(np.abs(g2 - 
+		self.assertAlmostEqual(np.sum(np.abs(g2 -
 			lens_params_csv['external_shear_g2'])),0)
 
 		# Clean up the file now that we're done
-		os.remove(new_lens_params_path)	
+		os.remove(new_lens_params_path)
 
 	def test_generate_tf_record(self):
-		# Test that the generate_tf_record code succesfully generates a TFRecord 
+		# Test that the generate_tf_record code succesfully generates a TFRecord
 		# object and that the images and labels generated correspond to what
 		# is in the npy file and the metadata csv.
 
@@ -137,13 +137,13 @@ class TFRecordTests(unittest.TestCase):
 		os.remove(self.tf_record_path)
 
 	def test_build_tf_dataset(self):
-		# Test that build_tf_dataset has the correct batching behaviour and 
+		# Test that build_tf_dataset has the correct batching behaviour and
 		# returns the same data contained in the npy files and csv.
 		num_npy = len(glob.glob(self.root_path+'X*.npy'))
 
 		data_tools.generate_tf_record(self.root_path,self.lens_params,
 			self.lens_params_path,self.tf_record_path)
-		
+
 		# Try batch size 10
 		batch_size = 10
 		n_epochs = 1
@@ -220,7 +220,7 @@ class TFRecordTests(unittest.TestCase):
 		tf.random.set_seed(20)
 		dataset_shifted = data_tools.build_tf_dataset(self.tf_record_path,
 				self.lens_params,batch_size,n_epochs,self.baobab_config_path,
-				norm_images=norm_images, shift_pixels=shift_pixels, 
+				norm_images=norm_images, shift_pixels=shift_pixels,
 				shift_params=shift_params, normed_pixel_scale=normed_pixel_scale)
 		tf.random.set_seed(20)
 		dataset = data_tools.build_tf_dataset(self.tf_record_path,

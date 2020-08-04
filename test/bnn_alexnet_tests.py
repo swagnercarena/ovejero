@@ -9,8 +9,7 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 class BNNTests(unittest.TestCase):
 
-	def __init__(self, *args, **kwargs):
-		super(BNNTests, self).__init__(*args, **kwargs)
+	def setUp(self):
 		self.random_seed = 1234
 		tf.random.set_seed(self.random_seed)
 		np.random.seed(self.random_seed)
@@ -260,8 +259,7 @@ class BNNTests(unittest.TestCase):
 
 class LensingLossFunctionsTests(unittest.TestCase):
 
-	def __init__(self, *args, **kwargs):
-		super(LensingLossFunctionsTests, self).__init__(*args, **kwargs)
+	def setUp(self):
 		# Set a seed to make sure that the behaviour of all the test functions
 		# is consistent.
 		np.random.seed(2)
