@@ -29,8 +29,7 @@ before_script:
 
 script:
   - cd test
-  - coverage run --source ../ovejero -m unittest -v *_tests.py
+  - coverage run --source ovejero -m unittest -v *_tests.py
 
 after_success:
-  - codecov
-  - coveralls
+  - coverage report
