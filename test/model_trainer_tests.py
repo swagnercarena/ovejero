@@ -1,4 +1,4 @@
-import unittest, json, glob, os
+import unittest, json, glob, os, gc
 # Eliminate TF warning in tests
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 import tensorflow as tf
@@ -143,6 +143,10 @@ class DataPrepTests(unittest.TestCase):
 		self.assertEqual(len(model.layers),13)
 		self.assertEqual(model.layers[-1].output_shape[-1],y_pred.shape[-1])
 
+		# Let's do some aggressive garabge collecting to not have memory issues
+		model = None
+		gc.collect()
+
 		cfg['training_params']['bnn_type'] = 'full'
 		model, loss = model_trainer.model_loss_builder(cfg)
 		y_true = np.ones((1,num_params))
@@ -156,6 +160,10 @@ class DataPrepTests(unittest.TestCase):
 		self.assertEqual(len(model.layers),13)
 		self.assertEqual(model.layers[-1].output_shape[-1],y_pred.shape[-1])
 
+		# Let's do some aggressive garabge collecting to not have memory issues
+		model = None
+		gc.collect()
+
 		cfg['training_params']['bnn_type'] = 'diag'
 		model, loss = model_trainer.model_loss_builder(cfg)
 		y_true = np.ones((1,num_params))
@@ -168,6 +176,10 @@ class DataPrepTests(unittest.TestCase):
 		loss(yttf,yptf)
 		self.assertEqual(len(model.layers),13)
 		self.assertEqual(model.layers[-1].output_shape[-1],y_pred.shape[-1])
+
+		# Let's do some aggressive garabge collecting to not have memory issues
+		model = None
+		gc.collect()
 
 		cfg['training_params']['bnn_type'] = 'diag'
 		cfg['training_params']['dropout_type'] = 'standard'
