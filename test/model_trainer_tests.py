@@ -1,4 +1,4 @@
-import unittest, json, glob, os, gc
+import unittest, json, glob, os
 # Eliminate TF warning in tests
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 import tensorflow as tf
@@ -243,4 +243,3 @@ class DataPrepTests(unittest.TestCase):
 		# Clean up the file now that we're done
 		os.remove(normalized_param_path)
 		os.remove(normalization_constants_path)
-
