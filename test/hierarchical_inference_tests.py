@@ -279,6 +279,7 @@ class HierarchicalClassTest(unittest.TestCase):
 
 	def tearDown(self):
 		# Do some cleanup for memory management
+		self.hclass.infer_class = None
 		self.hclass = None
 		self.cfg = None
 		# Force collection
@@ -632,6 +633,7 @@ class HierarchicalEmpiricalTest(unittest.TestCase):
 
 	def tearDown(self):
 		# Clean up to save memory
+		self.hclass.infer_class = None
 		self.hclass = None
 		self.cfg = None
 		self.train_to_test_param_map = None
