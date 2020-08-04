@@ -3,26 +3,34 @@ language: python
 python:
     - '3.6'
 
-cache:
-    ccache: true
-    pip: true
+services:
+  - xvfb
 
 before_install:
   - sudo apt-get install gfortran
   - pip install coveralls
   - pip install python-coveralls
-  - pip install tensorflow
+  - pip install h5py
 
 install:
+  - git clone https://github.com/sibirrer/fastell4py.git
+  - cd fastell4py
   - pip install .
-  - pip install -r requirements.txt
+  - cd ..
+  - git clone https://github.com/jiwoncpark/baobab.git
+  - cd baobab
+  - pip install -e . -r requirements.txt
+  - cd ..
+  - pip install .
 
 before_script:
   - "export DISPLAY=:99.0"
   - sleep 3
 
 script:
-  - coverage run --source ovejero setup.py test
+  - cd test
+  - python -m unittest -v model_trainer_tests
+  #- coverage run -m unittest -v *
 
 after_success:
   - codecov

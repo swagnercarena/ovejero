@@ -1,4 +1,4 @@
-import unittest, json, glob, os
+import unittest, json, glob, os, gc
 # Eliminate TF warning in tests
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 import tensorflow as tf
@@ -7,10 +7,10 @@ import pandas as pd
 from ovejero import model_trainer, data_tools
 from helpers import dataset_comparison
 
+
 class DataPrepTests(unittest.TestCase):
 
-	def __init__(self, *args, **kwargs):
-		super(DataPrepTests, self).__init__(*args, **kwargs)
+	def setUp(self):
 		self.root_path = os.path.dirname(os.path.abspath(__file__))+'/test_data/'
 		self.lens_params = ['external_shear_g1','external_shear_g2',
 			'lens_mass_center_x','lens_mass_center_y','lens_mass_e1',
@@ -122,7 +122,7 @@ class DataPrepTests(unittest.TestCase):
 		os.remove(self.root_path+'new_metadata.csv')
 		os.remove(self.root_path+'norms.csv')
 
-	def test_model_loss_builder(self):
+	def test_model_loss_builder_gmm(self):
 		# Test that the model and loss returned from model_loss_builder
 		# agree with what is expected.
 		cfg = model_trainer.load_config(self.root_path+'test.json')
@@ -143,6 +143,14 @@ class DataPrepTests(unittest.TestCase):
 		self.assertEqual(len(model.layers),13)
 		self.assertEqual(model.layers[-1].output_shape[-1],y_pred.shape[-1])
 
+	def test_model_loss_builder_full(self):
+		# Test that the model and loss returned from model_loss_builder
+		# agree with what is expected.
+		cfg = model_trainer.load_config(self.root_path+'test.json')
+		cfg['training_params']['dropout_type'] = 'concrete'
+		final_params = cfg['training_params']['final_params']
+		num_params = len(final_params)
+
 		cfg['training_params']['bnn_type'] = 'full'
 		model, loss = model_trainer.model_loss_builder(cfg)
 		y_true = np.ones((1,num_params))
@@ -156,6 +164,14 @@ class DataPrepTests(unittest.TestCase):
 		self.assertEqual(len(model.layers),13)
 		self.assertEqual(model.layers[-1].output_shape[-1],y_pred.shape[-1])
 
+	def test_model_loss_builder_diag(self):
+		# Test that the model and loss returned from model_loss_builder
+		# agree with what is expected.
+		cfg = model_trainer.load_config(self.root_path+'test.json')
+		cfg['training_params']['dropout_type'] = 'concrete'
+		final_params = cfg['training_params']['final_params']
+		num_params = len(final_params)
+
 		cfg['training_params']['bnn_type'] = 'diag'
 		model, loss = model_trainer.model_loss_builder(cfg)
 		y_true = np.ones((1,num_params))
@@ -168,6 +184,14 @@ class DataPrepTests(unittest.TestCase):
 		loss(yttf,yptf)
 		self.assertEqual(len(model.layers),13)
 		self.assertEqual(model.layers[-1].output_shape[-1],y_pred.shape[-1])
+
+	def test_model_loss_builder_diag_stand(self):
+		# Test that the model and loss returned from model_loss_builder
+		# agree with what is expected.
+		cfg = model_trainer.load_config(self.root_path+'test.json')
+		cfg['training_params']['dropout_type'] = 'concrete'
+		final_params = cfg['training_params']['final_params']
+		num_params = len(final_params)
 
 		cfg['training_params']['bnn_type'] = 'diag'
 		cfg['training_params']['dropout_type'] = 'standard'

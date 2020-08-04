@@ -1,6 +1,17 @@
 ========================================================
 ovejero - Bayesian Neural Network Inference of Strong Gravitational Lenses
 ========================================================
+
+.. image:: https://travis-ci.com/swagnercarena/ovejero.png?branch=master
+	:target: https://travis-ci.org/swagnercarena/ovejero
+
+.. image:: https://readthedocs.org/projects/ovejero/badge/?version=latest
+	:target: https://ovejero.readthedocs.io/en/latest/?badge=latest
+	:alt: Documentation Status
+
+.. image:: https://img.shields.io/badge/license-MIT-blue.svg?style=flat
+    :target: https://github.com/swagnercarena/ovejero/LICENSE
+
 ''ovejero'' conducts hierarchical inference of strongly-lensed systems with Bayesian neural networks
 
 Installation
@@ -11,7 +22,7 @@ To run ovejero, you must first install tensorflow 2.0. This is not part of the p
 
 	$ pip install tensorflow==2.0.0a0 --user
 
-Otherswise use the command 
+Otherswise use the command
 
 .. code-block:: bash
 
@@ -23,7 +34,7 @@ The gast lines are a workaround for current issues with tensorflow and gast.
 Then clone the directory and run the setup.py file to complete the installation
 
 .. code-block:: bash
-	
+
 	$ git clone https://github.com/swagnercarena/ovejero.git
 	$ cd overjero/
 	$ python setup.py install

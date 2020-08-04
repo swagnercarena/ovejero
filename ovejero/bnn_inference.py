@@ -30,7 +30,7 @@ class InferenceClass:
 	models for inference. This class will output correctly marginalized
 	predictions as well as make important performance plots.
 	"""
-	def __init__(self,cfg):
+	def __init__(self,cfg,lite_class=False):
 		"""
 		Initialize the InferenceClass instance using the parameters of the
 		configuration file.
@@ -38,11 +38,20 @@ class InferenceClass:
 		Parameters
 		----------
 		cfg (dict): The dictionary attained from reading the json config file.
+		lite_class (bool): If True, do not bother loading the BNN model weights.
+			This allows the user to save on memory, but will cause an error
+			if the BNN samples have not already been drawn.
 		"""
 
 		self.cfg = cfg
-		self.model, self.loss = model_trainer.model_loss_builder(cfg,
-			verbose=True)
+
+		self.lite_class = lite_class
+		if self.lite_class:
+			self.model = None
+			self.loss = None
+		else:
+			self.model, self.loss = model_trainer.model_loss_builder(cfg,
+				verbose=True)
 
 		# Load the validation set we're going to use.
 		self.tf_record_path_v = os.path.join(
@@ -61,7 +70,6 @@ class InferenceClass:
 			self.final_params,self.batch_size,1,self.baobab_config_path,
 			norm_images=self.norm_images)
 
-		self.output_shape = self.model.output_shape[1]
 		self.bnn_type = cfg['training_params']['bnn_type']
 
 		# This code is borrowed from the LensingLossFunctions initializer
@@ -191,6 +199,8 @@ class InferenceClass:
 			num_samples = int(np.ceil(num_samples/batch_size))
 
 		if sample_save_dir is None or not os.path.isdir(sample_save_dir):
+			if self.lite_class:
+				raise ValueError('Cannot ask for lite class without samples!')
 			if sample_save_dir is not None:
 				print('No samples found. Saving samples to %s'%(sample_save_dir))
 			# Extract image and output batch from tf dataset

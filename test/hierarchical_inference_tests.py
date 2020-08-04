@@ -1,4 +1,4 @@
-import unittest, os, json
+import unittest, os, json, gc
 from ovejero import hierarchical_inference, model_trainer
 from baobab import configs
 from lenstronomy.Util.param_util import ellipticity2phi_q
@@ -12,8 +12,7 @@ import matplotlib.pyplot as plt
 
 class HierarchicalnferenceTest(unittest.TestCase):
 
-	def __init__(self, *args, **kwargs):
-		super(HierarchicalnferenceTest, self).__init__(*args, **kwargs)
+	def setUp(self):
 		# Open up the config file.
 		np.random.seed(2)
 		self.root_path = os.path.dirname(os.path.abspath(__file__))+'/test_data/'
@@ -38,6 +37,15 @@ class HierarchicalnferenceTest(unittest.TestCase):
 			self.cfg_pr,self.lens_params,baobab_config=False)
 		self.eval_dict_cov = hierarchical_inference.build_eval_dict(
 			self.cfg_cov,self.lens_params_cov,baobab_config=False)
+
+	def tearDown(self):
+		# Clean up for memory
+		self.cfg = None
+		self.cfg_pr = None
+		self.cfg_cov = None
+		self.eval_dict = None
+		self.eval_dict_prior = None
+		self.eval_dict_cov = None
 
 	def test_build_eval_dict(self):
 		# Check that the eval dictionary is built correctly for a test config.
@@ -238,8 +246,7 @@ class HierarchicalnferenceTest(unittest.TestCase):
 
 class HierarchicalClassTest(unittest.TestCase):
 
-	def __init__(self, *args, **kwargs):
-		super(HierarchicalClassTest, self).__init__(*args, **kwargs)
+	def setUp(self):
 		# Open up the config file.
 		self.root_path = os.path.dirname(os.path.abspath(__file__))+'/test_data/'
 		with open(self.root_path+'test.json','r') as json_f:
@@ -266,9 +273,18 @@ class HierarchicalClassTest(unittest.TestCase):
 
 		self.hclass = hierarchical_inference.HierarchicalClass(self.cfg,
 			self.interim_baobab_omega_path,self.target_ovejero_omega_path,
-			self.root_path,self.tf_record_path,self.target_baobab_omega_path)
+			self.root_path,self.tf_record_path,self.target_baobab_omega_path,
+			lite_class=True)
 
 		os.remove(self.tf_record_path)
+
+	def tearDown(self):
+		# Do some cleanup for memory management
+		self.hclass.infer_class = None
+		self.hclass = None
+		self.cfg = None
+		# Force collection
+		gc.collect()
 
 	def test_init(self):
 		# Check that the true hyperparameter values were correctly initialized.
@@ -321,6 +337,9 @@ class HierarchicalClassTest(unittest.TestCase):
 
 		# Replace the real model with our fake model and generate samples
 		self.hclass.infer_class.model = diag_model
+		# Set this to false so the system doesn't complain when we try
+		# to generate samples.
+		self.hclass.infer_class.lite_class = False
 
 		self.hclass.gen_samples(100)
 
@@ -578,8 +597,7 @@ class HierarchicalClassTest(unittest.TestCase):
 
 class HierarchicalEmpiricalTest(unittest.TestCase):
 
-	def __init__(self, *args, **kwargs):
-		super(HierarchicalEmpiricalTest, self).__init__(*args, **kwargs)
+	def setUp(self):
 		# Open up the config file.
 		self.root_path = os.path.dirname(os.path.abspath(__file__))+'/test_data/'
 		with open(self.root_path+'test.json','r') as json_f:
@@ -613,9 +631,18 @@ class HierarchicalEmpiricalTest(unittest.TestCase):
 		self.hclass = hierarchical_inference.HierarchicalClass(self.cfg,
 			self.interim_baobab_omega_path,self.target_ovejero_omega_path,
 			self.root_path,self.tf_record_path,self.target_baobab_omega_path,
-			self.train_to_test_param_map)
+			self.train_to_test_param_map,lite_class=True)
 
 		os.remove(self.tf_record_path)
+
+	def tearDown(self):
+		# Clean up to save memory
+		self.hclass.infer_class = None
+		self.hclass = None
+		self.cfg = None
+		self.train_to_test_param_map = None
+		# This is so bad I'm going to force garbage collection
+		gc.collect()
 
 	def test_init(self):
 		# Check that the true hyperparameter values were correctly initialized.
@@ -670,6 +697,9 @@ class HierarchicalEmpiricalTest(unittest.TestCase):
 
 		# Replace the real model with our fake model and generate samples
 		self.hclass.infer_class.model = diag_model
+		# Set this to false so the system doesn't complain when we try
+		# to generate samples.
+		self.hclass.infer_class.lite_class = False
 
 		self.hclass.gen_samples(100)
 
@@ -766,7 +796,7 @@ class HierarchicalEmpiricalTest(unittest.TestCase):
 		# work is being done by emcee.
 		test_chains_path = self.root_path + 'test_chains_rs.h5'
 		n_walkers = 60
-		n_samps = 10
+		n_samps = 2
 
 		# Make some fake samples.
 		samples = np.ones((8,2,2))*0.3
@@ -792,7 +822,7 @@ class HierarchicalEmpiricalTest(unittest.TestCase):
 		# Here, we're mostly just testing things don't crash again.
 		test_chains_path = self.root_path + 'test_chains_tp.h5'
 		n_walkers = 60
-		n_samps = 10
+		n_samps = 2
 		burnin = 0
 
 		# Make some fake samples.

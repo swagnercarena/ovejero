@@ -10,8 +10,7 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 class BNNInferenceTest(unittest.TestCase):
 
-	def __init__(self, *args, **kwargs):
-		super(BNNInferenceTest, self).__init__(*args, **kwargs)
+	def setUp(self):
 		# Open up the config file.
 		self.root_path = os.path.dirname(os.path.abspath(__file__))+'/test_data/'
 		with open(self.root_path+'test.json','r') as json_f:
@@ -33,6 +32,11 @@ class BNNInferenceTest(unittest.TestCase):
 		self.infer_class = bnn_inference.InferenceClass(self.cfg)
 		np.random.seed(2)
 		tf.random.set_seed(2)
+
+	def tearDown(self):
+		# Cleanup for memory
+		self.infer_class = None
+		self.cfg = None
 
 	def test_fix_flip_pairs(self):
 		# Check that fix_flip_pairs always selects the best possible configuration

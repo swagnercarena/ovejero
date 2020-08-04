@@ -9,8 +9,7 @@ os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 class BNNTests(unittest.TestCase):
 
-	def __init__(self, *args, **kwargs):
-		super(BNNTests, self).__init__(*args, **kwargs)
+	def setUp(self):
 		self.random_seed = 1234
 		tf.random.set_seed(self.random_seed)
 		np.random.seed(self.random_seed)
@@ -260,8 +259,7 @@ class BNNTests(unittest.TestCase):
 
 class LensingLossFunctionsTests(unittest.TestCase):
 
-	def __init__(self, *args, **kwargs):
-		super(LensingLossFunctionsTests, self).__init__(*args, **kwargs)
+	def setUp(self):
 		# Set a seed to make sure that the behaviour of all the test functions
 		# is consistent.
 		np.random.seed(2)
@@ -314,7 +312,6 @@ class LensingLossFunctionsTests(unittest.TestCase):
 		mse_tensor = loss_class.mse_loss(tf.constant(y_true,dtype=tf.float32),
 			tf.constant(y_pred,dtype=tf.float32))
 		self.assertGreater(np.sum(mse_tensor.numpy()),0.1)
-
 
 	def test_log_gauss_diag(self):
 		# Will not be used for this test, but must be passed in.
@@ -602,7 +599,7 @@ class LensingLossFunctionsTests(unittest.TestCase):
 			scipy_nlp = -np.logaddexp(scipy_nlp1,scipy_nlp2)
 			# The decimal error can be significant due to inverting the precision
 			# matrix
-			self.assertAlmostEqual(np.sum(nlp_tensor.numpy()),scipy_nlp,places=2)
+			self.assertAlmostEqual(np.sum(nlp_tensor.numpy()),scipy_nlp,places=1)
 
 	def test_gm_full_covariance_loss(self):
 		# Test that the diagonal covariance loss gives the correct values
