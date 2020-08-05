@@ -130,6 +130,8 @@ class DataPrepTests(unittest.TestCase):
 		final_params = cfg['training_params']['final_params']
 		num_params = len(final_params)
 
+		tf.keras.backend.clear_session()
+
 		model, loss = model_trainer.model_loss_builder(cfg)
 		y_true = np.ones((1,num_params))
 		y_pred = np.ones((1,2*(num_params +
@@ -150,6 +152,8 @@ class DataPrepTests(unittest.TestCase):
 		cfg['training_params']['dropout_type'] = 'concrete'
 		final_params = cfg['training_params']['final_params']
 		num_params = len(final_params)
+
+		tf.keras.backend.clear_session()
 
 		cfg['training_params']['bnn_type'] = 'full'
 		model, loss = model_trainer.model_loss_builder(cfg)
@@ -172,6 +176,8 @@ class DataPrepTests(unittest.TestCase):
 		final_params = cfg['training_params']['final_params']
 		num_params = len(final_params)
 
+		tf.keras.backend.clear_session()
+
 		cfg['training_params']['bnn_type'] = 'diag'
 		model, loss = model_trainer.model_loss_builder(cfg)
 		y_true = np.ones((1,num_params))
@@ -192,6 +198,8 @@ class DataPrepTests(unittest.TestCase):
 		cfg['training_params']['dropout_type'] = 'concrete'
 		final_params = cfg['training_params']['final_params']
 		num_params = len(final_params)
+
+		tf.keras.backend.clear_session()
 
 		cfg['training_params']['bnn_type'] = 'diag'
 		cfg['training_params']['dropout_type'] = 'standard'
