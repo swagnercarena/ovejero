@@ -22,9 +22,9 @@ cfg.selection = dict(
     initial=["lambda x: x['lens_mass']['theta_E'] > 0.5", ],
 )
 
-cfg.survey_info = {"survey_name": "DES",
-    "bandpass_list": ["g"],
-    "coadd_years": 6}
+cfg.survey_info = dict(survey_name="DES",
+    bandpass_list=["g"],
+    coadd_years=6,)
 
 cfg.psf = dict(
     type='PIXEL',  # string, type of PSF ('GAUSSIAN' and 'PIXEL' supported)
@@ -41,11 +41,6 @@ cfg.image = dict(
              num_pix=64, # cutout pixel size
              inverse=False, # if True, coord sys is ra to the left, if False, to the right
              squeeze_bandpass_dimension=True)
-
-"""dict(
-             num_pix=64, # cutout pixel size
-             inverse=False, # if True, coord sys is ra to the left, if False, to the right
-             )"""
 
 cfg.bnn_omega = dict(
     lens_mass=dict(

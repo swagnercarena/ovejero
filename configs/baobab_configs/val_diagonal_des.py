@@ -22,9 +22,9 @@ cfg.selection = dict(
                  initial=["lambda x: x['lens_mass']['theta_E'] > 0.5",],
                  )
 
-cfg.survey_info = {"survey_name": "DES",
-    "bandpass_list": ["g"],
-    "coadd_years": 6}
+cfg.survey_info = dict(survey_name="DES",
+    bandpass_list=["g"],
+    coadd_years=6,)
 
 cfg.psf = dict(
            type='PIXEL', # string, type of PSF ('GAUSSIAN' and 'PIXEL' supported)
