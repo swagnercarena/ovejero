@@ -873,7 +873,7 @@ class HierarchicalClass:
 
 	def plot_single_corner(self,burnin,plot_param,hyperparam_plot_names=None,
 		block=True,color='#FFAA00',truth_color='#000000',figure=None,
-		plot_range=None,dpi=200):
+		plot_range=None,dpi=200,fontsize=13):
 		"""
 		Plot the corner plot of chains resulting from the emcee for a specific
 		parameter
@@ -892,6 +892,7 @@ class HierarchicalClass:
 			figure (matplotlib.pyplot.figure): A figure that was previously
 				returned by plot_single_corner to overplot onto.
 			dpi (int): The dpi of the figure.
+			fontsize (int): The fontsize for the corner plot labels.
 		"""
 		if hyperparam_plot_names is None:
 			hyperparam_plot_names = self.target_eval_dict['hyp_names']
@@ -911,7 +912,7 @@ class HierarchicalClass:
 		figure = corner.corner(chains[:,hyp_s:hyp_e],
 			labels=hyperparam_plot_names[hyp_s:hyp_e],
 			dpi=dpi,bins=20,show_titles=False, plot_datapoints=False,
-			label_kwargs=dict(fontsize=13),
+			label_kwargs=dict(fontsize=fontsize),
 			truths=truths,levels=[0.68,0.95],color=color,fill_contours=True,
 			truth_color=truth_color,fig=figure,range=plot_range,
 			hist_kwargs=hist_kwargs)
@@ -919,7 +920,7 @@ class HierarchicalClass:
 
 	def plot_cov_corner(self,burnin,hyperparam_plot_names=None,
 		block=True,color='#FFAA00',truth_color='#000000',figures=None,
-		plot_range=None,dpi=200):
+		plot_range=None,dpi=200,fontsize=13):
 		"""
 		Plot the corner plot of chains resulting from the emcee of the
 		covariance matrix parameters for population inference.
@@ -940,6 +941,7 @@ class HierarchicalClass:
 				overplot onto. Two figure are required since we will make a
 				corner plot for the mean and the covariance.
 			dpi (int): The dpi of the figure.
+			fontsize (int): The fontsize for the corner plot labels.
 		"""
 		if hyperparam_plot_names is None:
 			hyperparam_plot_names = self.target_eval_dict['hyp_names']
@@ -963,7 +965,7 @@ class HierarchicalClass:
 		figures[0] = corner.corner(chains[:,mu_hyp_s:mu_hyp_e],
 			labels=hyperparam_plot_names[mu_hyp_s:mu_hyp_e],
 			dpi=dpi,bins=20,show_titles=False, plot_datapoints=False,
-			label_kwargs=dict(fontsize=13),
+			label_kwargs=dict(fontsize=fontsize),
 			truths=truths,levels=[0.68,0.95],color=color,fill_contours=True,
 			truth_color=truth_color,fig=figures[0],range=plot_range,
 			hist_kwargs=hist_kwargs)
@@ -989,7 +991,7 @@ class HierarchicalClass:
 		figures[1]= corner.corner(chains_covs,
 			labels=hyperparam_plot_names[tril_hyp_s:tril_hyp_e],
 			dpi=dpi,bins=20,show_titles=False, plot_datapoints=False,
-			label_kwargs=dict(fontsize=13),
+			label_kwargs=dict(fontsize=fontsize),
 			truths=cov_truth,levels=[0.68,0.95],color=color,fill_contours=True,
 			truth_color=truth_color,fig=figures[1],range=plot_range,
 			hist_kwargs=hist_kwargs)

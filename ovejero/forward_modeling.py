@@ -394,7 +394,7 @@ class ForwardModel(bnn_inference.InferenceClass):
 		sample_save_dir=None,color_map=['#FFAA00','#41b6c4'],
 		plot_limits=None,truth_color='#000000',save_fig_path=None,
 		dpi=400,fig=None,show_plot=True,plot_fow_model=True,
-		add_legend=True):
+		add_legend=True,fontsize=12):
 		"""
 		Plot the corner plot of chains resulting from the emcee for the
 		lens mass parameters.
@@ -426,6 +426,7 @@ class ForwardModel(bnn_inference.InferenceClass):
 				posteriors. This is mostly here  for plotting multiple BNN
 				posteriors on one plot.
 			add_legend (bool): Whether or not to add an auto-generated legend.
+			fontsize (int): The fontsize for the corner plot labels.
 		"""
 		# Get the chains from the samples
 		chains = self.chains[burnin:].reshape(-1,len(self.chain_params))
@@ -464,7 +465,7 @@ class ForwardModel(bnn_inference.InferenceClass):
 			self.predict_samps.shape[-1])
 		fig = corner.corner(corner_bnn_samples,
 				bins=20,labels=self.final_params_print_names,show_titles=False,
-				plot_datapoints=False,label_kwargs=dict(fontsize=14),
+				plot_datapoints=False,label_kwargs=dict(fontsize=fontsize),
 				truths=reordered_true_values,levels=[0.68,0.95],
 				dpi=dpi, color=color_map[0],fig=fig,fill_contours=True,
 				range=plot_limits,truth_color=truth_color,
@@ -475,8 +476,8 @@ class ForwardModel(bnn_inference.InferenceClass):
 			hist_kwargs['color'] = color_map[1]
 			fig = corner.corner(reordered_chains,
 				labels=self.final_params_print_names,bins=20,show_titles=False,
-				plot_datapoints=False,label_kwargs=dict(fontsize=14),dpi=dpi,
-				truths=reordered_true_values,levels=[0.68,0.95],
+				plot_datapoints=False,label_kwargs=dict(fontsize=fontsize),
+				truths=reordered_true_values,levels=[0.68,0.95],dpi=dpi,
 				color=color_map[1],fill_contours=True,range=plot_limits,
 				truth_color=truth_color,hist_kwargs=hist_kwargs,fig=fig)
 
