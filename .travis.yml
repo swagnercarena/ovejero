@@ -8,6 +8,7 @@ services:
 
 before_install:
   - sudo apt-get install gfortran
+  - pip install coverage==4.5.4 # Temp fix
   - pip install coveralls
   - pip install python-coveralls
   - pip install h5py
