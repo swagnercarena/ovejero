@@ -14,3 +14,4 @@ multiprocess>=0.70.10
 schwimmbad>=0.3.0
 addict
 lenstronomy
+mpmath
