@@ -9,6 +9,9 @@ ovejero - Bayesian Neural Network Inference of Strong Gravitational Lenses
 	:target: https://ovejero.readthedocs.io/en/latest/?badge=latest
 	:alt: Documentation Status
 
+.. image:: https://coveralls.io/repos/github/swagnercarena/ovejero/badge.svg?branch=master
+	:target: https://coveralls.io/github/swagnercarena/ovejero?branch=master
+
 .. image:: https://img.shields.io/badge/license-MIT-blue.svg?style=flat
     :target: https://github.com/swagnercarena/ovejero/LICENSE
 
