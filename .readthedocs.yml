@@ -4,13 +4,4 @@ build:
 python:
   version: 3.6
   install:
-    - git clone https://github.com/sibirrer/fastell4py.git
-    - cd fastell4py
-    - pip install .
-    - cd ..
-    - git clone https://github.com/jiwoncpark/baobab.git
-    - cd baobab
-    - pip install -e . -r requirements.txt
-    - cd ..
-    - pip install .
     - requirements: requirements.txt
