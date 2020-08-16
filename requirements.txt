@@ -15,3 +15,4 @@ schwimmbad>=0.3.0
 addict
 lenstronomy
 mpmath
+astropy
