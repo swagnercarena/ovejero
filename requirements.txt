@@ -1,3 +1,4 @@
+git+https://github.com/jiwoncpark/baobab.git
 numpy==1.18.0
 scipy==1.4.1
 configparser
