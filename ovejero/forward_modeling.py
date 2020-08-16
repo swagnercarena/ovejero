@@ -6,14 +6,13 @@ model.
 This module contains the functions neccesary to compare the inference of a
 trained BNN to a traditional forward modeling approach powered by lenstronomy.
 
-Examples
---------
-The demo Forward_Modeling.ipynb gives examples on how to use this module.
+Examples:
+	The demo Forward_Modeling_Demo.ipynb gives examples on how to use this
+	module.
 
-Notes
------
-Unlike most of the other modules in this package, this module assumes that the
-images consist only a a lensed source (no lens light or point source).
+Notes:
+	Unlike most of the other modules in this package, this module assumes that
+	the images consist only a a lensed source (no lens light or point source).
 """
 # TODO: Write tests for these functions after you're done racing.
 from ovejero import bnn_inference
@@ -41,8 +40,7 @@ class ForwardModel(bnn_inference.InferenceClass):
 		Initialize the ForwardModel instance using the parameters of the
 		configuration file.
 
-		Parameters
-		----------
+		Parameters:
 			cfg (dict): The dictionary attained from reading the json config file.
 			lite_class (bool): If True, do not bother loading the BNN model
 				weights. This allows the user to save on memory, but will cause
@@ -158,8 +156,7 @@ class ForwardModel(bnn_inference.InferenceClass):
 		"""
 		Select the image to conduct forward modeling on.
 
-		Parameters
-		----------
+		Parameters:
 			image_index (int): The index of the image to use.
 		"""
 		# Load the metadata file
@@ -231,8 +228,7 @@ class ForwardModel(bnn_inference.InferenceClass):
 		Initialize the sampler to be used by run_samples.
 
 
-		Parameters
-		----------
+		Parameters:
 			walker_ratio (int): The number of walkers per free parameter.
 				Must be at least 2.
 			save_path (str): An h5 path specifying where to save the
@@ -258,8 +254,7 @@ class ForwardModel(bnn_inference.InferenceClass):
 		"""
 		Run an emcee sampler to get a posterior on the hyperparameters.
 
-		Parameters
-		----------
+		Parameters:
 			n_samps (int): The number of samples to take
 		"""
 		if self.sampler_init is False:
@@ -305,8 +300,7 @@ class ForwardModel(bnn_inference.InferenceClass):
 		Plot the chains resulting from the emcee to figure out what
 		the correct burnin is.
 
-		Parameters
-		----------
+		Parameters:
 			burnin (int): How many of the initial samples to drop as burnin
 			block (bool): If true, block excecution after plt.show() command
 		"""
@@ -328,8 +322,7 @@ class ForwardModel(bnn_inference.InferenceClass):
 		Correct the chains and true values so that their convention agrees with
 		what was used to train the BNN.
 
-		Parameters
-		----------
+		Parameters:
 			chains (np.array): A numpy array containing the chain in the
 				original parameter space. Dimensions should be (n_samples,
 				n_params).
@@ -339,10 +332,9 @@ class ForwardModel(bnn_inference.InferenceClass):
 				each parameter in the untransformed parameterization. Should
 				have dimensions (n_params).
 
-		Returns
-		-------
+		Returns:
 			[str,...]: A list containing the corrected parameter names.
-				Everything else is changed in place.
+			Everything else is changed in place.
 
 		TODO: Integrate this directly with the dataset code.
 		"""
@@ -394,13 +386,12 @@ class ForwardModel(bnn_inference.InferenceClass):
 		sample_save_dir=None,color_map=['#FFAA00','#41b6c4'],
 		plot_limits=None,truth_color='#000000',save_fig_path=None,
 		dpi=400,fig=None,show_plot=True,plot_fow_model=True,
-		add_legend=True):
+		add_legend=True,fontsize=12):
 		"""
 		Plot the corner plot of chains resulting from the emcee for the
 		lens mass parameters.
 
-		Parameters
-		----------
+		Parameters:
 			burnin (int): How many of the initial samples to drop as burnin
 			num_samples (int): The number of bnn samples to use for the
 				contour
@@ -426,6 +417,11 @@ class ForwardModel(bnn_inference.InferenceClass):
 				posteriors. This is mostly here  for plotting multiple BNN
 				posteriors on one plot.
 			add_legend (bool): Whether or not to add an auto-generated legend.
+			fontsize (int): The fontsize for the corner plot labels.
+
+		Returns:
+			(matplotlib.pyplot.figure): The figure object containing the
+			contours.
 		"""
 		# Get the chains from the samples
 		chains = self.chains[burnin:].reshape(-1,len(self.chain_params))
@@ -464,7 +460,7 @@ class ForwardModel(bnn_inference.InferenceClass):
 			self.predict_samps.shape[-1])
 		fig = corner.corner(corner_bnn_samples,
 				bins=20,labels=self.final_params_print_names,show_titles=False,
-				plot_datapoints=False,label_kwargs=dict(fontsize=14),
+				plot_datapoints=False,label_kwargs=dict(fontsize=fontsize),
 				truths=reordered_true_values,levels=[0.68,0.95],
 				dpi=dpi, color=color_map[0],fig=fig,fill_contours=True,
 				range=plot_limits,truth_color=truth_color,
@@ -475,8 +471,8 @@ class ForwardModel(bnn_inference.InferenceClass):
 			hist_kwargs['color'] = color_map[1]
 			fig = corner.corner(reordered_chains,
 				labels=self.final_params_print_names,bins=20,show_titles=False,
-				plot_datapoints=False,label_kwargs=dict(fontsize=14),dpi=dpi,
-				truths=reordered_true_values,levels=[0.68,0.95],
+				plot_datapoints=False,label_kwargs=dict(fontsize=fontsize),
+				truths=reordered_true_values,levels=[0.68,0.95],dpi=dpi,
 				color=color_map[1],fill_contours=True,range=plot_limits,
 				truth_color=truth_color,hist_kwargs=hist_kwargs,fig=fig)
 
