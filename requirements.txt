@@ -1,5 +1,5 @@
 numpy>=1.13
-scipy>=0.14.0
+scipy==1.4.1
 configparser
 pandas>=0.24.2
 corner>=2.0.1
