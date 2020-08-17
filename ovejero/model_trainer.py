@@ -3,9 +3,8 @@
 This script will initialize and train a BNN model on a strong lensing image
 dataset.
 
-Examples
---------
-python -m model_trainer configs/t1.json
+Examples:
+	python -m model_trainer configs/t1.json
 
 """
 
@@ -26,8 +25,7 @@ def config_checker(cfg):
 	Check that configuration file meets ovejero requirements. Throw an error
 	if configuration file is invalid.
 
-	Parameters
-	----------
+	Parameters:
 	cfg: The dictionary attained from reading the json config.
 	"""
 
@@ -37,8 +35,7 @@ def config_checker(cfg):
 		that the same is true for any sub-dictionaries. Raise an error if not
 		identical.
 
-		Parameters
-		----------
+		Parameters:
 			dict_check (dict): The dictionary to check
 			dict_ref (dict): The reference dictionary
 
@@ -62,12 +59,10 @@ def load_config(config_path):
 	Load a configuration file from the path and check that it meets the
 	requirements.
 
-	Parameters
-	----------
+	Parameters:
 		config_path (str): The path to the config file to be loaded
 
-	Returns
-	-------
+	Returns:
 		(dict): A dictionary object with the config file.
 	"""
 	# Load the config
@@ -85,8 +80,7 @@ def prepare_tf_record(cfg,root_path,tf_record_path,final_params,train_or_test):
 	"""
 	Perpare the tf record using the config file values.
 
-	Parameters
-	----------
+	Parameters:
 		cfg (dict): The dictionary attained from reading the json config
 			file.
 		root_path (str): The root path that will contain all of the data
@@ -177,15 +171,13 @@ def get_normed_pixel_scale(cfg,pixel_scale):
 	Return a dictionary with the pixel scale normalized according to the
 	normalization of each shift parameter.
 
-	Parameters
-	----------
+	Parameters:
 		cfg (dict): The dictionary attained from reading the json config file.
 		pixel_scale (float): The pixel scale used for the original images.
 
-	Returns
-	-------
+	Returns:
 		(dict): A dictionary of the pixel scales renormalized in the same way as
-			the shift parameters.
+		the shift parameters.
 	"""
 	# Get the parameters we need to read the normalization from
 	shift_params = cfg['training_params']['shift_params']
@@ -210,16 +202,14 @@ def model_loss_builder(cfg, verbose=False):
 	Build a model according to the specifications in configuration dictionary
 	and return both the initialized model and the loss function.
 
-	Parameters
-	----------
+	Parameters:
 		cfg (dict): The dictionary attained from reading the json config file.
 		verbose (bool): If True, will be verbose as model is built.
 
-	Returns
-	-------
+	Returns:
 		(tf.keras.model, function): A bnn model of the type specified in config
-			and a callable function to construct the tesnorflow graph for the
-			loss.
+		and a callable function to construct the tesnorflow graph for the
+		loss.
 	"""
 	# Load the parameters we need from the config file. Some of these will
 	# be repeats from the main script.

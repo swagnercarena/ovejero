@@ -26,8 +26,7 @@ class AlwaysDropout(Layer):
 		"""
 		Initialize the AlwaysDropout layer.
 
-		Parameters
-		----------
+		Parameters:
 			dropout_rate (float): A number in the range [0,1) that will serve
 				as the dropout rate for the layer. A larger rate means more
 				dropout.
@@ -45,16 +44,14 @@ class AlwaysDropout(Layer):
 		The function that takes the inputs (likely outputs of a previous layer)
 		and conducts dropout.
 
-		Parameters
-		----------
-		inputs (tf.Keras.Layer): The inputs to the Dense layer.
-		training (bool): A required input for call. Setting training to
-			true or false does nothing because always dropout behaves the
-			same way in both cases.
+		Parameters:
+			inputs (tf.Keras.Layer): The inputs to the Dense layer.
+			training (bool): A required input for call. Setting training to
+				true or false does nothing because always dropout behaves the
+				same way in both cases.
 
-		Returns
-		-------
-		(tf.Keras.Layer): The output of the Dense layer.
+		Returns:
+			(tf.Keras.Layer): The output of the Dense layer.
 		"""
 		return tf.nn.dropout(inputs, self.dropout_rate)
 
@@ -71,13 +68,11 @@ class AlwaysDropout(Layer):
 		Compute the shape of the output given the input. Needed for Keras
 		layer.
 
-		Parameters
-		----------
-		input_shape ((int,...)): The shape of the input to our Dense layer.
+		Parameters:
+			input_shape ((int,...)): The shape of the input to our Dense layer.
 
-		Returns
-		-------
-		((int,...)): The output shape of the layer.
+		Returns:
+			((int,...)): The output shape of the layer.
 		"""
 		return input_shape
 
@@ -87,8 +82,7 @@ def cd_regularizer(p, kernel, kernel_regularizer, dropout_regularizer,
 	"""
 	Calculate the regularization term for concrete dropout.
 
-	Parameters
-	----------
+	Parameters:
 		p (tf.Tensor): A 1D Tensor containing the p value for dropout (between
 			0 and 1).
 		kernel (tf.Tensor): A 2D Tensor defining the weights of the Dense
@@ -99,14 +93,11 @@ def cd_regularizer(p, kernel, kernel_regularizer, dropout_regularizer,
 			regularization term.
 		input_dim (int): The dimension of the input to the layer.
 
-	Returns
-	-------
-		(tf.Tensor): The tensorflow graph to calculate the regularization
-			term.
+	Returns:
+		(tf.Tensor): The tensorflow graph to calculate the regularization term.
 
-	Notes
-	-----
-	This is currently not being used because of issues with the Keras
+	Notes:
+		This is currently not being used because of issues with the Keras
 		framework. Once it updates this will be employed instead of dividing
 		the loss into two parts.
 	"""
@@ -132,8 +123,7 @@ class ConcreteDropout(Layer):
 		Initialize the Concrete dropout Dense layer. This will initialize the
 		dense layer along with the overhead needed for concrete dropout.
 
-		Parameters
-		----------
+		Parameters:
 			output_dim (int): The number of output parameters
 			activation (str): The type of activation function to be used. Will
 				be passed into tensorflow's activation function library.
@@ -152,13 +142,11 @@ class ConcreteDropout(Layer):
 			random_seed (int): A seed to use in the random function calls. If
 				None no explicit seed will be used.
 
-		Returns
-		-------
+		Returns:
 			(keras.Layer): The initialized ConcreteDropout layer. Must still be
 				built.
 
-		Notes
-		-----
+		Notes:
 			Technically the regularization terms must be divided by the number
 				of training examples. This is degenerate with the value of the
 				regularizers, so we do not specify it here.
@@ -189,8 +177,7 @@ class ConcreteDropout(Layer):
 		"""
 		Build the weights and operations that the network will use.
 
-		Parameters
-		----------
+		Parameters:
 			input_shape ((int,...)): The shape of the input to our Dense layer.
 		"""
 		assert len(input_shape) >= 2
@@ -212,13 +199,11 @@ class ConcreteDropout(Layer):
 			"""
 			Calculate the regularization term for p_logit.
 
-			Parameters
-			----------
+			Parameters:
 				p_logit (tf.Tensor): A 1D Tensor containing the p_logit value
 					for dropout.
 
-			Returns
-			-------
+			Returns:
 				(tf.Tensor): The tensorflow graph to calculate the
 					p_logit regularization term.
 			"""
@@ -234,13 +219,11 @@ class ConcreteDropout(Layer):
 			"""
 			Calculate the regularization term for concrete dropout.
 
-			Parameters
-			----------
+			Parameters:
 				kernel (tf.Tensor): A 2D Tensor containing the kernel for our
 					Dense layer computation.
 
-			Returns
-			-------
+			Returns:
 				(tf.Tensor): The tensorflow graph to calculate the
 					kernel regularization term.
 			"""
@@ -263,16 +246,14 @@ class ConcreteDropout(Layer):
 		The function that takes the inputs of the layer and conducts the
 		Dense layer multiplication with concrete dropout.
 
-		Parameters
-		----------
-		inputs (tf.Keras.Layer): The inputs to the Dense layer.
-		training (bool): A required input for call. Setting training to
-			true or false does nothing because concrete dropout behaves the
-			same way in both cases.
+		Parameters:
+			inputs (tf.Keras.Layer): The inputs to the Dense layer.
+			training (bool): A required input for call. Setting training to
+				true or false does nothing because concrete dropout behaves
+				the same way in both cases.
 
-		Returns
-		-------
-		(tf.Keras.Layer): The output of the Dense layer.
+		Returns:
+			(tf.Keras.Layer): The output of the Dense layer.
 		"""
 		# Small epsilon parameter needed for stable optimization
 		eps = K.cast_to_floatx(K.epsilon())
@@ -300,12 +281,10 @@ class ConcreteDropout(Layer):
 		Compute the shape of the output given the input. Needed for Keras
 		layer.
 
-		Parameters
-		----------
+		Parameters:
 		input_shape ((int,...)): The shape of the input to our Dense layer.
 
-		Returns
-		-------
+		Returns:
 		((int,...)): The output shape of the layer.
 		"""
 		output_shape = list(input_shape)
@@ -345,8 +324,7 @@ class SpatialConcreteDropout(Conv2D):
 		the Conv2d layer along with the overhead needed for spatial concrete
 		dropout.
 
-		Parameters
-		----------
+		ParametersL
 			filters (int): The number of filters to use for the Conv2D layer
 			kernel_size ((int,int)): The dimensions of the kernel for the
 				Conv2D layer
@@ -367,13 +345,11 @@ class SpatialConcreteDropout(Conv2D):
 			random_seed (int): A seed to use in the random function calls. If
 				None no explicit seed will be used.
 
-		Returns
-		-------
+		Returns:
 			(keras.Layer): The initialized SpatialConcreteDropout layer. Must
 				still be built.
 
-		Notes
-		-----
+		Notes:
 			Technically the regularization terms must be divided by the number
 				of training examples. This is degenerate with the value of the
 				regularizers, so we do not specify it here.
@@ -394,8 +370,7 @@ class SpatialConcreteDropout(Conv2D):
 		"""
 		Build the weights and operations that the network will use.
 
-		Parameters
-		----------
+		Parameters:
 			input_shape ((int,...)): The shape of the input to our Conv2D layer.
 		"""
 		super(SpatialConcreteDropout, self).build(input_shape)
@@ -414,13 +389,11 @@ class SpatialConcreteDropout(Conv2D):
 			"""
 			Calculate the regularization term for p_logit.
 
-			Parameters
-			----------
+			Parameters:
 				p_logit (tf.Tensor): A 1D Tensor containing the p_logit value
 					for dropout.
 
-			Returns
-			-------
+			Returns:
 				(tf.Tensor): The tensorflow graph to calculate the
 					p_logit regularization term.
 			"""
@@ -436,13 +409,11 @@ class SpatialConcreteDropout(Conv2D):
 			"""
 			Calculate the regularization term for concrete dropout.
 
-			Parameters
-			----------
+			Parameters:
 				kernel (tf.Tensor): A 2D Tensor containing the kernel for our
 					Dense layer computation.
 
-			Returns
-			-------
+			Returns:
 				(tf.Tensor): The tensorflow graph to calculate the
 					kernel regularization term.
 			"""
@@ -463,15 +434,13 @@ class SpatialConcreteDropout(Conv2D):
 		The function that takes the inputs of the layer and conducts the
 		Dense layer multiplication with concrete dropout.
 
-		Parameters
-		----------
+		Parameters:
 			inputs (tf.Keras.Layer): The inputs to the Dense layer.
 			training (bool): A required input for call. Setting training to
 				true or false does nothing because concrete dropout behaves the
 				same way in both cases.
 
-		Returns
-		-------
+		Returns:
 			(tf.Keras.Layer): The output of the Dense layer.
 		"""
 		# Small epsilon parameter needed for stable optimization
@@ -498,12 +467,10 @@ class SpatialConcreteDropout(Conv2D):
 		Compute the shape of the output given the input. Needed for Keras
 		layer.
 
-		Parameters
-		----------
+		Parameters:
 			input_shape ((int,...)): The shape of the input to our Dense layer.
 
-		Returns
-		-------
+		Returns:
 			((int,...)): The output shape of the layer.
 		"""
 		return super(SpatialConcreteDropout, self).compute_output_shape(
@@ -515,8 +482,7 @@ def dropout_alexnet(img_size, num_params, kernel_regularizer=1e-6,
 	"""
 	Build the tensorflow graph for the alexnet BNN.
 
-	Parameters
-	----------
+	Parameters:
 		img_size ((int,int,int)): A tupe with shape (pix,pix,freq) that describes
 			the size of the input images
 		num_params (int): The number of lensing parameters to predict
@@ -526,8 +492,7 @@ def dropout_alexnet(img_size, num_params, kernel_regularizer=1e-6,
 		random_seed (int): A seed to use in the random function calls. If None
 			no explicit seed will be used.
 
-	Returns
-	-------
+	Returns:
 		(tf.Tensor): The model (i.e. the tensorflow graph for the model)
 	"""
 
@@ -609,8 +574,7 @@ def concrete_alexnet(img_size, num_params, kernel_regularizer=1e-6,
 	"""
 	Build the tensorflow graph for the concrete dropout alexnet BNN.
 
-	Parameters
-	----------
+	Parameters:
 		img_size ((int,int,int)): A tupe with shape (pix,pix,freq) that describes
 			the size of the input images
 		num_params (int): The number of lensing parameters to predict
@@ -627,12 +591,10 @@ def concrete_alexnet(img_size, num_params, kernel_regularizer=1e-6,
 		random_seed (int): A seed to use in the random function calls. If None
 			no explicit seed will be used.
 
-	Returns
-	-------
+	Returns:
 		(tf.Tensor): The model (i.e. the tensorflow graph for the model)
 
-	Notes
-	-----
+	Notes:
 		While the concrete dropout implementation works, the training of the
 		dropout terms is very slow. It's possible that modifying the learning
 		rate schedule may help.
@@ -726,8 +688,7 @@ class LensingLossFunctions:
 		such that negating both parameters gives the same
 		physical definition of the system.
 
-		Parameters
-		----------
+		Parameters:
 			flip_pairs ([[int,int,...],...]): A list of pairs of numbers to
 				conduct the flip operation on. If empty no flip pairs will be
 				used. Note if you also want to consider two sets of parameters
@@ -759,18 +720,16 @@ class LensingLossFunctions:
 		"""
 		Returns the MSE loss of the predicted parameters. Will ignore parameters
 		associated with the covariance matrix.
-		Parameters
-		----------
+
+		Parameters:
 			y_true (tf.Tensor): The true values of the parameters
 			output (tf.Tensor): The predicted values of the lensing parameters.
 				This assumes the first num_params are
 
-		Returns
-		-------
+		Returns:
 			(tf.Tensor): The mse loss function.
 
-		Notes
-		-----
+		Notes:
 			This function should never be used as a loss function. It is useful
 			as a metric to understand what portion of the reduciton in the loss
 			function can be attributed to improved parameter accuracy. Also
@@ -791,20 +750,17 @@ class LensingLossFunctions:
 		Return the negative log posterior of a Gaussian with diagonal
 		covariance matrix
 
-		Parameters
-		----------
+		Parameters:
 			y_true (tf.Tensor): The true values of the parameters
 			y_pred (tf.Tensor): The predicted value of the parameters
 			std_pred (tf.Tensor): The predicted diagonal entries of the
 				covariance. Note that std_pred is assumed to be the log of the
 				covariance matrix values.
 
-		Returns
-		-------
+		Returns:
 			(tf.Tensor): The TF graph for calculating the nlp
 
-		Notes
-		-----
+		Notes:
 			This loss does not include the constant factor of 1/(2*pi)^(d/2).
 		"""
 		return 0.5*tf.reduce_sum(tf.multiply(tf.square(y_pred-y_true),
@@ -815,16 +771,14 @@ class LensingLossFunctions:
 		"""
 		Return the loss function assuming a diagonal covariance matrix
 
-		Parameters
-		----------
+		Parameters:
 			y_true (tf.Tensor): The true values of the lensing parameters
 			output (tf.Tensor): The predicted values of the lensing parameters.
 				This should include 2*self.num_params parameters to account for
 				the diagonal entries of our covariance matrix. Covariance matrix
 				values are assumed to be in log space.
 
-		Returns
-		-------
+		Returns:
 			(tf.Tensor): The loss function (i.e. the tensorflow graph for it).
 		"""
 		# First split the data into predicted parameters and covariance matrix
@@ -847,18 +801,16 @@ class LensingLossFunctions:
 		the diagonal elements before exponentiation, since we get that for
 		free.
 
-		Parameters
-		----------
+		Parameters:
 			L_mat_elements (tf.Tensor): A tensor of length
 				num_params*(num_params+1)/2 that define the lower traingular
 				matrix elements of the log cholesky decomposition
 
-		Returns
-		-------
+		Returns:
 			((tf.Tensor,tf.Tensor)): Both the precision matrix and the diagonal
-				elements (before exponentiation) of the log cholesky L matrix.
-				Note that this second value is important for the posterior
-				calculation.
+			elements (before exponentiation) of the log cholesky L matrix.
+			Note that this second value is important for the posterior
+			calculation.
 		"""
 		# First split the tensor into the elements that will populate each row
 		cov_elements_split = tf.split(L_mat_elements,
@@ -889,20 +841,17 @@ class LensingLossFunctions:
 		Return the negative log posterior of a Gaussian with full
 		covariance matrix
 
-		Parameters
-		----------
+		Parameters:
 			y_true (tf.Tensor): The true values of the parameters
 			y_pred (tf.Tensor): The predicted value of the parameters
 			prec_mat: The precision matrix
 			L_diag (tf.Tensor): The diagonal (non exponentiated) values of the
 				log cholesky decomposition of the precision matrix
 
-		Returns
-		-------
+		Returns:
 			(tf.Tensor): The TF graph for calculating the nlp
 
-		Notes
-		-----
+		Notes:
 			This loss does not include the constant factor of 1/(2*pi)^(d/2).
 		"""
 		y_dif = y_true - y_pred
@@ -914,16 +863,14 @@ class LensingLossFunctions:
 		"""
 		Return the loss function assuming a full covariance matrix
 
-		Parameters
-		----------
+		Parameters:
 			y_true (tf.Tensor): The true values of the lensing parameters
 			output (tf.Tensor): The predicted values of the lensing parameters.
 				This should include self.num_params parameters for the prediction
 				and self.num_params*(self.num_params+1)/2 parameters for the
 				lower triangular log cholesky decomposition
 
-		Returns
-		-------
+		Returns:
 			(tf.Tensor): The loss function (i.e. the tensorflow graph for it).
 		"""
 		# Start by dividing the output into the L_elements and the prediction
@@ -950,8 +897,7 @@ class LensingLossFunctions:
 		covariance matrix for each GM. Note this code allows for any number
 		of GMMs.
 
-		Parameters
-		----------
+		Parameters:
 			y_true (tf.Tensor): The true values of the parameters
 			y_preds ([tf.Tensor,...]): A list of the predicted value of the
 				parameters
@@ -960,12 +906,10 @@ class LensingLossFunctions:
 				values of the log cholesky decomposition of the precision
 				matrices
 
-		Returns
-		-------
+		Returns:
 			(tf.Tensor): The TF graph for calculating the nlp
 
-		Notes
-		-----
+		Notes:
 			This loss does not include the constant factors of 1/(2*pi)^(d/2).
 		"""
 		# Stack together the loss to be able to do the logsumexp trick
@@ -986,8 +930,7 @@ class LensingLossFunctions:
 		Return the loss function assuming a mixture of two gaussians each with
 		a full covariance matrix
 
-		Parameters
-		----------
+		Parameters:
 			y_true (tf.Tensor): The true values of the lensing parameters
 			output (tf.Tensor): The predicted values of the lensing parameters.
 				This should include 2 gm which consists of self.num_params
@@ -997,8 +940,7 @@ class LensingLossFunctions:
 				It should also include one final parameter for the ratio
 				between the two gms.
 
-		Returns
-		-------
+		Returns:
 			(tf.Tensor): The loss function (i.e. the tensorflow graph for it).
 		"""
 		# Start by seperating out the predictions for each gaussian model.
@@ -1037,13 +979,11 @@ def p_value(model):
 	"""
 	Returns the average value of the dropout in each concrete layer.
 
-	Parameters
-	----------
+	Parameters:
 		model (keras.Model): A Keras model from with the dropout values will be
 			extracted.
 
-	Notes
-	-----
+	Notes:
 		This is a hack that allows us to easily keep track of the dropout value
 		during training.
 	"""

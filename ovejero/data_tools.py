@@ -24,8 +24,7 @@ def normalize_lens_parameters(lens_params,lens_params_path,
 	Normalize the lens parameters such that they have mean 0 and standard
 	deviation 1.
 
-	Parameters
-	----------
+	Parameters:
 		lens_params ([str,....]): A list of strings containing the lens params
 			that should be written out as features
 		lens_params_path (str):  The path to the csv file containing the lens
@@ -77,8 +76,7 @@ def write_parameters_in_log_space(lens_params,lens_params_path,
 	Convert lens parameters to log space (important for parameters that cannot
 	be negative)
 
-	Parameters
-	----------
+	Parameters:
 		lens_params ([str,...]): The parameters that will be convereted to log
 			space
 		lens_params_path (str):  The path to the csv file containing the lens
@@ -87,8 +85,7 @@ def write_parameters_in_log_space(lens_params,lens_params_path,
 			parameters and the log parameter will be written. Can be the same as
 			lens_params_path
 
-	Notes
-	-----
+	Notes:
 		New values of parameters will be written to csv file with the name
 		'lens parameter name'_log
 	"""
@@ -107,8 +104,7 @@ def gampsi_2_g1g2(lens_param_rat,lens_param_ang,lens_params_path,
 	"""
 	Convert one lens parameter pair of gamma and psi to cartesian coordinates.
 
-	Parameters
-	----------
+	Parameters:
 		lens_param_rat (str): The gamma parameter name
 		lens_param_ang (str): The angle parameter name
 		lens_params_path (str):  The path to the csv file containing the lens
@@ -118,8 +114,7 @@ def gampsi_2_g1g2(lens_param_rat,lens_param_ang,lens_params_path,
 		new_lens_parameter_prefix (str): The prefix for the new lens parameter
 			name (for example external_shear)
 
-	Notes
-	-------
+	Notes:
 		New values of parameters will be written to csv file with the names
 		'lens new_lens_parameter_prefix name'_e1/e2
 	"""
@@ -143,8 +138,7 @@ def generate_tf_record(root_path,lens_params,lens_params_path,tf_record_path):
 	"""
 	Generate a TFRecord file from a directory of numpy files.
 
-	Parameters
-	----------
+	Parameters:
 		root_path (str): The path to the folder containing all of the numpy files
 		lens_params (str): A list of strings containing the lens params that
 			should be written out as features
@@ -194,8 +188,7 @@ def build_tf_dataset(tf_record_path,lens_params,batch_size,n_epochs,
 	"""
 	Return a TFDataset for use in training the model.
 
-	Parameters
-	----------
+	Parameters:
 		tf_record_path (str): The path to the TFRecord file that will be turned
 			into a TFDataset
 		lens_params ([str,...]): A list of strings containing the lens params
@@ -217,8 +210,7 @@ def build_tf_dataset(tf_record_path,lens_params,batch_size,n_epochs,
 			set if shift_pixels is being used. If the data was normalized, the
 			pixel scale must also be normalized.
 
-	Returns
-	-------
+	Returns:
 		(tf.TFDataset): A TFDataset object for use in training
 	"""
 
@@ -293,4 +285,3 @@ def build_tf_dataset(tf_record_path,lens_params,batch_size,n_epochs,
 	dataset = raw_dataset.map(parse_image_features).repeat(n_epochs).shuffle(
 		buffer_size=buffer_size).batch(batch_size)
 	return dataset
-
