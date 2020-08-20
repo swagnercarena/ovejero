@@ -35,7 +35,7 @@ config_path = args.config_path
 
 # We also need the path to the baobab configs for the interim and target omega
 interim_baobab_omega_path = os.path.join(root_path,
-	'configs/baobab_configs/train_diagonal.py')
+	'configs/baobab_configs/train_diagonal_des.py')
 target_ovejero_omega_path = args.target_ovejero_omega_path
 
 test_dataset_path = args.test_dataset_path
