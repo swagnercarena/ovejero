@@ -123,7 +123,8 @@ class ForwardModel(bnn_inference.InferenceClass):
 		# We will also need some of the noise kwargs. We will feed the
 		# lenstronomy version straight to lenstronomy and the tensorflow
 		# version to our pipeline for selecting the image.
-		self.noise_kwargs = self.baobab_cfg.get_noise_kwargs()
+		bandpass = self.baobab_cfg.survey_info.bandpass_list[0]
+		self.noise_kwargs = self.baobab_cfg.get_noise_kwargs(bandpass)
 		self.noise_function = noise_tf.NoiseModelTF(**self.noise_kwargs)
 
 		self.ls_kwargs_psf = instantiate_PSF_kwargs(self.baobab_cfg.psf,
