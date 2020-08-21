@@ -198,7 +198,7 @@ class ForwardModel(bnn_inference.InferenceClass):
 		_, _, ra_0, dec_0, _, _, Mpix2coord, _ = (
 			util.make_grid_with_coordtransform(
 				numPix=self.baobab_cfg.image.num_pix,
-				deltapix=self.baobab_cfg.instrument.pixel_scale, center_ra=0,
+				deltapix=self.baobab_cfg.instrument['pixel_scale'], center_ra=0,
 				center_dec=0,
 				subgrid_res=1,
 				inverse=self.baobab_cfg.image.inverse))
