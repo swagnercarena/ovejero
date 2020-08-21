@@ -124,11 +124,15 @@ class ForwardModel(bnn_inference.InferenceClass):
 		# lenstronomy version straight to lenstronomy and the tensorflow
 		# version to our pipeline for selecting the image.
 		bandpass = self.baobab_cfg.survey_info.bandpass_list[0]
+		detector = self.baobab_cfg.survey_object_dict[bandpass]
+		detector_kwargs = detector.kwargs_single_band()
 		self.noise_kwargs = self.baobab_cfg.get_noise_kwargs(bandpass)
 		self.noise_function = noise_tf.NoiseModelTF(**self.noise_kwargs)
 
-		self.ls_kwargs_psf = instantiate_PSF_kwargs(self.baobab_cfg.psf,
-			self.baobab_cfg.instrument.pixel_scale)[0]
+		self.ls_kwargs_psf = instantiate_PSF_kwargs(
+			self.baobab_cfg.psf['type'],detector_kwargs['pixel_scale'],
+			seeing=detector_kwargs['seeing'],
+			kernel_size=detector.psf_kernel_size,which_psf_maps=0)
 
 		# The kwargs for the numerics. These should match what was used
 		# to generate the image.
