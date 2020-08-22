@@ -23,7 +23,7 @@ target_ovejero_omega_path = [
 
 target_baobab_omega_path = [
 	'../configs/baobab_configs/cent_narrow.py',
-	'../configs/baobab_configs/cent_narrow_.py',
+	'../configs/baobab_configs/cent_narrow.py',
 	'../configs/baobab_configs/cent_narrow.py',
 	'../configs/baobab_configs/shifted_narrow.py',
 	'../configs/baobab_configs/shifted_narrow.py',
