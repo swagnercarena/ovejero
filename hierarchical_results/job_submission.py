@@ -21,6 +21,21 @@ target_ovejero_omega_path = [
 	'../configs/baobab_configs/cent_narrow_cfg_prior.py',
 	'../configs/baobab_configs/cent_narrow_cfg_prior.py']
 
+target_baobab_omega_path = [
+	'../configs/baobab_configs/cent_narrow.py',
+	'../configs/baobab_configs/cent_narrow_.py',
+	'../configs/baobab_configs/cent_narrow.py',
+	'../configs/baobab_configs/shifted_narrow.py',
+	'../configs/baobab_configs/shifted_narrow.py',
+	'../configs/baobab_configs/shifted_narrow.py',
+	'../configs/baobab_configs/empirical.py',
+	'../configs/baobab_configs/empirical.py',
+	'../configs/baobab_configs/empirical.py',
+	'../configs/baobab_configs/cent_narrow.py',
+	'../configs/baobab_configs/cent_narrow.py',
+	'../configs/baobab_configs/cent_narrow.py',
+	'../configs/baobab_configs/cent_narrow.py']
+
 test_dataset_path = ['../datasets/cent_narrow/','../datasets/cent_narrow/',
 	'../datasets/cent_narrow/','../datasets/shifted_narrow/',
 	'../datasets/shifted_narrow/','../datasets/shifted_narrow/',
@@ -55,7 +70,8 @@ num_emcee_samples = ['10000']*len(chains_save_path)
 
 num_lenses = ['0','0','0','0','0','0','0','0','0','256','64','0','0']
 
-for arg_list in zip(config_path,target_ovejero_omega_path,test_dataset_path,
-	test_dataset_tf_record_path,sample_save_dir,chains_save_path,num_lens_samples,
-	num_emcee_samples,num_lenses):
+for arg_list in zip(config_path,target_ovejero_omega_path,
+	target_baobab_omega_path,test_dataset_path,test_dataset_tf_record_path,
+	sample_save_dir,chains_save_path,num_lens_samples,num_emcee_samples,
+	num_lenses):
 	print('sbatch submit_script.sh ' + ' '.join(arg_list))
