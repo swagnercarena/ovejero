@@ -9,6 +9,8 @@ parser.add_argument('config_path', type=str,
 	help='The path to the ovejero config used to train the model.')
 parser.add_argument('target_ovejero_omega_path', type=str,
 	help='The ovejero config containing the target distribution')
+parser.add_argument('target_baobab_omega_path', type=str,
+	help='The baobab config containing the target distribution')
 parser.add_argument('test_dataset_path', type=str,
 	help='The path to the test data')
 parser.add_argument('test_dataset_tf_record_path', type=str,
@@ -37,6 +39,7 @@ config_path = args.config_path
 interim_baobab_omega_path = os.path.join(root_path,
 	'configs/baobab_configs/train_diagonal_des.py')
 target_ovejero_omega_path = args.target_ovejero_omega_path
+target_baobab_omega_path = args.target_baobab_omega_path
 
 test_dataset_path = args.test_dataset_path
 test_dataset_tf_record_path = args.test_dataset_tf_record_path
@@ -73,7 +76,8 @@ recursive_str_checker(cfg)
 # marginalized over the BNN uncertainties.
 hier_infer = hierarchical_inference.HierarchicalClass(cfg,
 	interim_baobab_omega_path,target_ovejero_omega_path,test_dataset_path,
-	test_dataset_tf_record_path,train_to_test_param_map=train_to_test_param_map)
+	test_dataset_tf_record_path,train_to_test_param_map=train_to_test_param_map,
+	target_baobab_omega_path=target_baobab_omega_path)
 
 # Now we just have to ask the InferenceClass to spin up some samples from our
 # BNN. The more samples, the more accurate our plots and metrics will be. The
