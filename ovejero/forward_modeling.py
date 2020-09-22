@@ -35,7 +35,7 @@ class ForwardModel(bnn_inference.InferenceClass):
 	A class that inherets from InferenceClass and adds the ability to forward
 	# model.
 	"""
-	def __init__(self,cfg,lite_class=False):
+	def __init__(self,cfg,lite_class=False,test_set_path=None):
 		"""
 		Initialize the ForwardModel instance using the parameters of the
 		configuration file.
@@ -45,9 +45,16 @@ class ForwardModel(bnn_inference.InferenceClass):
 			lite_class (bool): If True, do not bother loading the BNN model
 				weights. This allows the user to save on memory, but will cause
 				an error if the BNN samples have not already been drawn.
+			test_set_path (str): The path to the set of images that the
+				forward modeling image will be pulled from. If None, the
+				path to the validation set images will be used.
 		"""
 		# Initialize the BNN inference class.
 		super(ForwardModel, self).__init__(cfg,lite_class)
+
+		# Replace the validation path with the test_set_path
+		self.cfg['validation_params']['root_path'] = test_set_path
+
 		# We will use the baobab code to generate our images and then calculate
 		# the likelihood manually.
 		# First we get the psf model

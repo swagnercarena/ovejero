@@ -1067,11 +1067,11 @@ class HierarchicalClass:
 			if param_plot_names is None:
 				plt.xlabel(lens_param)
 				plt.ylabel('p(%s)'%(lens_param))
-				plt.title('%s Distribtuions for p(%s)'%(bnn_name,lens_param))
+				plt.title('%s Distributions for p(%s)'%(bnn_name,lens_param))
 			else:
 				plt.xlabel(param_plot_names[li])
 				plt.ylabel('p(%s)'%(param_plot_names[li]))
-				plt.title('%s Distribtuions for p(%s)'%(bnn_name,
+				plt.title('%s Distributions for p(%s)'%(bnn_name,
 					param_plot_names[li]))
 			plt.xlim([plt_min,plt_max])
 
