@@ -50,10 +50,7 @@ class ForwardModel(bnn_inference.InferenceClass):
 				path to the validation set images will be used.
 		"""
 		# Initialize the BNN inference class.
-		super(ForwardModel, self).__init__(cfg,lite_class)
-
-		# Replace the validation path with the test_set_path
-		self.cfg['validation_params']['root_path'] = test_set_path
+		super(ForwardModel, self).__init__(cfg,lite_class,test_set_path)
 
 		# We will use the baobab code to generate our images and then calculate
 		# the likelihood manually.

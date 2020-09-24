@@ -32,8 +32,20 @@ class ForwardModelingTests(unittest.TestCase):
 		self.normalization_constants_path = self.root_path + 'norms.csv'
 		self.tf_record_path = self.root_path + 'tf_record_test'
 
+		# Create the normalization file that would have been made
+		# during training.
+		self.final_params = ['external_shear_g1','external_shear_g2',
+			'lens_mass_center_x','lens_mass_center_y','lens_mass_e1',
+			'lens_mass_e2','lens_mass_gamma','lens_mass_theta_E_log']
+		model_trainer.prepare_tf_record(self.cfg, self.root_path,
+			self.tf_record_path,self.final_params,'train')
+
 	def tearDown(self):
 		self.cfg = None
+		os.remove(self.tf_record_path)
+		os.remove(self.root_path+'tf_record_test_val')
+		os.remove(self.root_path+'new_metadata.csv')
+		os.remove(self.normalization_constants_path)
 
 	def test_class_initialization(self):
 		# Just test that the basic variables of the class are initialized as
@@ -255,6 +267,7 @@ class ForwardModelingTests(unittest.TestCase):
 		burnin = 0
 		num_samples = 20
 
+		os.remove(self.tf_record_path)
 		model_trainer.prepare_tf_record(self.cfg, self.root_path,
 			self.tf_record_path,self.lens_params,'train')
 		dpi = 20
@@ -262,7 +275,6 @@ class ForwardModelingTests(unittest.TestCase):
 			block=False)
 		plt.close()
 
-		os.remove(self.normalization_constants_path)
-		os.remove(self.tf_record_path)
-		os.remove(self.root_path + self.cfg['dataset_params']['new_param_path'])
 		os.remove(chains_save_path)
+		# The tf record path and the normalization path and the new csv
+		# will be dealt with at teardown.
