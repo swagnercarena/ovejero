@@ -253,31 +253,31 @@ class DataPrepTests(unittest.TestCase):
 		os.remove(normalized_param_path)
 		os.remove(normalization_constants_path)
 
-	def test_main(self):
-		# Test that the main function works.
+	# def test_main(self):
+	# 	# Test that the main function works.
 
-		# Make a copy of the previous test config file with fewer epochs
-		with open(self.root_path+'test.json') as json_file:
-			old_config = json.load(json_file)
-		old_config['training_params']['n_epochs'] = 1
-		with open(self.root_path+'test_temp.json','w') as json_file:
-			json.dump(old_config,json_file)
+	# 	# Make a copy of the previous test config file with fewer epochs
+	# 	with open(self.root_path+'test.json') as json_file:
+	# 		old_config = json.load(json_file)
+	# 	old_config['training_params']['n_epochs'] = 1
+	# 	with open(self.root_path+'test_temp.json','w') as json_file:
+	# 		json.dump(old_config,json_file)
 
-		sys.argv = ['model_trainer',self.root_path+'test_temp.json']
-		model_trainer.main()
+	# 	sys.argv = ['model_trainer',self.root_path+'test_temp.json']
+	# 	model_trainer.main()
 
-		# Check that the expected directories were created
-		self.assertTrue(os.path.isfile(self.root_path+'new_metadata.csv'))
-		self.assertTrue(os.path.isfile(self.root_path+'norms.csv'))
-		self.assertTrue(os.path.isfile(self.root_path+'tf_record_test'))
-		self.assertTrue(os.path.isfile(self.root_path+'tf_record_test_val'))
-		self.assertTrue(os.path.isfile(self.root_path+'test_model.h5'))
+	# 	# Check that the expected directories were created
+	# 	self.assertTrue(os.path.isfile(self.root_path+'new_metadata.csv'))
+	# 	self.assertTrue(os.path.isfile(self.root_path+'norms.csv'))
+	# 	self.assertTrue(os.path.isfile(self.root_path+'tf_record_test'))
+	# 	self.assertTrue(os.path.isfile(self.root_path+'tf_record_test_val'))
+	# 	self.assertTrue(os.path.isfile(self.root_path+'test_model.h5'))
 
-		# Clean up from the model training
-		os.remove(self.root_path+'new_metadata.csv')
-		os.remove(self.root_path+'norms.csv')
-		os.remove(self.root_path+'tf_record_test')
-		os.remove(self.root_path+'tf_record_test_val')
-		os.remove(self.root_path+'test_model.h5')
-		os.remove(self.root_path+'test_temp.json')
-		shutil.rmtree(self.root_path + 'test.log')
+	# 	# Clean up from the model training
+	# 	os.remove(self.root_path+'new_metadata.csv')
+	# 	os.remove(self.root_path+'norms.csv')
+	# 	os.remove(self.root_path+'tf_record_test')
+	# 	os.remove(self.root_path+'tf_record_test_val')
+	# 	os.remove(self.root_path+'test_model.h5')
+	# 	os.remove(self.root_path+'test_temp.json')
+	# 	shutil.rmtree(self.root_path + 'test.log')
