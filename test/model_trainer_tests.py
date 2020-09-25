@@ -133,7 +133,7 @@ class DataPrepTests(unittest.TestCase):
 
 		tf.keras.backend.clear_session()
 
-		model, loss = model_trainer.model_loss_builder(cfg,python_testing=True)
+		model, loss = model_trainer.model_loss_builder(cfg)
 		y_true = np.ones((1,num_params))
 		y_pred = np.ones((1,2*(num_params +
 			int(num_params*(num_params+1)/2))+1))
@@ -157,7 +157,7 @@ class DataPrepTests(unittest.TestCase):
 		tf.keras.backend.clear_session()
 
 		cfg['training_params']['bnn_type'] = 'full'
-		model, loss = model_trainer.model_loss_builder(cfg,python_testing=True)
+		model, loss = model_trainer.model_loss_builder(cfg)
 		y_true = np.ones((1,num_params))
 		y_pred = np.ones((1,num_params + int(num_params*(num_params+1)/2)))
 		yptf = tf.constant(y_pred,dtype=tf.float32)
@@ -169,28 +169,28 @@ class DataPrepTests(unittest.TestCase):
 		self.assertEqual(len(model.layers),13)
 		self.assertEqual(model.layers[-1].output_shape[-1],y_pred.shape[-1])
 
-	# def test_model_loss_builder_diag(self):
-	# 	# Test that the model and loss returned from model_loss_builder
-	# 	# agree with what is expected.
-	# 	cfg = model_trainer.load_config(self.root_path+'test.json')
-	# 	cfg['training_params']['dropout_type'] = 'concrete'
-	# 	final_params = cfg['training_params']['final_params']
-	# 	num_params = len(final_params)
+	def test_model_loss_builder_diag(self):
+		# Test that the model and loss returned from model_loss_builder
+		# agree with what is expected.
+		cfg = model_trainer.load_config(self.root_path+'test.json')
+		cfg['training_params']['dropout_type'] = 'concrete'
+		final_params = cfg['training_params']['final_params']
+		num_params = len(final_params)
 
-	# 	tf.keras.backend.clear_session()
+		tf.keras.backend.clear_session()
 
-	# 	cfg['training_params']['bnn_type'] = 'diag'
-	# 	model, loss = model_trainer.model_loss_builder(cfg,python_testing=True)
-	# 	y_true = np.ones((1,num_params))
-	# 	y_pred = np.ones((1,2*num_params))
-	# 	yptf = tf.constant(y_pred,dtype=tf.float32)
-	# 	yttf = tf.constant(y_true,dtype=tf.float32)
+		cfg['training_params']['bnn_type'] = 'diag'
+		model, loss = model_trainer.model_loss_builder(cfg)
+		y_true = np.ones((1,num_params))
+		y_pred = np.ones((1,2*num_params))
+		yptf = tf.constant(y_pred,dtype=tf.float32)
+		yttf = tf.constant(y_true,dtype=tf.float32)
 
-	# 	# Check that the loss function has the right dimensions. More rigerous
-	# 	# tests of the loss function can be found in the test_bnn_alexnet.
-	# 	loss(yttf,yptf)
-	# 	self.assertEqual(len(model.layers),13)
-	# 	self.assertEqual(model.layers[-1].output_shape[-1],y_pred.shape[-1])
+		# Check that the loss function has the right dimensions. More rigerous
+		# tests of the loss function can be found in the test_bnn_alexnet.
+		loss(yttf,yptf)
+		self.assertEqual(len(model.layers),13)
+		self.assertEqual(model.layers[-1].output_shape[-1],y_pred.shape[-1])
 
 	def test_model_loss_builder_diag_stand(self):
 		# Test that the model and loss returned from model_loss_builder
@@ -204,7 +204,7 @@ class DataPrepTests(unittest.TestCase):
 
 		cfg['training_params']['bnn_type'] = 'diag'
 		cfg['training_params']['dropout_type'] = 'standard'
-		model, loss = model_trainer.model_loss_builder(cfg,python_testing=True)
+		model, loss = model_trainer.model_loss_builder(cfg)
 		y_true = np.ones((1,num_params))
 		y_pred = np.ones((1,2*num_params))
 		yptf = tf.constant(y_pred,dtype=tf.float32)
@@ -253,31 +253,31 @@ class DataPrepTests(unittest.TestCase):
 		os.remove(normalized_param_path)
 		os.remove(normalization_constants_path)
 
-	def test_main(self):
-		# Test that the main function works.
+	# def test_main(self):
+	# 	# Test that the main function works.
 
-		# Make a copy of the previous test config file with fewer epochs
-		with open(self.root_path+'test.json') as json_file:
-			old_config = json.load(json_file)
-		old_config['training_params']['n_epochs'] = 1
-		with open(self.root_path+'test_temp.json','w') as json_file:
-			json.dump(old_config,json_file)
+	# 	# Make a copy of the previous test config file with fewer epochs
+	# 	with open(self.root_path+'test.json') as json_file:
+	# 		old_config = json.load(json_file)
+	# 	old_config['training_params']['n_epochs'] = 1
+	# 	with open(self.root_path+'test_temp.json','w') as json_file:
+	# 		json.dump(old_config,json_file)
 
-		sys.argv = ['model_trainer',self.root_path+'test_temp.json']
-		model_trainer.main()
+	# 	sys.argv = ['model_trainer',self.root_path+'test_temp.json']
+	# 	model_trainer.main()
 
-		# Check that the expected directories were created
-		self.assertTrue(os.path.isfile(self.root_path+'new_metadata.csv'))
-		self.assertTrue(os.path.isfile(self.root_path+'norms.csv'))
-		self.assertTrue(os.path.isfile(self.root_path+'tf_record_test'))
-		self.assertTrue(os.path.isfile(self.root_path+'tf_record_test_val'))
-		self.assertTrue(os.path.isfile(self.root_path+'test_model.h5'))
+	# 	# Check that the expected directories were created
+	# 	self.assertTrue(os.path.isfile(self.root_path+'new_metadata.csv'))
+	# 	self.assertTrue(os.path.isfile(self.root_path+'norms.csv'))
+	# 	self.assertTrue(os.path.isfile(self.root_path+'tf_record_test'))
+	# 	self.assertTrue(os.path.isfile(self.root_path+'tf_record_test_val'))
+	# 	self.assertTrue(os.path.isfile(self.root_path+'test_model.h5'))
 
-		# Clean up from the model training
-		os.remove(self.root_path+'new_metadata.csv')
-		os.remove(self.root_path+'norms.csv')
-		os.remove(self.root_path+'tf_record_test')
-		os.remove(self.root_path+'tf_record_test_val')
-		os.remove(self.root_path+'test_model.h5')
-		os.remove(self.root_path+'test_temp.json')
-		shutil.rmtree(self.root_path + 'test.log')
+	# 	# Clean up from the model training
+	# 	os.remove(self.root_path+'new_metadata.csv')
+	# 	os.remove(self.root_path+'norms.csv')
+	# 	os.remove(self.root_path+'tf_record_test')
+	# 	os.remove(self.root_path+'tf_record_test_val')
+	# 	os.remove(self.root_path+'test_model.h5')
+	# 	os.remove(self.root_path+'test_temp.json')
+	# 	shutil.rmtree(self.root_path + 'test.log')

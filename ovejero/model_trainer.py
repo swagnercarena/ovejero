@@ -197,7 +197,7 @@ def get_normed_pixel_scale(cfg,pixel_scale):
 	return normed_pixel_scale
 
 
-def model_loss_builder(cfg, verbose=False, python_testing=False):
+def model_loss_builder(cfg, verbose=False):
 	"""
 	Build a model according to the specifications in configuration dictionary
 	and return both the initialized model and the loss function.
@@ -205,10 +205,6 @@ def model_loss_builder(cfg, verbose=False, python_testing=False):
 	Parameters:
 		cfg (dict): The dictionary attained from reading the json config file.
 		verbose (bool): If True, will be verbose as model is built.
-		python_testing (bool): If True this function is only being run
-			in a test suite. This will ignore the compilation step and
-			therefore avoid out of memory issues with a small test
-			rig. Never use this when actually running your model.
 
 	Returns:
 		(tf.keras.model, function): A bnn model of the type specified in config
@@ -266,14 +262,12 @@ def model_loss_builder(cfg, verbose=False, python_testing=False):
 			kernel_regularizer=kr,dropout_regularizer=dr,random_seed=random_seed)
 		# The final metric here is a hack to be able to track the average dropout
 		# value.
-		if python_testing is False:
-			model.compile(loss=loss, optimizer=adam, metrics=[loss,mse_loss,
-				bnn_alexnet.p_value(model)])
+		model.compile(loss=loss, optimizer=adam, metrics=[loss,mse_loss,
+			bnn_alexnet.p_value(model)])
 	elif dropout_type == 'standard':
 		model = bnn_alexnet.dropout_alexnet((img_dim, img_dim, 1), num_outputs,
 			kernel_regularizer=kr,dropout_rate=dropout_rate)
-		if python_testing is False:
-			model.compile(loss=loss, optimizer=adam, metrics=[loss,mse_loss])
+		model.compile(loss=loss, optimizer=adam, metrics=[loss,mse_loss])
 	else:
 		raise ValueError('dropout type %s is not an option.'%(dropout_type) +
 			' Either standard or concrete')
