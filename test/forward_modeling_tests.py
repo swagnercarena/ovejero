@@ -1,4 +1,4 @@
-import unittest, os
+import unittest, os, gc
 from ovejero import forward_modeling, model_trainer
 import matplotlib.pyplot as plt
 import numpy as np
