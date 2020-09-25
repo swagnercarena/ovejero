@@ -54,7 +54,7 @@ class ForwardModelingTests(unittest.TestCase):
 	def test_class_initialization(self):
 		# Just test that the basic variables of the class are initialized as
 		# expected.
-		fow_model = forward_modeling.ForwardModel(self.cfg)
+		fow_model = forward_modeling.ForwardModel(self.cfg,lite_class=True)
 
 		# Make sure that the correct lens and source models were initialized
 		self.assertEqual(fow_model.ls_lens_model_list,
@@ -86,7 +86,7 @@ class ForwardModelingTests(unittest.TestCase):
 		# Test that the image selection works as intended. The most important
 		# thing to test here is that the parameter values and image are what we
 		# expect.
-		fow_model = forward_modeling.ForwardModel(self.cfg)
+		fow_model = forward_modeling.ForwardModel(self.cfg,lite_class=True)
 
 		# Use the image index 4
 		image_index = 4
@@ -132,7 +132,7 @@ class ForwardModelingTests(unittest.TestCase):
 	def test_initialize_sampler(self):
 		# Test that we correctly initialize the lenstronomy fitting sequence
 		# sampler.
-		fow_model = forward_modeling.ForwardModel(self.cfg)
+		fow_model = forward_modeling.ForwardModel(self.cfg,lite_class=True)
 
 		# If no image has been selected, initializing the sampler should
 		# raise an error.
@@ -153,7 +153,7 @@ class ForwardModelingTests(unittest.TestCase):
 		# Test that running the sampler for a few iterations doesn't return
 		# any errors. Since all the work is being done by the lenstronomy
 		# fitting sequence, these tests are light.
-		fow_model = forward_modeling.ForwardModel(self.cfg)
+		fow_model = forward_modeling.ForwardModel(self.cfg,lite_class=True)
 		image_index = 4
 		fow_model.select_image(image_index,block=False)
 		plt.close('all')
@@ -188,7 +188,7 @@ class ForwardModelingTests(unittest.TestCase):
 
 	def test_plot_chains(self):
 		# Check that the plot chains function does not crash.
-		fow_model = forward_modeling.ForwardModel(self.cfg)
+		fow_model = forward_modeling.ForwardModel(self.cfg,lite_class=True)
 		image_index = 4
 		fow_model.select_image(image_index,block=False)
 		plt.close('all')
@@ -216,7 +216,7 @@ class ForwardModelingTests(unittest.TestCase):
 			'external_shear_gamma_ext', 'external_shear_psi_ext'])
 
 		# Initialize our forward model
-		fow_model = forward_modeling.ForwardModel(self.cfg)
+		fow_model = forward_modeling.ForwardModel(self.cfg,lite_class=True)
 
 		# Run our internal function
 		new_params = fow_model._correct_chains(new_chains,params,new_true_values)
