@@ -535,21 +535,21 @@ class HierarchicalClassTest(unittest.TestCase):
 
 		block = False
 		self.hclass.plot_chains(block=block)
-		plt.close()
+		plt.close('all')
 		self.hclass.plot_corner(burnin,block=block)
-		plt.close()
+		plt.close('all')
 		self.hclass.plot_distributions(burnin,block=block)
-		plt.close()
+		plt.close('all')
 		self.hclass.plot_corner(burnin,hyperparam_plot_names,block=block)
-		plt.close()
+		plt.close('all')
 		self.hclass.plot_single_corner(burnin,'external_shear_gamma_ext',
 			hyperparam_plot_names,block=block)
-		plt.close()
+		plt.close('all')
 		self.hclass.plot_distributions(burnin,hyperparam_plot_names,block=block,
 			dpi=50)
-		plt.close()
+		plt.close('all')
 		self.hclass.plot_auto_corr(block=block)
-		plt.close()
+		plt.close('all')
 		dist_lens_params = ['external_shear_gamma_ext','lens_mass_center_x',
 			'lens_mass_center_y','lens_mass_e1','lens_mass_e2',
 			'lens_mass_gamma','lens_mass_theta_E']
@@ -851,13 +851,13 @@ class HierarchicalEmpiricalTest(unittest.TestCase):
 
 		block = False
 		self.hclass.plot_chains(block=block)
-		plt.close()
+		plt.close('all')
 		self.hclass.plot_corner(burnin,block=block)
-		plt.close()
+		plt.close('all')
 		self.hclass.plot_distributions(burnin,block=block)
-		plt.close()
+		plt.close('all')
 		self.hclass.plot_corner(burnin,hyperparam_plot_names,block=block)
-		plt.close()
+		plt.close('all')
 		self.hclass.plot_distributions(burnin,hyperparam_plot_names,block=block,
 			dpi=50)
 		_ = self.hclass.plot_cov_corner(burnin,hyperparam_plot_names)
@@ -865,7 +865,7 @@ class HierarchicalEmpiricalTest(unittest.TestCase):
 			'lens_mass_center_y',
 			'lens_mass_gamma','lens_mass_theta_E']
 		self.hclass.plot_parameter_distribtuion(burnin,dist_lens_params)
-		plt.close()
+		plt.close('all')
 
 		os.remove(test_chains_path)
 

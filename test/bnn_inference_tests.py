@@ -516,17 +516,17 @@ class BNNInferenceTest(unittest.TestCase):
 
 		# Test that none of the plotting routines break
 		self.infer_class.gen_coverage_plots(block=False)
-		plt.close()
+		plt.close('all')
 		self.infer_class.report_stats()
 		self.infer_class.plot_posterior_contours(1,block=False)
-		plt.close()
-		plt.close()
+		plt.close('all')
+		plt.close('all')
 		self.infer_class.comp_al_ep_unc(block=False)
-		plt.close()
+		plt.close('all')
 		self.infer_class.comp_al_ep_unc(block=False,norm_diagonal=False)
-		plt.close()
+		plt.close('all')
 		self.infer_class.plot_calibration(block=False,title='test')
-		plt.close()
+		plt.close('all')
 
 		# Clean up the files we generated
 		os.remove(self.normalization_constants_path)
