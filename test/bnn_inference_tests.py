@@ -56,8 +56,8 @@ class BNNInferenceTest(unittest.TestCase):
 		self.infer_class = None
 		self.cfg = None
 
-		# tf.keras.backend.clear_session()
-		# gc.collect()
+		tf.keras.backend.clear_session()
+		gc.collect()
 
 	def test_fix_flip_pairs(self):
 		# Check that fix_flip_pairs always selects the best possible configuration
