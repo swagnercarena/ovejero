@@ -169,28 +169,28 @@ class DataPrepTests(unittest.TestCase):
 		self.assertEqual(len(model.layers),13)
 		self.assertEqual(model.layers[-1].output_shape[-1],y_pred.shape[-1])
 
-	def test_model_loss_builder_diag(self):
-		# Test that the model and loss returned from model_loss_builder
-		# agree with what is expected.
-		cfg = model_trainer.load_config(self.root_path+'test.json')
-		cfg['training_params']['dropout_type'] = 'concrete'
-		final_params = cfg['training_params']['final_params']
-		num_params = len(final_params)
+	# def test_model_loss_builder_diag(self):
+	# 	# Test that the model and loss returned from model_loss_builder
+	# 	# agree with what is expected.
+	# 	cfg = model_trainer.load_config(self.root_path+'test.json')
+	# 	cfg['training_params']['dropout_type'] = 'concrete'
+	# 	final_params = cfg['training_params']['final_params']
+	# 	num_params = len(final_params)
 
-		tf.keras.backend.clear_session()
+	# 	tf.keras.backend.clear_session()
 
-		cfg['training_params']['bnn_type'] = 'diag'
-		model, loss = model_trainer.model_loss_builder(cfg,python_testing=True)
-		y_true = np.ones((1,num_params))
-		y_pred = np.ones((1,2*num_params))
-		yptf = tf.constant(y_pred,dtype=tf.float32)
-		yttf = tf.constant(y_true,dtype=tf.float32)
+	# 	cfg['training_params']['bnn_type'] = 'diag'
+	# 	model, loss = model_trainer.model_loss_builder(cfg,python_testing=True)
+	# 	y_true = np.ones((1,num_params))
+	# 	y_pred = np.ones((1,2*num_params))
+	# 	yptf = tf.constant(y_pred,dtype=tf.float32)
+	# 	yttf = tf.constant(y_true,dtype=tf.float32)
 
-		# Check that the loss function has the right dimensions. More rigerous
-		# tests of the loss function can be found in the test_bnn_alexnet.
-		loss(yttf,yptf)
-		self.assertEqual(len(model.layers),13)
-		self.assertEqual(model.layers[-1].output_shape[-1],y_pred.shape[-1])
+	# 	# Check that the loss function has the right dimensions. More rigerous
+	# 	# tests of the loss function can be found in the test_bnn_alexnet.
+	# 	loss(yttf,yptf)
+	# 	self.assertEqual(len(model.layers),13)
+	# 	self.assertEqual(model.layers[-1].output_shape[-1],y_pred.shape[-1])
 
 	def test_model_loss_builder_diag_stand(self):
 		# Test that the model and loss returned from model_loss_builder
