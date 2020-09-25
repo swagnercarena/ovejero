@@ -7,6 +7,7 @@ import pandas as pd
 from ovejero import model_trainer, data_tools
 from helpers import dataset_comparison
 import gc
+import memory_profiler
 
 
 class DataPrepTests(unittest.TestCase):
@@ -19,6 +20,11 @@ class DataPrepTests(unittest.TestCase):
 		self.lens_params_path = self.root_path + 'new_metadata.csv'
 		self.tf_record_path = self.root_path + 'tf_record_test'
 
+	def tearDown(self):
+		tf.keras.backend.clear_session()
+		gc.collect()
+
+	@profile
 	def test_config_checker(self):
 		# Test that the config checker doesn't fail correct configuration files
 		# and does fail configs with missing fields.
@@ -51,6 +57,7 @@ class DataPrepTests(unittest.TestCase):
 		self.assertTrue('dataset_params' in cfg)
 		self.assertTrue('gampsi' in cfg['dataset_params'])
 
+	@profile
 	def test_load_config(self):
 		# Test that load config returns a config file and fails the config check
 		# when it should.
@@ -67,6 +74,7 @@ class DataPrepTests(unittest.TestCase):
 
 		os.remove(temp_cfg_path)
 
+	@profile
 	def test_prepare_tf_record(self):
 		# Test that the prepare_tf_record function works as expected.
 		with open(self.root_path+'test.json','r') as json_f:
@@ -123,6 +131,7 @@ class DataPrepTests(unittest.TestCase):
 		os.remove(self.root_path+'new_metadata.csv')
 		os.remove(self.root_path+'norms.csv')
 
+	@profile
 	def test_model_loss_builder_gmm(self):
 		# Test that the model and loss returned from model_loss_builder
 		# agree with what is expected.
@@ -132,6 +141,7 @@ class DataPrepTests(unittest.TestCase):
 		num_params = len(final_params)
 
 		tf.keras.backend.clear_session()
+		gc.collect()
 
 		model, loss = model_trainer.model_loss_builder(cfg)
 		y_true = np.ones((1,num_params))
@@ -146,6 +156,7 @@ class DataPrepTests(unittest.TestCase):
 		self.assertEqual(len(model.layers),13)
 		self.assertEqual(model.layers[-1].output_shape[-1],y_pred.shape[-1])
 
+	@profile
 	def test_model_loss_builder_full(self):
 		# Test that the model and loss returned from model_loss_builder
 		# agree with what is expected.
@@ -155,6 +166,7 @@ class DataPrepTests(unittest.TestCase):
 		num_params = len(final_params)
 
 		tf.keras.backend.clear_session()
+		gc.collect()
 
 		cfg['training_params']['bnn_type'] = 'full'
 		model, loss = model_trainer.model_loss_builder(cfg)
@@ -169,6 +181,7 @@ class DataPrepTests(unittest.TestCase):
 		self.assertEqual(len(model.layers),13)
 		self.assertEqual(model.layers[-1].output_shape[-1],y_pred.shape[-1])
 
+	@profile
 	def test_model_loss_builder_diag(self):
 		# Test that the model and loss returned from model_loss_builder
 		# agree with what is expected.
@@ -178,6 +191,7 @@ class DataPrepTests(unittest.TestCase):
 		num_params = len(final_params)
 
 		tf.keras.backend.clear_session()
+		gc.collect()
 
 		cfg['training_params']['bnn_type'] = 'diag'
 		model, loss = model_trainer.model_loss_builder(cfg)
@@ -192,6 +206,7 @@ class DataPrepTests(unittest.TestCase):
 		self.assertEqual(len(model.layers),13)
 		self.assertEqual(model.layers[-1].output_shape[-1],y_pred.shape[-1])
 
+	@profile
 	def test_model_loss_builder_diag_stand(self):
 		# Test that the model and loss returned from model_loss_builder
 		# agree with what is expected.
@@ -201,6 +216,7 @@ class DataPrepTests(unittest.TestCase):
 		num_params = len(final_params)
 
 		tf.keras.backend.clear_session()
+		gc.collect()
 
 		cfg['training_params']['bnn_type'] = 'diag'
 		cfg['training_params']['dropout_type'] = 'standard'
@@ -216,6 +232,7 @@ class DataPrepTests(unittest.TestCase):
 		self.assertEqual(len(model.layers),21)
 		self.assertEqual(model.layers[-1].output_shape[-1],y_pred.shape[-1])
 
+	@profile
 	def test_get_normed_pixel_scale(self):
 		# Test if get_normed_pixel scale rescales the pixel_scale as we would
 		# expect.
@@ -253,31 +270,34 @@ class DataPrepTests(unittest.TestCase):
 		os.remove(normalized_param_path)
 		os.remove(normalization_constants_path)
 
-	# def test_main(self):
-	# 	# Test that the main function works.
+	@profile
+	def test_main(self):
+		# Test that the main function works.
 
-	# 	# Make a copy of the previous test config file with fewer epochs
-	# 	with open(self.root_path+'test.json') as json_file:
-	# 		old_config = json.load(json_file)
-	# 	old_config['training_params']['n_epochs'] = 1
-	# 	with open(self.root_path+'test_temp.json','w') as json_file:
-	# 		json.dump(old_config,json_file)
+		# Make a copy of the previous test config file with fewer epochs
+		with open(self.root_path+'test.json') as json_file:
+			old_config = json.load(json_file)
+		old_config['training_params']['n_epochs'] = 1
+		with open(self.root_path+'test_temp.json','w') as json_file:
+			json.dump(old_config,json_file)
 
-	# 	sys.argv = ['model_trainer',self.root_path+'test_temp.json']
-	# 	model_trainer.main()
+		sys.argv = ['model_trainer',self.root_path+'test_temp.json']
+		model_trainer.main()
+		tf.keras.backend.clear_session()
+		gc.collect()
 
-	# 	# Check that the expected directories were created
-	# 	self.assertTrue(os.path.isfile(self.root_path+'new_metadata.csv'))
-	# 	self.assertTrue(os.path.isfile(self.root_path+'norms.csv'))
-	# 	self.assertTrue(os.path.isfile(self.root_path+'tf_record_test'))
-	# 	self.assertTrue(os.path.isfile(self.root_path+'tf_record_test_val'))
-	# 	self.assertTrue(os.path.isfile(self.root_path+'test_model.h5'))
+		# Check that the expected directories were created
+		self.assertTrue(os.path.isfile(self.root_path+'new_metadata.csv'))
+		self.assertTrue(os.path.isfile(self.root_path+'norms.csv'))
+		self.assertTrue(os.path.isfile(self.root_path+'tf_record_test'))
+		self.assertTrue(os.path.isfile(self.root_path+'tf_record_test_val'))
+		self.assertTrue(os.path.isfile(self.root_path+'test_model.h5'))
 
-	# 	# Clean up from the model training
-	# 	os.remove(self.root_path+'new_metadata.csv')
-	# 	os.remove(self.root_path+'norms.csv')
-	# 	os.remove(self.root_path+'tf_record_test')
-	# 	os.remove(self.root_path+'tf_record_test_val')
-	# 	os.remove(self.root_path+'test_model.h5')
-	# 	os.remove(self.root_path+'test_temp.json')
-	# 	shutil.rmtree(self.root_path + 'test.log')
+		# Clean up from the model training
+		os.remove(self.root_path+'new_metadata.csv')
+		os.remove(self.root_path+'norms.csv')
+		os.remove(self.root_path+'tf_record_test')
+		os.remove(self.root_path+'tf_record_test_val')
+		os.remove(self.root_path+'test_model.h5')
+		os.remove(self.root_path+'test_temp.json')
+		shutil.rmtree(self.root_path + 'test.log')

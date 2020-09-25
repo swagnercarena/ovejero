@@ -1202,7 +1202,7 @@ class HierarchicalClass:
 
 		return figure
 
-	def plot_parameter_distribtuion(self,burnin,lens_params,n_p_omega_samps=100,
+	def plot_parameter_distribution(self,burnin,lens_params,n_p_omega_samps=100,
 		samps_per_omega=100, param_print_names=None,color='#000000',
 		fontsize=13,plot_limits=None,figure=None, cov_params=False):
 		"""

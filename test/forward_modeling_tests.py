@@ -47,6 +47,9 @@ class ForwardModelingTests(unittest.TestCase):
 		os.remove(self.root_path+'new_metadata.csv')
 		os.remove(self.normalization_constants_path)
 
+		tf.keras.backend.clear_session()
+		gc.collect()
+
 	def test_class_initialization(self):
 		# Just test that the basic variables of the class are initialized as
 		# expected.

@@ -55,6 +55,9 @@ class BNNInferenceTest(unittest.TestCase):
 		self.infer_class = None
 		self.cfg = None
 
+		tf.keras.backend.clear_session()
+		gc.collect()
+
 	def test_fix_flip_pairs(self):
 		# Check that fix_flip_pairs always selects the best possible configuration
 		# to return.
@@ -599,36 +602,36 @@ class BNNInferenceTest(unittest.TestCase):
 			self.assertAlmostEqual(percentages[p_i],self.infer_class.p_dlt[p_i],
 				places=2)
 
-	# def test_specify_test_set_path(self):
-	# 	# Pass a specific test_set_path to the inference class and make sure
-	# 	# it behaves as expected.
-	# 	test_set_path = self.root_path
+	def test_specify_test_set_path(self):
+		# Pass a specific test_set_path to the inference class and make sure
+		# it behaves as expected.
+		test_set_path = self.root_path
 
-	# 	# Check that the file doesn't already exist.
-	# 	self.assertFalse(os.path.isfile(test_set_path+'tf_record_test_val'))
+		# Check that the file doesn't already exist.
+		self.assertFalse(os.path.isfile(test_set_path+'tf_record_test_val'))
 
-	# 	# We will again have to simulate training so that the desired
-	# 	# normalization path exists.
-	# 	model_trainer.prepare_tf_record(self.cfg, self.root_path,
-	# 		self.tf_record_path,self.final_params,'train')
-	# 	os.remove(self.tf_record_path)
+		# We will again have to simulate training so that the desired
+		# normalization path exists.
+		model_trainer.prepare_tf_record(self.cfg, self.root_path,
+			self.tf_record_path,self.final_params,'train')
+		os.remove(self.tf_record_path)
 
-	# 	_ = bnn_inference.InferenceClass(self.cfg,
-	# 		test_set_path=test_set_path)
+		_ = bnn_inference.InferenceClass(self.cfg,
+			test_set_path=test_set_path)
 
-	# 	# Check that a new tf_record was generated
-	# 	self.assertTrue(os.path.isfile(test_set_path+'tf_record_test_val'))
+		# Check that a new tf_record was generated
+		self.assertTrue(os.path.isfile(test_set_path+'tf_record_test_val'))
 
-	# 	# Check that passing a fake test_set_path raises an error.
-	# 	fake_test_path = self.root_path+'fake_data'
-	# 	os.mkdir(fake_test_path)
+		# Check that passing a fake test_set_path raises an error.
+		fake_test_path = self.root_path+'fake_data'
+		os.mkdir(fake_test_path)
 
-	# 	with self.assertRaises(FileNotFoundError):
-	# 		_ = bnn_inference.InferenceClass(self.cfg,
-	# 			test_set_path=fake_test_path)
+		with self.assertRaises(FileNotFoundError):
+			_ = bnn_inference.InferenceClass(self.cfg,
+				test_set_path=fake_test_path)
 
-	# 	# Test cleanup
-	# 	os.rmdir(fake_test_path)
-	# 	os.remove(test_set_path+'tf_record_test_val')
-	# 	os.remove(self.root_path+'new_metadata.csv')
-	# 	os.remove(self.normalization_constants_path)
+		# Test cleanup
+		os.rmdir(fake_test_path)
+		os.remove(test_set_path+'tf_record_test_val')
+		os.remove(self.root_path+'new_metadata.csv')
+		os.remove(self.normalization_constants_path)
