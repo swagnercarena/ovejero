@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 from ovejero import model_trainer, data_tools
 from helpers import dataset_comparison
+import gc
 
 
 class DataPrepTests(unittest.TestCase):
@@ -145,6 +146,10 @@ class DataPrepTests(unittest.TestCase):
 		self.assertEqual(len(model.layers),13)
 		self.assertEqual(model.layers[-1].output_shape[-1],y_pred.shape[-1])
 
+		# Try to keep memory usage in check
+		del model
+		gc.collect()
+
 	def test_model_loss_builder_full(self):
 		# Test that the model and loss returned from model_loss_builder
 		# agree with what is expected.
@@ -167,6 +172,10 @@ class DataPrepTests(unittest.TestCase):
 		loss(yttf,yptf)
 		self.assertEqual(len(model.layers),13)
 		self.assertEqual(model.layers[-1].output_shape[-1],y_pred.shape[-1])
+
+		# Try to keep memory usage in check
+		del model
+		gc.collect()
 
 	def test_model_loss_builder_diag(self):
 		# Test that the model and loss returned from model_loss_builder
@@ -191,6 +200,10 @@ class DataPrepTests(unittest.TestCase):
 		self.assertEqual(len(model.layers),13)
 		self.assertEqual(model.layers[-1].output_shape[-1],y_pred.shape[-1])
 
+		# Try to keep memory usage in check
+		del model
+		gc.collect()
+
 	def test_model_loss_builder_diag_stand(self):
 		# Test that the model and loss returned from model_loss_builder
 		# agree with what is expected.
@@ -214,6 +227,10 @@ class DataPrepTests(unittest.TestCase):
 		loss(yttf,yptf)
 		self.assertEqual(len(model.layers),21)
 		self.assertEqual(model.layers[-1].output_shape[-1],y_pred.shape[-1])
+
+		# Try to keep memory usage in check
+		del model
+		gc.collect()
 
 	def test_get_normed_pixel_scale(self):
 		# Test if get_normed_pixel scale rescales the pixel_scale as we would

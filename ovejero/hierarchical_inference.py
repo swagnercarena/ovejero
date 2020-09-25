@@ -797,7 +797,7 @@ class HierarchicalClass:
 			plt.title('Autocorrelation Time for %s'%(hyperparam_plot_names[ci]))
 			plt.legend(['Autocorrelation Estimate',
 				r'Convergence Threshold ($\tau=N/50$)'])
-			plt.show(block)
+			plt.show(block=block)
 
 	def plot_corner(self,burnin,hyperparam_plot_names=None,block=True,
 		color='#FFAA00',truth_color='#000000',plot_range=None,dpi=200):
