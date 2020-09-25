@@ -5,7 +5,6 @@ import pandas as pd
 import tensorflow as tf
 import matplotlib.pyplot as plt
 import gc
-import memory_profiler
 
 # Eliminate TF warning in tests
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
@@ -50,7 +49,6 @@ class BNNInferenceTest(unittest.TestCase):
 		tf.keras.backend.clear_session()
 		gc.collect()
 
-	@profile
 	def test_fix_flip_pairs(self):
 		# Check that fix_flip_pairs always selects the best possible configuration
 		# to return.
@@ -94,7 +92,6 @@ class BNNInferenceTest(unittest.TestCase):
 		self.assertEqual(np.sum(np.abs(predict_samps-y_test)),
 			2*self.batch_size*len(dont_flip_set))
 
-	@profile
 	def test_undo_param_norm(self):
 		# Test if normalizing the lens parameters works correctly.
 
@@ -140,7 +137,6 @@ class BNNInferenceTest(unittest.TestCase):
 		os.remove(self.normalized_param_path)
 		os.remove(self.normalization_constants_path)
 
-	@profile
 	def test_gen_samples_diag(self):
 
 		self.infer_class = bnn_inference.InferenceClass(self.cfg)
@@ -252,7 +248,6 @@ class BNNInferenceTest(unittest.TestCase):
 		os.remove(self.normalization_constants_path)
 		os.remove(self.tf_record_path)
 
-	@profile
 	def test_gen_samples_full(self):
 
 		self.infer_class = bnn_inference.InferenceClass(self.cfg)
@@ -353,7 +348,6 @@ class BNNInferenceTest(unittest.TestCase):
 		os.remove(self.normalization_constants_path)
 		os.remove(self.tf_record_path)
 
-	@profile
 	def test_gen_samples_gmm(self):
 
 		self.infer_class = bnn_inference.InferenceClass(self.cfg)
@@ -502,7 +496,6 @@ class BNNInferenceTest(unittest.TestCase):
 		os.remove(self.normalization_constants_path)
 		os.remove(self.tf_record_path)
 
-	@profile
 	def test_gen_samples_save(self):
 
 		self.infer_class = bnn_inference.InferenceClass(self.cfg)
@@ -588,7 +581,6 @@ class BNNInferenceTest(unittest.TestCase):
 		os.remove(save_path+'y_test.npy')
 		os.rmdir(save_path)
 
-	@profile
 	def test_calc_p_dlt(self):
 
 		self.infer_class = bnn_inference.InferenceClass(self.cfg,
@@ -661,7 +653,6 @@ class BNNInferenceTest(unittest.TestCase):
 			self.assertAlmostEqual(percentages[p_i],self.infer_class.p_dlt[p_i],
 				places=2)
 
-	@profile
 	def test_specify_test_set_path(self):
 		# Pass a specific test_set_path to the inference class and make sure
 		# it behaves as expected.
