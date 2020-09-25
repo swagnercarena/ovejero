@@ -148,6 +148,7 @@ class DataPrepTests(unittest.TestCase):
 
 		# Try to keep memory usage in check
 		del model
+		tf.keras.backend.clear_session()
 		gc.collect()
 
 	def test_model_loss_builder_full(self):
@@ -175,6 +176,7 @@ class DataPrepTests(unittest.TestCase):
 
 		# Try to keep memory usage in check
 		del model
+		tf.keras.backend.clear_session()
 		gc.collect()
 
 	def test_model_loss_builder_diag(self):
@@ -202,6 +204,7 @@ class DataPrepTests(unittest.TestCase):
 
 		# Try to keep memory usage in check
 		del model
+		tf.keras.backend.clear_session()
 		gc.collect()
 
 	def test_model_loss_builder_diag_stand(self):
@@ -230,6 +233,7 @@ class DataPrepTests(unittest.TestCase):
 
 		# Try to keep memory usage in check
 		del model
+		tf.keras.backend.clear_session()
 		gc.collect()
 
 	def test_get_normed_pixel_scale(self):
@@ -297,3 +301,6 @@ class DataPrepTests(unittest.TestCase):
 		os.remove(self.root_path+'test_model.h5')
 		os.remove(self.root_path+'test_temp.json')
 		shutil.rmtree(self.root_path + 'test.log')
+
+		tf.keras.backend.clear_session()
+		gc.collect()
