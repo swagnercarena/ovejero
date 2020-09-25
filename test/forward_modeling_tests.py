@@ -87,7 +87,7 @@ class ForwardModelingTests(unittest.TestCase):
 		# Use the image index 4
 		image_index = 4
 		fow_model.select_image(image_index,block=False)
-		plt.close()
+		plt.close('all')
 
 		# Check that the image is correct
 		test_image = np.load(self.root_path + 'X_0000004.npy')
@@ -122,7 +122,7 @@ class ForwardModelingTests(unittest.TestCase):
 		# (i.e. that the noise is fixed by the random seed in the config)
 		old_image = np.copy(fow_model.true_image_noise)
 		fow_model.select_image(image_index,block=False)
-		plt.close()
+		plt.close('all')
 		np.testing.assert_almost_equal(old_image,fow_model.true_image_noise)
 
 	def test_initialize_sampler(self):
@@ -140,7 +140,7 @@ class ForwardModelingTests(unittest.TestCase):
 		# Now select an image and run the same function.
 		image_index = 4
 		fow_model.select_image(image_index,block=False)
-		plt.close()
+		plt.close('all')
 		fow_model.initialize_sampler(walker_ratio,chains_save_path)
 
 		self.assertTrue(fow_model.sampler_init)
@@ -152,7 +152,7 @@ class ForwardModelingTests(unittest.TestCase):
 		fow_model = forward_modeling.ForwardModel(self.cfg)
 		image_index = 4
 		fow_model.select_image(image_index,block=False)
-		plt.close()
+		plt.close('all')
 
 		# If the sampler hasn't been initialized, this should throw an error
 		n_samps = 5
@@ -187,16 +187,16 @@ class ForwardModelingTests(unittest.TestCase):
 		fow_model = forward_modeling.ForwardModel(self.cfg)
 		image_index = 4
 		fow_model.select_image(image_index,block=False)
-		plt.close()
+		plt.close('all')
 		walker_ratio = 3
 		chains_save_path = self.root_path + 'test_chains.h5'
 		fow_model.initialize_sampler(walker_ratio,chains_save_path)
 		n_samps = 5
 		fow_model.run_sampler(n_samps)
 		fow_model.plot_chains(burnin=None,block=False)
-		plt.close()
+		plt.close('all')
 		fow_model.plot_chains(burnin=2,block=False)
-		plt.close()
+		plt.close('all')
 		os.remove(chains_save_path)
 
 	def test_correct_chains(self):
@@ -258,7 +258,7 @@ class ForwardModelingTests(unittest.TestCase):
 		fow_model = forward_modeling.ForwardModel(self.cfg)
 		image_index = 4
 		fow_model.select_image(image_index,block=False)
-		plt.close()
+		plt.close('all')
 		walker_ratio = 3
 		chains_save_path = self.root_path + 'test_chains.h5'
 		fow_model.initialize_sampler(walker_ratio,chains_save_path)
@@ -273,7 +273,7 @@ class ForwardModelingTests(unittest.TestCase):
 		dpi = 20
 		fow_model.plot_posterior_contours(burnin,num_samples,dpi=dpi,
 			block=False)
-		plt.close()
+		plt.close('all')
 
 		os.remove(chains_save_path)
 		# The tf record path and the normalization path and the new csv
