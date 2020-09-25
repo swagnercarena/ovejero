@@ -133,7 +133,7 @@ class DataPrepTests(unittest.TestCase):
 
 		tf.keras.backend.clear_session()
 
-		model, loss = model_trainer.model_loss_builder(cfg)
+		model, loss = model_trainer.model_loss_builder(cfg,python_testing=True)
 		y_true = np.ones((1,num_params))
 		y_pred = np.ones((1,2*(num_params +
 			int(num_params*(num_params+1)/2))+1))
@@ -146,11 +146,6 @@ class DataPrepTests(unittest.TestCase):
 		self.assertEqual(len(model.layers),13)
 		self.assertEqual(model.layers[-1].output_shape[-1],y_pred.shape[-1])
 
-		# Try to keep memory usage in check
-		del model
-		tf.keras.backend.clear_session()
-		gc.collect()
-
 	def test_model_loss_builder_full(self):
 		# Test that the model and loss returned from model_loss_builder
 		# agree with what is expected.
@@ -162,7 +157,7 @@ class DataPrepTests(unittest.TestCase):
 		tf.keras.backend.clear_session()
 
 		cfg['training_params']['bnn_type'] = 'full'
-		model, loss = model_trainer.model_loss_builder(cfg)
+		model, loss = model_trainer.model_loss_builder(cfg,python_testing=True)
 		y_true = np.ones((1,num_params))
 		y_pred = np.ones((1,num_params + int(num_params*(num_params+1)/2)))
 		yptf = tf.constant(y_pred,dtype=tf.float32)
@@ -173,11 +168,6 @@ class DataPrepTests(unittest.TestCase):
 		loss(yttf,yptf)
 		self.assertEqual(len(model.layers),13)
 		self.assertEqual(model.layers[-1].output_shape[-1],y_pred.shape[-1])
-
-		# Try to keep memory usage in check
-		del model
-		tf.keras.backend.clear_session()
-		gc.collect()
 
 	def test_model_loss_builder_diag(self):
 		# Test that the model and loss returned from model_loss_builder
@@ -190,7 +180,7 @@ class DataPrepTests(unittest.TestCase):
 		tf.keras.backend.clear_session()
 
 		cfg['training_params']['bnn_type'] = 'diag'
-		model, loss = model_trainer.model_loss_builder(cfg)
+		model, loss = model_trainer.model_loss_builder(cfg,python_testing=True)
 		y_true = np.ones((1,num_params))
 		y_pred = np.ones((1,2*num_params))
 		yptf = tf.constant(y_pred,dtype=tf.float32)
@@ -201,11 +191,6 @@ class DataPrepTests(unittest.TestCase):
 		loss(yttf,yptf)
 		self.assertEqual(len(model.layers),13)
 		self.assertEqual(model.layers[-1].output_shape[-1],y_pred.shape[-1])
-
-		# Try to keep memory usage in check
-		del model
-		tf.keras.backend.clear_session()
-		gc.collect()
 
 	def test_model_loss_builder_diag_stand(self):
 		# Test that the model and loss returned from model_loss_builder
@@ -219,7 +204,7 @@ class DataPrepTests(unittest.TestCase):
 
 		cfg['training_params']['bnn_type'] = 'diag'
 		cfg['training_params']['dropout_type'] = 'standard'
-		model, loss = model_trainer.model_loss_builder(cfg)
+		model, loss = model_trainer.model_loss_builder(cfg,python_testing=True)
 		y_true = np.ones((1,num_params))
 		y_pred = np.ones((1,2*num_params))
 		yptf = tf.constant(y_pred,dtype=tf.float32)
@@ -230,11 +215,6 @@ class DataPrepTests(unittest.TestCase):
 		loss(yttf,yptf)
 		self.assertEqual(len(model.layers),21)
 		self.assertEqual(model.layers[-1].output_shape[-1],y_pred.shape[-1])
-
-		# Try to keep memory usage in check
-		del model
-		tf.keras.backend.clear_session()
-		gc.collect()
 
 	def test_get_normed_pixel_scale(self):
 		# Test if get_normed_pixel scale rescales the pixel_scale as we would
@@ -301,6 +281,3 @@ class DataPrepTests(unittest.TestCase):
 		os.remove(self.root_path+'test_model.h5')
 		os.remove(self.root_path+'test_temp.json')
 		shutil.rmtree(self.root_path + 'test.log')
-
-		tf.keras.backend.clear_session()
-		gc.collect()
