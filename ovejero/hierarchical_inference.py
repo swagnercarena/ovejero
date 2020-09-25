@@ -1114,7 +1114,7 @@ class HierarchicalClass:
 
 	def plot_reweighted_lens_posterior(self,burnin,image_index,plot_limits=None,
 		n_p_omega_samps=100, color_map=["#FFAA00","#41b6c4"],
-		block=True,truth_color='#000000'):
+		block=True,truth_color='#000000',dpi=400):
 		"""
 		Plot the original and reweighted posterior contours for a specific image
 		along with the image itself.
@@ -1131,6 +1131,7 @@ class HierarchicalClass:
 			block (bool): If true, block excecution after plt.show() command
 			truth_color (str): The color to use for plotting the truths in the
 				corner plot.
+			dpi (int): The dpi of the figure.
 		"""
 		# Plot the contours without the reweighting first.
 		fig = corner.corner(self.infer_class.predict_samps[:,image_index,:],
@@ -1138,7 +1139,7 @@ class HierarchicalClass:
 				show_titles=False,plot_datapoints=False,
 				label_kwargs=dict(fontsize=13),
 				truths=self.infer_class.y_test[image_index],levels=[0.68,0.95],
-				dpi=1600, color=color_map[0],fill_contours=True,
+				dpi=dpi, color=color_map[0],fill_contours=True,
 				range=plot_limits,truth_color=truth_color)
 
 		log_weights = self.calculate_sample_log_weights(n_p_omega_samps,burnin)
@@ -1150,7 +1151,7 @@ class HierarchicalClass:
 				show_titles=False,plot_datapoints=False,
 				label_kwargs=dict(fontsize=13),
 				truths=self.infer_class.y_test[image_index],levels=[0.68,0.95],
-				dpi=1600, color=color_map[1],fill_contours=True,
+				dpi=dpi, color=color_map[1],fill_contours=True,
 				weights=weights, fig=fig,range=plot_limits,
 				truth_color=truth_color)
 
