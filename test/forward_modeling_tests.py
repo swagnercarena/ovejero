@@ -5,6 +5,7 @@ import numpy as np
 from baobab import configs
 import pandas as pd
 import h5py
+import tensorflow as tf
 
 # Eliminate TF warning in tests
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'

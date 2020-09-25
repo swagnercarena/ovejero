@@ -7,7 +7,6 @@ import pandas as pd
 from ovejero import model_trainer, data_tools
 from helpers import dataset_comparison
 import gc
-import memory_profiler
 
 
 class DataPrepTests(unittest.TestCase):
@@ -24,7 +23,6 @@ class DataPrepTests(unittest.TestCase):
 		tf.keras.backend.clear_session()
 		gc.collect()
 
-	@profile
 	def test_config_checker(self):
 		# Test that the config checker doesn't fail correct configuration files
 		# and does fail configs with missing fields.
@@ -57,7 +55,6 @@ class DataPrepTests(unittest.TestCase):
 		self.assertTrue('dataset_params' in cfg)
 		self.assertTrue('gampsi' in cfg['dataset_params'])
 
-	@profile
 	def test_load_config(self):
 		# Test that load config returns a config file and fails the config check
 		# when it should.
@@ -74,7 +71,6 @@ class DataPrepTests(unittest.TestCase):
 
 		os.remove(temp_cfg_path)
 
-	@profile
 	def test_prepare_tf_record(self):
 		# Test that the prepare_tf_record function works as expected.
 		with open(self.root_path+'test.json','r') as json_f:
@@ -131,7 +127,6 @@ class DataPrepTests(unittest.TestCase):
 		os.remove(self.root_path+'new_metadata.csv')
 		os.remove(self.root_path+'norms.csv')
 
-	@profile
 	def test_model_loss_builder_gmm(self):
 		# Test that the model and loss returned from model_loss_builder
 		# agree with what is expected.
@@ -156,7 +151,6 @@ class DataPrepTests(unittest.TestCase):
 		self.assertEqual(len(model.layers),13)
 		self.assertEqual(model.layers[-1].output_shape[-1],y_pred.shape[-1])
 
-	@profile
 	def test_model_loss_builder_full(self):
 		# Test that the model and loss returned from model_loss_builder
 		# agree with what is expected.
@@ -181,7 +175,6 @@ class DataPrepTests(unittest.TestCase):
 		self.assertEqual(len(model.layers),13)
 		self.assertEqual(model.layers[-1].output_shape[-1],y_pred.shape[-1])
 
-	@profile
 	def test_model_loss_builder_diag(self):
 		# Test that the model and loss returned from model_loss_builder
 		# agree with what is expected.
@@ -206,7 +199,6 @@ class DataPrepTests(unittest.TestCase):
 		self.assertEqual(len(model.layers),13)
 		self.assertEqual(model.layers[-1].output_shape[-1],y_pred.shape[-1])
 
-	@profile
 	def test_model_loss_builder_diag_stand(self):
 		# Test that the model and loss returned from model_loss_builder
 		# agree with what is expected.
@@ -232,7 +224,6 @@ class DataPrepTests(unittest.TestCase):
 		self.assertEqual(len(model.layers),21)
 		self.assertEqual(model.layers[-1].output_shape[-1],y_pred.shape[-1])
 
-	@profile
 	def test_get_normed_pixel_scale(self):
 		# Test if get_normed_pixel scale rescales the pixel_scale as we would
 		# expect.
@@ -270,7 +261,6 @@ class DataPrepTests(unittest.TestCase):
 		os.remove(normalized_param_path)
 		os.remove(normalization_constants_path)
 
-	@profile
 	def test_main(self):
 		# Test that the main function works.
 
