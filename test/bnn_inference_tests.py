@@ -1,9 +1,10 @@
 import unittest, os, json
-from ovejero import bnn_inference, data_tools, bnn_alexnet
+from ovejero import bnn_inference, data_tools, bnn_alexnet, model_trainer
 import numpy as np
 import pandas as pd
 import tensorflow as tf
 import matplotlib.pyplot as plt
+import gc
 
 # Eliminate TF warning in tests
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
@@ -29,18 +30,36 @@ class BNNInferenceTest(unittest.TestCase):
 		self.cfg['training_params']['bnn_type'] = 'diag'
 		self.tf_record_path = self.root_path+self.cfg['validation_params'][
 			'tf_record_path']
-		self.infer_class = bnn_inference.InferenceClass(self.cfg)
+
+		# Simulate training
+		self.final_params = ['external_shear_g1','external_shear_g2',
+			'lens_mass_center_x','lens_mass_center_y','lens_mass_e1',
+			'lens_mass_e2','lens_mass_gamma','lens_mass_theta_E_log']
+		model_trainer.prepare_tf_record(self.cfg, self.root_path,
+			self.tf_record_path,self.final_params,'train')
+		os.remove(self.tf_record_path)
+
 		np.random.seed(2)
 		tf.random.set_seed(2)
 
 	def tearDown(self):
 		# Cleanup for memory
-		self.infer_class = None
 		self.cfg = None
+
+		tf.keras.backend.clear_session()
+		gc.collect()
 
 	def test_fix_flip_pairs(self):
 		# Check that fix_flip_pairs always selects the best possible configuration
 		# to return.
+		self.infer_class = bnn_inference.InferenceClass(self.cfg,
+			lite_class=True)
+		# Delete the tf record file made during the initialization of the
+		# inference class.
+		os.remove(self.root_path+'tf_record_test_val')
+		os.remove(self.root_path+'new_metadata.csv')
+		# Get rid of the normalization file.
+		os.remove(self.normalization_constants_path)
 
 		# Get the set of all flip pairs we want to check
 		flip_pairs = self.cfg['training_params']['flip_pairs']
@@ -75,6 +94,16 @@ class BNNInferenceTest(unittest.TestCase):
 
 	def test_undo_param_norm(self):
 		# Test if normalizing the lens parameters works correctly.
+
+		self.infer_class = bnn_inference.InferenceClass(self.cfg,
+			lite_class=True)
+		# Delete the tf record file made during the initialization of the
+		# inference class.
+		os.remove(self.root_path+'tf_record_test_val')
+		os.remove(self.root_path+'new_metadata.csv')
+		# Get rid of the normalization file.
+		os.remove(self.normalization_constants_path)
+
 		train_or_test='train'
 		data_tools.normalize_lens_parameters(self.lens_params,
 			self.lens_params_path,self.normalized_param_path,
@@ -109,6 +138,14 @@ class BNNInferenceTest(unittest.TestCase):
 		os.remove(self.normalization_constants_path)
 
 	def test_gen_samples_diag(self):
+
+		self.infer_class = bnn_inference.InferenceClass(self.cfg)
+		# Delete the tf record file made during the initialization of the
+		# inference class.
+		os.remove(self.root_path+'tf_record_test_val')
+		os.remove(self.root_path+'new_metadata.csv')
+		# Get rid of the normalization file.
+		os.remove(self.normalization_constants_path)
 
 		# First we have to make a fake model whose statistics are very well
 		# defined.
@@ -213,6 +250,14 @@ class BNNInferenceTest(unittest.TestCase):
 
 	def test_gen_samples_full(self):
 
+		self.infer_class = bnn_inference.InferenceClass(self.cfg)
+		# Delete the tf record file made during the initialization of the
+		# inference class.
+		os.remove(self.root_path+'tf_record_test_val')
+		os.remove(self.root_path+'new_metadata.csv')
+		# Get rid of the normalization file.
+		os.remove(self.normalization_constants_path)
+
 		# First we have to make a fake model whose statistics are very well
 		# defined.
 
@@ -304,6 +349,14 @@ class BNNInferenceTest(unittest.TestCase):
 		os.remove(self.tf_record_path)
 
 	def test_gen_samples_gmm(self):
+
+		self.infer_class = bnn_inference.InferenceClass(self.cfg)
+		# Delete the tf record file made during the initialization of the
+		# inference class.
+		os.remove(self.root_path+'tf_record_test_val')
+		os.remove(self.root_path+'new_metadata.csv')
+		# Get rid of the normalization file.
+		os.remove(self.normalization_constants_path)
 
 		# First we have to make a fake model whose statistics are very well
 		# defined.
@@ -445,6 +498,14 @@ class BNNInferenceTest(unittest.TestCase):
 
 	def test_gen_samples_save(self):
 
+		self.infer_class = bnn_inference.InferenceClass(self.cfg)
+		# Delete the tf record file made during the initialization of the
+		# inference class.
+		os.remove(self.root_path+'tf_record_test_val')
+		os.remove(self.root_path+'new_metadata.csv')
+		# Get rid of the normalization file.
+		os.remove(self.normalization_constants_path)
+
 		# First we have to make a fake model whose statistics are very well
 		# defined.
 		class ToyModel():
@@ -499,17 +560,17 @@ class BNNInferenceTest(unittest.TestCase):
 
 		# Test that none of the plotting routines break
 		self.infer_class.gen_coverage_plots(block=False)
-		plt.close()
+		plt.close('all')
 		self.infer_class.report_stats()
 		self.infer_class.plot_posterior_contours(1,block=False)
-		plt.close()
-		plt.close()
+		plt.close('all')
+		plt.close('all')
 		self.infer_class.comp_al_ep_unc(block=False)
-		plt.close()
+		plt.close('all')
 		self.infer_class.comp_al_ep_unc(block=False,norm_diagonal=False)
-		plt.close()
+		plt.close('all')
 		self.infer_class.plot_calibration(block=False,title='test')
-		plt.close()
+		plt.close('all')
 
 		# Clean up the files we generated
 		os.remove(self.normalization_constants_path)
@@ -521,6 +582,16 @@ class BNNInferenceTest(unittest.TestCase):
 		os.rmdir(save_path)
 
 	def test_calc_p_dlt(self):
+
+		self.infer_class = bnn_inference.InferenceClass(self.cfg,
+			lite_class=True)
+		# Delete the tf record file made during the initialization of the
+		# inference class.
+		os.remove(self.root_path+'tf_record_test_val')
+		os.remove(self.root_path+'new_metadata.csv')
+		# Get rid of the normalization file.
+		os.remove(self.normalization_constants_path)
+
 		# Test that the calc_p_dlt returns the correct percentages for some
 		# toy examples
 
@@ -582,7 +653,36 @@ class BNNInferenceTest(unittest.TestCase):
 			self.assertAlmostEqual(percentages[p_i],self.infer_class.p_dlt[p_i],
 				places=2)
 
+	def test_specify_test_set_path(self):
+		# Pass a specific test_set_path to the inference class and make sure
+		# it behaves as expected.
+		test_set_path = self.root_path
 
+		# Check that the file doesn't already exist.
+		self.assertFalse(os.path.isfile(test_set_path+'tf_record_test_val'))
 
+		# We will again have to simulate training so that the desired
+		# normalization path exists.
+		model_trainer.prepare_tf_record(self.cfg, self.root_path,
+			self.tf_record_path,self.final_params,'train')
+		os.remove(self.tf_record_path)
 
+		_ = bnn_inference.InferenceClass(self.cfg,
+			test_set_path=test_set_path,lite_class=True)
 
+		# Check that a new tf_record was generated
+		self.assertTrue(os.path.isfile(test_set_path+'tf_record_test_val'))
+
+		# Check that passing a fake test_set_path raises an error.
+		fake_test_path = self.root_path+'fake_data'
+		os.mkdir(fake_test_path)
+
+		with self.assertRaises(FileNotFoundError):
+			_ = bnn_inference.InferenceClass(self.cfg,
+				test_set_path=fake_test_path,lite_class=True)
+
+		# Test cleanup
+		os.rmdir(fake_test_path)
+		os.remove(test_set_path+'tf_record_test_val')
+		os.remove(self.root_path+'new_metadata.csv')
+		os.remove(self.normalization_constants_path)

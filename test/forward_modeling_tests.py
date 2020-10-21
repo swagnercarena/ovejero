@@ -1,10 +1,11 @@
-import unittest, os
+import unittest, os, gc
 from ovejero import forward_modeling, model_trainer
 import matplotlib.pyplot as plt
 import numpy as np
 from baobab import configs
 import pandas as pd
 import h5py
+import tensorflow as tf
 
 # Eliminate TF warning in tests
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
@@ -32,13 +33,28 @@ class ForwardModelingTests(unittest.TestCase):
 		self.normalization_constants_path = self.root_path + 'norms.csv'
 		self.tf_record_path = self.root_path + 'tf_record_test'
 
+		# Create the normalization file that would have been made
+		# during training.
+		self.final_params = ['external_shear_g1','external_shear_g2',
+			'lens_mass_center_x','lens_mass_center_y','lens_mass_e1',
+			'lens_mass_e2','lens_mass_gamma','lens_mass_theta_E_log']
+		model_trainer.prepare_tf_record(self.cfg, self.root_path,
+			self.tf_record_path,self.final_params,'train')
+
 	def tearDown(self):
 		self.cfg = None
+		os.remove(self.tf_record_path)
+		os.remove(self.root_path+'tf_record_test_val')
+		os.remove(self.root_path+'new_metadata.csv')
+		os.remove(self.normalization_constants_path)
+
+		tf.keras.backend.clear_session()
+		gc.collect()
 
 	def test_class_initialization(self):
 		# Just test that the basic variables of the class are initialized as
 		# expected.
-		fow_model = forward_modeling.ForwardModel(self.cfg)
+		fow_model = forward_modeling.ForwardModel(self.cfg,lite_class=True)
 
 		# Make sure that the correct lens and source models were initialized
 		self.assertEqual(fow_model.ls_lens_model_list,
@@ -70,12 +86,12 @@ class ForwardModelingTests(unittest.TestCase):
 		# Test that the image selection works as intended. The most important
 		# thing to test here is that the parameter values and image are what we
 		# expect.
-		fow_model = forward_modeling.ForwardModel(self.cfg)
+		fow_model = forward_modeling.ForwardModel(self.cfg,lite_class=True)
 
 		# Use the image index 4
 		image_index = 4
 		fow_model.select_image(image_index,block=False)
-		plt.close()
+		plt.close('all')
 
 		# Check that the image is correct
 		test_image = np.load(self.root_path + 'X_0000004.npy')
@@ -110,13 +126,13 @@ class ForwardModelingTests(unittest.TestCase):
 		# (i.e. that the noise is fixed by the random seed in the config)
 		old_image = np.copy(fow_model.true_image_noise)
 		fow_model.select_image(image_index,block=False)
-		plt.close()
+		plt.close('all')
 		np.testing.assert_almost_equal(old_image,fow_model.true_image_noise)
 
 	def test_initialize_sampler(self):
 		# Test that we correctly initialize the lenstronomy fitting sequence
 		# sampler.
-		fow_model = forward_modeling.ForwardModel(self.cfg)
+		fow_model = forward_modeling.ForwardModel(self.cfg,lite_class=True)
 
 		# If no image has been selected, initializing the sampler should
 		# raise an error.
@@ -128,7 +144,7 @@ class ForwardModelingTests(unittest.TestCase):
 		# Now select an image and run the same function.
 		image_index = 4
 		fow_model.select_image(image_index,block=False)
-		plt.close()
+		plt.close('all')
 		fow_model.initialize_sampler(walker_ratio,chains_save_path)
 
 		self.assertTrue(fow_model.sampler_init)
@@ -137,10 +153,10 @@ class ForwardModelingTests(unittest.TestCase):
 		# Test that running the sampler for a few iterations doesn't return
 		# any errors. Since all the work is being done by the lenstronomy
 		# fitting sequence, these tests are light.
-		fow_model = forward_modeling.ForwardModel(self.cfg)
+		fow_model = forward_modeling.ForwardModel(self.cfg,lite_class=True)
 		image_index = 4
 		fow_model.select_image(image_index,block=False)
-		plt.close()
+		plt.close('all')
 
 		# If the sampler hasn't been initialized, this should throw an error
 		n_samps = 5
@@ -172,19 +188,19 @@ class ForwardModelingTests(unittest.TestCase):
 
 	def test_plot_chains(self):
 		# Check that the plot chains function does not crash.
-		fow_model = forward_modeling.ForwardModel(self.cfg)
+		fow_model = forward_modeling.ForwardModel(self.cfg,lite_class=True)
 		image_index = 4
 		fow_model.select_image(image_index,block=False)
-		plt.close()
+		plt.close('all')
 		walker_ratio = 3
 		chains_save_path = self.root_path + 'test_chains.h5'
 		fow_model.initialize_sampler(walker_ratio,chains_save_path)
 		n_samps = 5
 		fow_model.run_sampler(n_samps)
 		fow_model.plot_chains(burnin=None,block=False)
-		plt.close()
+		plt.close('all')
 		fow_model.plot_chains(burnin=2,block=False)
-		plt.close()
+		plt.close('all')
 		os.remove(chains_save_path)
 
 	def test_correct_chains(self):
@@ -200,7 +216,7 @@ class ForwardModelingTests(unittest.TestCase):
 			'external_shear_gamma_ext', 'external_shear_psi_ext'])
 
 		# Initialize our forward model
-		fow_model = forward_modeling.ForwardModel(self.cfg)
+		fow_model = forward_modeling.ForwardModel(self.cfg,lite_class=True)
 
 		# Run our internal function
 		new_params = fow_model._correct_chains(new_chains,params,new_true_values)
@@ -246,7 +262,7 @@ class ForwardModelingTests(unittest.TestCase):
 		fow_model = forward_modeling.ForwardModel(self.cfg)
 		image_index = 4
 		fow_model.select_image(image_index,block=False)
-		plt.close()
+		plt.close('all')
 		walker_ratio = 3
 		chains_save_path = self.root_path + 'test_chains.h5'
 		fow_model.initialize_sampler(walker_ratio,chains_save_path)
@@ -255,14 +271,14 @@ class ForwardModelingTests(unittest.TestCase):
 		burnin = 0
 		num_samples = 20
 
+		os.remove(self.tf_record_path)
 		model_trainer.prepare_tf_record(self.cfg, self.root_path,
 			self.tf_record_path,self.lens_params,'train')
 		dpi = 20
 		fow_model.plot_posterior_contours(burnin,num_samples,dpi=dpi,
 			block=False)
-		plt.close()
+		plt.close('all')
 
-		os.remove(self.normalization_constants_path)
-		os.remove(self.tf_record_path)
-		os.remove(self.root_path + self.cfg['dataset_params']['new_param_path'])
 		os.remove(chains_save_path)
+		# The tf record path and the normalization path and the new csv
+		# will be dealt with at teardown.

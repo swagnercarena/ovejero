@@ -29,7 +29,7 @@ class InferenceClass:
 	models for inference. This class will output correctly marginalized
 	predictions as well as make important performance plots.
 	"""
-	def __init__(self,cfg,lite_class=False):
+	def __init__(self,cfg,lite_class=False,test_set_path=None):
 		"""
 		Initialize the InferenceClass instance using the parameters of the
 		configuration file.
@@ -39,9 +39,16 @@ class InferenceClass:
 		lite_class (bool): If True, do not bother loading the BNN model weights.
 			This allows the user to save on memory, but will cause an error
 			if the BNN samples have not already been drawn.
+		test_set_path (str): The path to the set of images that the
+			forward modeling image will be pulled from. If None, the path to
+			the validation set images will be used.
 		"""
 
 		self.cfg = cfg
+
+		# Replace the validation path with the test_set_path if specified
+		if test_set_path is not None:
+			self.cfg['validation_params']['root_path'] = test_set_path
 
 		self.lite_class = lite_class
 		if self.lite_class:
@@ -63,6 +70,15 @@ class InferenceClass:
 		self.batch_size = cfg['training_params']['batch_size']
 		self.norm_images = cfg['training_params']['norm_images']
 		self.baobab_config_path = cfg['training_params']['baobab_config_path']
+
+		if not os.path.exists(self.tf_record_path_v):
+			print('Generating new TFRecord at %s'%(self.tf_record_path_v))
+			model_trainer.prepare_tf_record(cfg,
+				cfg['validation_params']['root_path'],
+				self.tf_record_path_v,self.final_params,
+				train_or_test='test')
+		else:
+			print('TFRecord found at %s'%(self.tf_record_path_v))
 
 		self.tf_dataset_v = data_tools.build_tf_dataset(self.tf_record_path_v,
 			self.final_params,self.batch_size,1,self.baobab_config_path,

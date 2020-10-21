@@ -797,7 +797,7 @@ class HierarchicalClass:
 			plt.title('Autocorrelation Time for %s'%(hyperparam_plot_names[ci]))
 			plt.legend(['Autocorrelation Estimate',
 				r'Convergence Threshold ($\tau=N/50$)'])
-			plt.show(block)
+			plt.show(block=block)
 
 	def plot_corner(self,burnin,hyperparam_plot_names=None,block=True,
 		color='#FFAA00',truth_color='#000000',plot_range=None,dpi=200):
@@ -1067,11 +1067,11 @@ class HierarchicalClass:
 			if param_plot_names is None:
 				plt.xlabel(lens_param)
 				plt.ylabel('p(%s)'%(lens_param))
-				plt.title('%s Distribtuions for p(%s)'%(bnn_name,lens_param))
+				plt.title('%s Distributions for p(%s)'%(bnn_name,lens_param))
 			else:
 				plt.xlabel(param_plot_names[li])
 				plt.ylabel('p(%s)'%(param_plot_names[li]))
-				plt.title('%s Distribtuions for p(%s)'%(bnn_name,
+				plt.title('%s Distributions for p(%s)'%(bnn_name,
 					param_plot_names[li]))
 			plt.xlim([plt_min,plt_max])
 
@@ -1114,7 +1114,7 @@ class HierarchicalClass:
 
 	def plot_reweighted_lens_posterior(self,burnin,image_index,plot_limits=None,
 		n_p_omega_samps=100, color_map=["#FFAA00","#41b6c4"],
-		block=True,truth_color='#000000'):
+		block=True,truth_color='#000000',dpi=400):
 		"""
 		Plot the original and reweighted posterior contours for a specific image
 		along with the image itself.
@@ -1131,6 +1131,7 @@ class HierarchicalClass:
 			block (bool): If true, block excecution after plt.show() command
 			truth_color (str): The color to use for plotting the truths in the
 				corner plot.
+			dpi (int): The dpi of the figure.
 		"""
 		# Plot the contours without the reweighting first.
 		fig = corner.corner(self.infer_class.predict_samps[:,image_index,:],
@@ -1138,7 +1139,7 @@ class HierarchicalClass:
 				show_titles=False,plot_datapoints=False,
 				label_kwargs=dict(fontsize=13),
 				truths=self.infer_class.y_test[image_index],levels=[0.68,0.95],
-				dpi=1600, color=color_map[0],fill_contours=True,
+				dpi=dpi, color=color_map[0],fill_contours=True,
 				range=plot_limits,truth_color=truth_color)
 
 		log_weights = self.calculate_sample_log_weights(n_p_omega_samps,burnin)
@@ -1150,7 +1151,7 @@ class HierarchicalClass:
 				show_titles=False,plot_datapoints=False,
 				label_kwargs=dict(fontsize=13),
 				truths=self.infer_class.y_test[image_index],levels=[0.68,0.95],
-				dpi=1600, color=color_map[1],fill_contours=True,
+				dpi=dpi, color=color_map[1],fill_contours=True,
 				weights=weights, fig=fig,range=plot_limits,
 				truth_color=truth_color)
 
@@ -1201,7 +1202,7 @@ class HierarchicalClass:
 
 		return figure
 
-	def plot_parameter_distribtuion(self,burnin,lens_params,n_p_omega_samps=100,
+	def plot_parameter_distribution(self,burnin,lens_params,n_p_omega_samps=100,
 		samps_per_omega=100, param_print_names=None,color='#000000',
 		fontsize=13,plot_limits=None,figure=None, cov_params=False):
 		"""

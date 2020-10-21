@@ -377,7 +377,6 @@ def main():
 	print('Initializing the model')
 
 	model, loss = model_loss_builder(cfg,verbose=True)
-	print(model.losses)
 
 	tensorboard = TensorBoard(log_dir=tensorboard_log_dir,update_freq='batch')
 	modelcheckpoint = ModelCheckpoint(model_weights,monitor='val_loss',
@@ -391,4 +390,3 @@ def main():
 
 if __name__ == '__main__':
 	main()
-

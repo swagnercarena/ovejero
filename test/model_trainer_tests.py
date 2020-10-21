@@ -1,4 +1,4 @@
-import unittest, json, glob, os
+import unittest, json, glob, os, sys, shutil
 # Eliminate TF warning in tests
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 import tensorflow as tf
@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 from ovejero import model_trainer, data_tools
 from helpers import dataset_comparison
+import gc
 
 
 class DataPrepTests(unittest.TestCase):
@@ -17,6 +18,10 @@ class DataPrepTests(unittest.TestCase):
 			'lens_mass_e2','lens_mass_gamma','lens_mass_theta_E_log']
 		self.lens_params_path = self.root_path + 'new_metadata.csv'
 		self.tf_record_path = self.root_path + 'tf_record_test'
+
+	def tearDown(self):
+		tf.keras.backend.clear_session()
+		gc.collect()
 
 	def test_config_checker(self):
 		# Test that the config checker doesn't fail correct configuration files
@@ -131,6 +136,7 @@ class DataPrepTests(unittest.TestCase):
 		num_params = len(final_params)
 
 		tf.keras.backend.clear_session()
+		gc.collect()
 
 		model, loss = model_trainer.model_loss_builder(cfg)
 		y_true = np.ones((1,num_params))
@@ -154,6 +160,7 @@ class DataPrepTests(unittest.TestCase):
 		num_params = len(final_params)
 
 		tf.keras.backend.clear_session()
+		gc.collect()
 
 		cfg['training_params']['bnn_type'] = 'full'
 		model, loss = model_trainer.model_loss_builder(cfg)
@@ -177,6 +184,7 @@ class DataPrepTests(unittest.TestCase):
 		num_params = len(final_params)
 
 		tf.keras.backend.clear_session()
+		gc.collect()
 
 		cfg['training_params']['bnn_type'] = 'diag'
 		model, loss = model_trainer.model_loss_builder(cfg)
@@ -200,6 +208,7 @@ class DataPrepTests(unittest.TestCase):
 		num_params = len(final_params)
 
 		tf.keras.backend.clear_session()
+		gc.collect()
 
 		cfg['training_params']['bnn_type'] = 'diag'
 		cfg['training_params']['dropout_type'] = 'standard'
@@ -251,3 +260,34 @@ class DataPrepTests(unittest.TestCase):
 		# Clean up the file now that we're done
 		os.remove(normalized_param_path)
 		os.remove(normalization_constants_path)
+
+	def test_main(self):
+		# Test that the main function works.
+
+		# Make a copy of the previous test config file with fewer epochs
+		with open(self.root_path+'test.json') as json_file:
+			old_config = json.load(json_file)
+		old_config['training_params']['n_epochs'] = 1
+		with open(self.root_path+'test_temp.json','w') as json_file:
+			json.dump(old_config,json_file)
+
+		sys.argv = ['model_trainer',self.root_path+'test_temp.json']
+		model_trainer.main()
+		tf.keras.backend.clear_session()
+		gc.collect()
+
+		# Check that the expected directories were created
+		self.assertTrue(os.path.isfile(self.root_path+'new_metadata.csv'))
+		self.assertTrue(os.path.isfile(self.root_path+'norms.csv'))
+		self.assertTrue(os.path.isfile(self.root_path+'tf_record_test'))
+		self.assertTrue(os.path.isfile(self.root_path+'tf_record_test_val'))
+		self.assertTrue(os.path.isfile(self.root_path+'test_model.h5'))
+
+		# Clean up from the model training
+		os.remove(self.root_path+'new_metadata.csv')
+		os.remove(self.root_path+'norms.csv')
+		os.remove(self.root_path+'tf_record_test')
+		os.remove(self.root_path+'tf_record_test_val')
+		os.remove(self.root_path+'test_model.h5')
+		os.remove(self.root_path+'test_temp.json')
+		shutil.rmtree(self.root_path + 'test.log')
