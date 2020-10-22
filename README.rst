@@ -18,7 +18,7 @@ ovejero - Bayesian Neural Network Inference of Strong Gravitational Lenses
 .. image:: https://zenodo.org/badge/DOI/10.5281/zenodo.4116503.svg
    :target: https://doi.org/10.5281/zenodo.4116503
 
-''ovejero'' conducts hierarchical inference of strongly-lensed systems with Bayesian neural networks
+``ovejero`` conducts hierarchical inference of strongly-lensed systems with Bayesian neural networks
 
 Installation
 ------------
@@ -81,5 +81,5 @@ This list does **not** include the model weights or the training dataset, since 
 
 Attribution
 -----------
-If you use ovejero or its datasets for your own research, please cite the lenstronomy package (`Birrer & Amara 2018 <https://arxiv.org/abs/1803.09746v1>`_), the lens simulation package baobab ('Park et al. 2020'), and the BNN package ovejero ('Wagner-Carena et al. 2020').
+If you use ovejero or its datasets for your own research, please cite the ``lenstronomy`` package (`Birrer & Amara 2018 <https://arxiv.org/abs/1803.09746v1>`_), the lens simulation package ``baobab`` ('Park et al. 2020'), and the BNN package ``ovejero`` ('Wagner-Carena et al. 2020').
 
