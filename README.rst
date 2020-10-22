@@ -15,7 +15,10 @@ ovejero - Bayesian Neural Network Inference of Strong Gravitational Lenses
 .. image:: https://img.shields.io/badge/license-MIT-blue.svg?style=flat
     :target: https://github.com/swagnercarena/ovejero/LICENSE
 
-''ovejero'' conducts hierarchical inference of strongly-lensed systems with Bayesian neural networks
+.. image:: https://zenodo.org/badge/DOI/10.5281/zenodo.4116503.svg
+   :target: https://doi.org/10.5281/zenodo.4116503
+
+``ovejero`` conducts hierarchical inference of strongly-lensed systems with Bayesian neural networks
 
 Installation
 ------------
@@ -57,4 +60,26 @@ The jupyter notebooks in the demos folder walk you through how to use all the ma
 * `Comparing Forward Modeling to a BNN Posterior <https://github.com/swagnercarena/ovejero/blob/master/demos/Forward_Modeling_Demo.ipynb>`_: Learn how to compare the performance of the BNN model to a forward modeling approach.
 * `Hierarchical Inference on a Test Set <https://github.com/swagnercarena/ovejero/blob/master/demos/Hierarchical_Inference_Demo.ipynb>`_: Learn how to run hierarchical inference on a test set using a trained BNN.
 
+Datasets, Chains, Model Weights, and Paper Figures
+--------------------------------------------------
+
+To reproduce all of the figures (and results) of "Hierarchical Inference With Bayesian Neural Networks: An Application to Strong Gravitational Lensing" you can download the datasets, chains, model weights, and BNN samples from `zenodo <https://zenodo.org/record/4116503#.X5IWWpNKjUI>`_.
+
+If you simply want to run the notebooks in the ovejero/paper folder (and therefore reproduce all the figures of the paper) you will need to download and unzip the following files:
+
+* datasets.zip
+* forward_modeling.zip
+* hierarchical_results.zip
+* validation_results.zip
+
+The contents of theses files will have to be placed in <ovejero_root_path>/<folder_name> for the notebooks to find the data. For example, for datasets.zip, the contents will need to be placed in $ovejero/datasets.
+
+This list does **not** include the model weights or the training dataset, since neither are needed to generate the plots (the BNN samples are saved to avoid needing a GPU to generate plots quickly). The BNN weights and training dataset are also included in the zenodo dataset and can be downloaded:
+
+* train.zip
+* models.zip
+
+Attribution
+-----------
+If you use ovejero or its datasets for your own research, please cite the ``lenstronomy`` package (`Birrer & Amara 2018 <https://arxiv.org/abs/1803.09746v1>`_), the lens simulation package ``baobab`` ('Park et al. 2020'), and the BNN package ``ovejero`` ('Wagner-Carena et al. 2020').
 
