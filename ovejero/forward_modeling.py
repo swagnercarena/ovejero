@@ -144,13 +144,8 @@ class ForwardModel(bnn_inference.InferenceClass):
 		self.lens_params = self.cfg['dataset_params']['lens_params']
 
 		# Get the model parameter kwargs
-		self.ls_kwargs_model = dict(
-			lens_model_list=[
-				self.baobab_cfg.bnn_omega.lens_mass.profile,
-				self.baobab_cfg.bnn_omega.external_shear.profile],
-			source_light_model_list=[
-				self.baobab_cfg.bnn_omega.src_light.profile]
-		)
+		self.ls_kwargs_model = {'lens_model_list': self.ls_lens_model_list,
+			'source_light_model_list': self.ls_source_model_list}
 
 		# Set flags to make sure things are initialzied.
 		self.image_selected = False
