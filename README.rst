@@ -15,6 +15,9 @@ ovejero - Bayesian Neural Network Inference of Strong Gravitational Lenses
 .. image:: https://img.shields.io/badge/license-MIT-blue.svg?style=flat
     :target: https://github.com/swagnercarena/ovejero/LICENSE
 
+.. image:: https://img.shields.io/badge/arXiv-2010.13787%20-yellowgreen.svg
+    :target: https://arxiv.org/abs/2010.13787
+
 .. image:: https://zenodo.org/badge/DOI/10.5281/zenodo.4116503.svg
    :target: https://doi.org/10.5281/zenodo.4116503
 
@@ -72,14 +75,14 @@ If you simply want to run the notebooks in the ovejero/paper folder (and therefo
 * hierarchical_results.zip
 * validation_results.zip
 
-The contents of theses files will have to be placed in <ovejero_root_path>/<folder_name> for the notebooks to find the data. For example, for datasets.zip, the contents will need to be placed in $ovejero/datasets.
+The contents of theses files will have to be placed in ``<ovejero_root_path>/<folder_name>`` for the notebooks to find the data. For example, for datasets.zip, the contents will need to be placed in ``$ovejero/datasets``.
 
-This list does **not** include the model weights or the training dataset, since neither are needed to generate the plots (the BNN samples are saved to avoid needing a GPU to generate plots quickly). The BNN weights and training dataset are also included in the zenodo dataset and can be downloaded:
+This list does **not** include the model weights or the training dataset, since neither are needed to generate the plots (the BNN samples are saved to avoid needing a GPU to generate plots quickly). The BNN weights and training dataset can also be downloaded from the zenodo dataset:
 
 * train.zip
 * models.zip
 
 Attribution
 -----------
-If you use ovejero or its datasets for your own research, please cite the ``lenstronomy`` package (`Birrer & Amara 2018 <https://arxiv.org/abs/1803.09746v1>`_), the lens simulation package ``baobab`` ('Park et al. 2020'), and the BNN package ``ovejero`` ('Wagner-Carena et al. 2020').
+If you use ovejero or its datasets for your own research, please cite the ``lenstronomy`` package (`Birrer & Amara 2018 <https://arxiv.org/abs/1803.09746v1>`_), the lens simulation package ``baobab`` (`Park et al. 2020`), and the BNN package ``ovejero`` (`Wagner-Carena et al. 2020 <https://arxiv.org/abs/2010.13787>`_).
 
