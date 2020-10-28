@@ -20,7 +20,7 @@ required_packages = ['numpy>=1.13', 'scipy>=0.14.0', 'configparser',
 
 setup(
 	name='ovejero',
-	version='0.0.1',
+	version='1.0.0',
 	description='Strong lens Bayesian Neural Network package.',
 	long_description=readme,
 	author='Sebastian Wagner-Carena',
