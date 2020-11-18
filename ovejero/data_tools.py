@@ -224,7 +224,8 @@ def build_tf_dataset(tf_record_path,lens_params,batch_size,n_epochs,
 	# Load a noise model from baobab using the baobab config file.
 	if baobab_config_path is not None:
 		baobab_cfg = configs.BaobabConfig.from_file(baobab_config_path)
-		noise_kwargs = baobab_cfg.get_noise_kwargs()
+		bandpass = baobab_cfg.survey_info.bandpass_list[0]
+		noise_kwargs = baobab_cfg.get_noise_kwargs(bandpass)
 		noise_function = noise_tf.NoiseModelTF(**noise_kwargs)
 	else:
 		print('No baobab config provided so no noise will be added')
