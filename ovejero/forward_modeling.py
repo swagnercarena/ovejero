@@ -127,11 +127,17 @@ class ForwardModel(bnn_inference.InferenceClass):
 		# We will also need some of the noise kwargs. We will feed the
 		# lenstronomy version straight to lenstronomy and the tensorflow
 		# version to our pipeline for selecting the image.
-		self.noise_kwargs = self.baobab_cfg.get_noise_kwargs()
+		bandpass = self.baobab_cfg.survey_info.bandpass_list[0]
+		detector = self.baobab_cfg.survey_object_dict[bandpass]
+		detector_kwargs = detector.kwargs_single_band()
+		self.noise_kwargs = self.baobab_cfg.get_noise_kwargs(bandpass)
 		self.noise_function = noise_tf.NoiseModelTF(**self.noise_kwargs)
 
-		self.ls_kwargs_psf = instantiate_PSF_kwargs(self.baobab_cfg.psf,
-			self.baobab_cfg.instrument.pixel_scale)[0]
+		self.ls_kwargs_psf = instantiate_PSF_kwargs(
+			self.baobab_cfg.psf['type'],detector_kwargs['pixel_scale'],
+			seeing=detector_kwargs['seeing'],
+			kernel_size=detector.psf_kernel_size,
+			which_psf_maps=self.baobab_cfg.psf['which_psf_maps'])
 
 		# The kwargs for the numerics. These should match what was used
 		# to generate the image.
@@ -191,11 +197,10 @@ class ForwardModel(bnn_inference.InferenceClass):
 		# by lenstronomy.
 		_, _, ra_0, dec_0, _, _, Mpix2coord, _ = (
 			util.make_grid_with_coordtransform(
-				numPix=self.baobab_cfg.image.num_pix,
-				deltapix=self.baobab_cfg.instrument.pixel_scale, center_ra=0,
-				center_dec=0,
-				subgrid_res=1,
-				inverse=self.baobab_cfg.image.inverse))
+				numPix=self.baobab_cfg.image['num_pix'],
+				deltapix=self.baobab_cfg.instrument['pixel_scale'],
+				center_ra=0, center_dec=0, subgrid_res=1,
+				inverse=self.baobab_cfg.image['inverse']))
 
 		# Update the lenstronomy kwargs with the image information
 		noise_dict = noise_lenstronomy.get_noise_sigma2_lenstronomy(
