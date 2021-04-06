@@ -9,6 +9,7 @@ import gc
 # Eliminate TF warning in tests
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
+
 class BNNInferenceTest(unittest.TestCase):
 
 	def setUp(self):
