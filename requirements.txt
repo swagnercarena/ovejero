@@ -16,3 +16,4 @@ addict
 lenstronomy
 mpmath
 astropy
+yaml
