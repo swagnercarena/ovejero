@@ -1,11 +1,11 @@
 git+https://github.com/jiwoncpark/baobab.git
-numpy==1.18.0
-scipy==1.4.1
+numpy>=1.18.0
+scipy>=1.4.1
 configparser
 pandas>=0.24.2
 corner>=2.0.1
-tensorflow-probability>=0.8.0
-tensorflow>=2.1.0
+tensorflow>=2.4.0
+tensorflow-probability>=0.12.0
 matplotlib>=3.3.0
 numba>=0.48.0
 tqdm>=4.42.1
@@ -16,3 +16,5 @@ addict
 lenstronomy
 mpmath
 astropy
+pyyaml
+scikit-image
