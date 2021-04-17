@@ -17,3 +17,4 @@ lenstronomy
 mpmath
 astropy
 pyyaml
+scikit-image
