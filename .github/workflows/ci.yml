@@ -39,8 +39,9 @@ jobs:
         run: |
           cd test
           coverage run --source paltas -m unittest -v *_tests.py
+          coverage lcov
       - name: Coveralls
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          coveralls --service=github
+        uses: coverallsapp/github-action@master
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path-to-lcov: ./test/coverage.lcov
