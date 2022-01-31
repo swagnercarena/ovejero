@@ -38,7 +38,7 @@ jobs:
       - name: Test with pytest
         run: |
           cd test
-          coverage run --source paltas -m unittest -v *_tests.py
+          coverage run --source ovejero -m unittest -v *_tests.py
           coverage lcov
       - name: Coveralls
         uses: coverallsapp/github-action@master
